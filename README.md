@@ -6,7 +6,7 @@ Straightforward tool to convert Commonjs files into ESM
 ## Installation
 
 ```shell
-npm install cjs-to-esm-converter
+npm install to-esm
 ```
 
 ---

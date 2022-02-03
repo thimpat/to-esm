@@ -1,10 +1,11 @@
 {
   "name": "to-esm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Very simple tool to convert Commonjs files into ESM",
   "main": "tools/converter.cjs",
   "bin": {
-    "toesm": "./index.js"
+    "toesm": "./index.js",
+    "to-esm": "./index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
