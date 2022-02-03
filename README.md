@@ -13,6 +13,7 @@ npm install to-esm
 ## Usage
 
 The following examples will work on a folder structure that looks like this:
+>
 > example/cjs/input.js
 >
 > example/cjs/dep-1.cjs
@@ -40,6 +41,7 @@ toesm.cmd  --input="example/cjs/*.?(c)js" --output=example/esm/
 ## Options
 
 ### Options to not generate automatic header
+>
 > --noheader
 
 
