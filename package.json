@@ -1,0 +1,18 @@
+{
+  "name": "cjs-to-esm-converter",
+  "version": "1.0.0",
+  "description": "Very simple tool to convert Commonjs files into ESM",
+  "main": "tools/converter.cjs",
+  "bin": {
+    "toesm": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Patrice Thimothee",
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^7.2.0",
+    "minimist": "^1.2.5"
+  }
+}
