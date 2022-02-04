@@ -55,7 +55,7 @@ const convertNonTrivial = (converted) =>
 
 const parseImport = (text, list, fileProp, workingDir) =>
 {
-    const parsedFilePath = path.join(workingDir, currentFile);
+    const parsedFilePath = path.join(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
 
     // All your regexps combined into one:
