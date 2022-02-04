@@ -14,7 +14,12 @@
     "demo": "npm run demo1 && npm run demo2"
   },
   "author": "Patrice Thimothee",
+  "homepage": "https://github.com/thimpat/to-esm",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thimpat/to-esm.git"
+  },
   "dependencies": {
     "commondir": "^1.0.1",
     "glob": "^7.2.0",
