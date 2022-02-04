@@ -8,11 +8,13 @@
     "to-esm": "./index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "demo": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/"
   },
   "author": "Patrice Thimothee",
   "license": "MIT",
   "dependencies": {
+    "commondir": "^1.0.1",
     "glob": "^7.2.0",
     "minimist": "^1.2.5"
   }

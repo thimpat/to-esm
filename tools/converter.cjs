@@ -3,9 +3,12 @@
  * by just replacing module.exports to export default.
  * It's for very simple library, but will allow me to avoid using a bundler.
  */
+const packageJson = require("../package.json");
 const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
+const commondir = require("commondir");
+
 
 const buildTargetDir = (targetDir) =>
 {
@@ -113,7 +116,7 @@ const convert = (cliOptions) =>
     }
     catch (e)
     {
-        console.error("CJS-TO-ESM-CONVERTER:", e.message)
+        console.error(`${packageJson.name}:`, e.message)
     }
 
 };
