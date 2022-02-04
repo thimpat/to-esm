@@ -41,7 +41,7 @@ const convertNonTrivial = (converted) =>
     let converted0;
     do
     {
-        const regex = /((?<!export\s+)(?:const|let)\s+)(\w+)(\s+=.*\bmodule\.exports\s*=\s*{[^}]*\2\b)/sgm;
+        const regex = /((?<!export\s+)(?:const|let)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
         const subst = "export $1$2$3";
         converted0 = converted;
         converted = converted0.replace(regex, subst);
@@ -149,10 +149,10 @@ const convertListFiles = (list, {noHeader = false} = {}) =>
         converted = convertNonTrivial(converted);
 
         // Convert module.exports to export default
-        converted = converted.replace(/module\.exports\s*=/gm, "export default");
+        converted = converted.replace(/(?:module\.)?exports\s*=/gm, "export default");
 
         // Convert module.exports.something to export something
-        converted = converted.replace(/module\.exports\./gm, "export const ");
+        converted = converted.replace(/(?:module\.)?exports\./gm, "export const ");
 
         // convert require with .json file to import
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
