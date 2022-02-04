@@ -37,6 +37,11 @@ toesm.cmd  --input=example/cjs/*.js --output=example/esm/
 ```shell
 toesm.cmd  --input="example/cjs/*.?(c)js" --output=example/esm/
 ```
+
+### Convert files into subdirectories (keep folder structure)
+```shell
+toesm.cmd  --input="example/cjs/**/*.?(c)js" --output=example/esm/
+```
 ---
 ## Options
 
