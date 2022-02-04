@@ -45,6 +45,9 @@ const convertNonTrivial = (converted) =>
 
 const convertListFiles = (list, outputDir, noHeader = false) =>
 {
+    const workingDir = process.cwd()
+    const rootDir = commondir(workingDir, list)
+
     list.forEach((filepath) =>
     {
         let converted = fs.readFileSync(filepath, "utf-8");
@@ -60,11 +63,13 @@ const convertListFiles = (list, outputDir, noHeader = false) =>
         // convert require with .json file to import
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
 
-        // convert require with .js file to import
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
+        // convert require with .[c]js file to import
+        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.[c]?js[^)])\)/gm, "import $1 from $2");
 
         // convert require with no file extension to import .mjs
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2.mjs\"");
+
+        console.log(list, filepath)
 
         if (!noHeader)
         {
@@ -80,12 +85,23 @@ const convertListFiles = (list, outputDir, noHeader = false) =>
 
         const targetFile = path.basename(filepath, path.extname(filepath));
 
-        if (!outputDir)
+        let destinationDir
+        if (outputDir)
         {
-            outputDir = path.join(path.dirname(filepath));
+            const fileDir = path.join(path.dirname(filepath));
+            const relativeDir = path.relative( rootDir, fileDir );
+            destinationDir = path.join(outputDir, relativeDir)
+
+            buildTargetDir(destinationDir)
+            console.log(outputDir)
+            console.log(relativeDir)
+        }
+        else
+        {
+            destinationDir = path.join(path.dirname(filepath));
         }
 
-        const targetFilepath = path.join(outputDir, targetFile + ".mjs");
+        const targetFilepath = path.join(destinationDir, targetFile + ".mjs");
 
         fs.writeFileSync(targetFilepath, converted, "utf-8");
 
