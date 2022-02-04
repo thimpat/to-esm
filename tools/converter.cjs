@@ -9,7 +9,11 @@ const fs = require("fs");
 const glob = require("glob");
 const commondir = require("commondir");
 
-
+/**
+ * Build target directory.
+ * Ignore, if the directory already exist
+ * @param {string} targetDir Directory to build
+ */
 const buildTargetDir = (targetDir) =>
 {
     try
@@ -24,9 +28,13 @@ const buildTargetDir = (targetDir) =>
     {
         console.error("E3166156464654:", e);
     }
-    ;
 };
 
+/**
+ * Execute some non-trivial transformations that require multiple passes
+ * @param {string} converted String to perform transformations onto
+ * @returns {*}
+ */
 const convertNonTrivial = (converted) =>
 {
     let converted0;
@@ -43,7 +51,13 @@ const convertNonTrivial = (converted) =>
 
 };
 
-const convertListFiles = (list, outputDir, noHeader = false) =>
+/**
+ * Convert cjs file into esm
+ * @param {string[]} list File list to convert
+ * @param {string} outputDir Target directory to put converted file
+ * @param {boolean} noHeader Whether to add extra info on top of converted file
+ */
+const convertListFiles = (list, outputDir, {noHeader = false} = {}) =>
 {
     const workingDir = process.cwd()
     const rootDir = commondir(workingDir, list)
@@ -69,8 +83,6 @@ const convertListFiles = (list, outputDir, noHeader = false) =>
         // convert require with no file extension to import .mjs
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2.mjs\"");
 
-        console.log(list, filepath)
-
         if (!noHeader)
         {
             converted = `/**
@@ -93,8 +105,6 @@ const convertListFiles = (list, outputDir, noHeader = false) =>
             destinationDir = path.join(outputDir, relativeDir)
 
             buildTargetDir(destinationDir)
-            console.log(outputDir)
-            console.log(relativeDir)
         }
         else
         {
@@ -110,6 +120,10 @@ const convertListFiles = (list, outputDir, noHeader = false) =>
     });
 };
 
+/**
+ * Use command line arguments to apply conversion
+ * @param {*} cliOptions Options to pass to converter
+ */
 const convert = (cliOptions) =>
 {
     try
@@ -127,8 +141,8 @@ const convert = (cliOptions) =>
         }
 
         // No header
-        const noheader = cliOptions.noheader;
-        convertListFiles(list, outputDir, noheader);
+        const noheader = !!cliOptions.noheader;
+        convertListFiles(list, outputDir, {noheader});
     }
     catch (e)
     {
