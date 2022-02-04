@@ -77,10 +77,14 @@ const convertListFiles = (list, outputDir, {noHeader = false} = {}) =>
         // convert require with .json file to import
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
 
-        // convert require with .[c]js file to import
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.[c]?js[^)])\)/gm, "import $1 from $2");
+        // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
+        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
+            " $2.mjs$3");
 
-        // convert require with no file extension to import .mjs
+        // convert require with .js extension to import
+        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
+
+        // convert require without extension to import .mjs extension
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2.mjs\"");
 
         if (!noHeader)
