@@ -12,6 +12,12 @@ npm install to-esm
 ---
 ## Usage
 
+```shell
+toesm --input=<inputFilesPattern> --output=<outputDirectory> [--noheader]
+```
+
+### Examples
+
 The following examples will work on a folder structure that looks like this:
 >
 > example/cjs/input.js
@@ -38,9 +44,14 @@ toesm.cmd  --input=example/cjs/*.js --output=example/esm/
 toesm.cmd  --input="example/cjs/*.?(c)js" --output=example/esm/
 ```
 
-### Convert files into subdirectories (keep folder structure)
+### In this example, we also, convert files in subdirectories (keeping folder structure)
 ```shell
 toesm.cmd  --input="example/cjs/**/*.?(c)js" --output=example/esm/
+```
+
+### When dealing with multiple folders, it's best to use this format (For better path resolution)
+```shell
+toesm.cmd  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=outdir1/esm/ --output=outdir2/esm/
 ```
 ---
 ## Options
