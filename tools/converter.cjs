@@ -7,7 +7,8 @@ const packageJson = require("../package.json");
 const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
-const commondir = require("commondir");
+const commonDir = require("commondir");
+const ESM_EXTENSION = ".mjs";
 
 /**
  * Build target directory.
@@ -26,7 +27,7 @@ const buildTargetDir = (targetDir) =>
     }
     catch (e)
     {
-        console.error("E3166156464654:", e);
+        console.error(`${packageJson.name}:`, e.message)
     }
 };
 
@@ -51,6 +52,68 @@ const convertNonTrivial = (converted) =>
 
 };
 
+
+const parseImport = (text, list, currentFile, workingDir) =>
+{
+    const parsedFilePath = path.join(workingDir, currentFile);
+    const parsedFileDir = path.dirname(parsedFilePath);
+
+    // All your regexps combined into one:
+    const re = /require\(["'`]([./][^)]+)["'`]\)/gmu;
+
+    return text.replace(re, function (match, group, char)
+    {
+        if (group === undefined)
+        {
+            return match;
+        }
+
+        if (/require\s*\(/.test(group))
+        {
+            return match
+        }
+
+        const target = path.join(parsedFileDir, group)
+        const extension = path.extname(target)
+
+        const targets = []
+        if (!extension)
+        {
+            targets.push(target + ".cjs")
+            targets.push(target + ".js")
+        }
+        else if (![".js", ".cjs"].includes(extension))
+        {
+            return match
+        }
+        else
+        {
+            targets.push(target)
+        }
+
+        const found = list.some(function (filepath)
+        {
+            const possibleFilePath = path.join(workingDir, filepath)
+            return (targets.includes(possibleFilePath))
+        })
+
+        if (!found)
+        {
+            return match
+        }
+
+        if (!extension)
+        {
+            const result = match.replace(group, group + ESM_EXTENSION)
+            return result
+        }
+
+        const filename = group.split(".").slice(0, -1).join("") + ESM_EXTENSION
+        return match.replace(group, filename)
+
+    });
+}
+
 /**
  * Convert cjs file into esm
  * @param {string[]} list File list to convert
@@ -60,11 +123,13 @@ const convertNonTrivial = (converted) =>
 const convertListFiles = (list, outputDir, {noHeader = false} = {}) =>
 {
     const workingDir = process.cwd()
-    const rootDir = commondir(workingDir, list)
+    const rootDir = commonDir(workingDir, list)
 
     list.forEach((filepath) =>
     {
         let converted = fs.readFileSync(filepath, "utf-8");
+
+        converted = parseImport(converted, list, filepath, workingDir)
 
         converted = convertNonTrivial(converted);
 
@@ -79,13 +144,16 @@ const convertListFiles = (list, outputDir, {noHeader = false} = {}) =>
 
         // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
-            " $2.mjs$3");
+            ` $2${ESM_EXTENSION}$3`);
 
         // convert require with .js extension to import
         converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
 
         // convert require without extension to import .mjs extension
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2.mjs\"");
+        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
+
+        // convert require without extension to import
+        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, `import $1 from "$2"`);
 
         if (!noHeader)
         {
@@ -115,11 +183,11 @@ const convertListFiles = (list, outputDir, {noHeader = false} = {}) =>
             destinationDir = path.join(path.dirname(filepath));
         }
 
-        const targetFilepath = path.join(destinationDir, targetFile + ".mjs");
+        const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
 
         fs.writeFileSync(targetFilepath, converted, "utf-8");
 
-        console.log(`${filepath} => ${targetFilepath}`);
+        console.log(`Converted [${filepath}] => [${targetFilepath}]`);
 
     });
 };
