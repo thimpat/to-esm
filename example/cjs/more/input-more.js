@@ -1,5 +1,5 @@
 const INFO1 = require("./dep-1.cjs");
-const INFO2 = require("./dep-2.cjs");
+const INFO2 = require("./dep-5.js");
 const INFO3 = require("./dep-6.js");
 const INFO4 = require("./somehing.js");
 const INFO5 = require("./somehing.cjs");
