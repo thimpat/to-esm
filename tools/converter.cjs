@@ -104,8 +104,7 @@ const parseImport = (text, list, currentFile, workingDir) =>
 
         if (!extension)
         {
-            const result = match.replace(group, group + ESM_EXTENSION)
-            return result
+            return match.replace(group, group + ESM_EXTENSION)
         }
 
         const filename = group.split(".").slice(0, -1).join(".") + ESM_EXTENSION
@@ -122,8 +121,14 @@ const parseImport = (text, list, currentFile, workingDir) =>
  */
 const convertListFiles = (list, outputDir, {noHeader = false} = {}) =>
 {
+    if (!list || !list.length)
+    {
+        console.info(`${packageJson.name}: No file to convert.`);
+        return
+    }
+
     const workingDir = process.cwd()
-    const rootDir = commonDir(workingDir, list)
+    const rootDir = list && list.length > 1 ? commonDir(workingDir, list) : path.join(workingDir, path.dirname(list[0]))
 
     list.forEach((filepath) =>
     {
