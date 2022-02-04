@@ -9,7 +9,9 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "demo": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/"
+    "demo1": "toesm.cmd  --input=\"example/cjs/*.cjs\" --output=example/esm/",
+    "demo2": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
+    "demo": "npm run demo1 && npm run demo2"
   },
   "author": "Patrice Thimothee",
   "license": "MIT",
