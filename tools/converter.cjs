@@ -108,7 +108,7 @@ const parseImport = (text, list, currentFile, workingDir) =>
             return result
         }
 
-        const filename = group.split(".").slice(0, -1).join("") + ESM_EXTENSION
+        const filename = group.split(".").slice(0, -1).join(".") + ESM_EXTENSION
         return match.replace(group, filename)
 
     });
