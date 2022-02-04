@@ -2,6 +2,8 @@
 
 Straightforward tool to convert Commonjs files into ESM
 
+
+
 ---
 ## Installation
 
@@ -9,12 +11,16 @@ Straightforward tool to convert Commonjs files into ESM
 npm install to-esm
 ```
 
+
+
 ---
 ## Usage
 
 ```shell
 toesm --input=<inputFilesPattern> [--output=<outputDirectory>] [--noheader]
 ```
+
+
 
 ### Examples
 
@@ -27,11 +33,13 @@ The following examples will work on a folder structure that looks like this:
 > example/cjs/dep-2.cjs
 
 
+
 ### Create a copy of input.js and convert it to ESM (input.mjs)
 ```shell
 # Generates => ./example/cjs/input.mjs
 toesm.cmd  --input=example/cjs/*.js
 ```
+
 
 ### Convert input.js copy (all .js in this directory) to a different location
 ```shell
@@ -39,10 +47,12 @@ toesm.cmd  --input=example/cjs/*.js
 toesm.cmd  --input=example/cjs/*.js --output=example/esm/
 ```
 
+
 ### Convert all .cjs and .js files
 ```shell
 toesm.cmd  --input="example/cjs/*.?(c)js" --output=example/esm/
 ```
+
 
 ### In this example, we also, convert files in subdirectories (keeping folder structure)
 ```shell
@@ -120,7 +130,10 @@ export default {
 import {COLOR_TABLE} from "./my-js.mjs"
 ```
 
-```const {something} = ...``` is different from ```import {something}```
+In this example, the only thing exported is "default". Hence, the system cannot find COLOR_TABLE.
+
+
+```const {something} = ...``` is different from ≠ ```import {something}```
 
 ##### Destructuring assignment
 
@@ -140,7 +153,7 @@ Const myObject = {something: "Great"};
 import {something} from myObject;       // 👀 <= myObject is not a file path
 ```
 There is no destructuring here. ESM is expecting a file path.
-If myObject were correctly a path, ESM would look into the table of exported named values against
+If myObject were correctly a path, ESM would look into the **table of exported named values** against
 the given file to do the assignment.
 
 ###### Named Exports (ESM)
