@@ -41,7 +41,7 @@ const convertNonTrivial = (converted) =>
     let converted0;
     do
     {
-        const regex = /((?<!export\s+)(?:const|let)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
+        const regex = /((?<!export\s+)(?:const|let|var)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
         const subst = "export $1$2$3";
         converted0 = converted;
         converted = converted0.replace(regex, subst);
@@ -173,20 +173,20 @@ const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = 
         converted = converted.replace(/(?:module\.)?exports\./gm, "export const ");
 
         // convert require with .json file to import
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
 
         // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
             ` $2${ESM_EXTENSION}$3`);
 
         // convert require with .js extension to import
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
 
         // convert require without extension to import .mjs extension
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
 
-        // convert require without extension to import
-        converted = converted.replace(/const\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, `import $1 from "$2"`);
+        // convert require without extension to import (Third Party libraries)
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, `import $1 from "$2"`);
 
         if (!noHeader)
         {
@@ -295,12 +295,15 @@ const installPackage =
 
 /**
  * Install two modules versions for each specified package
- * @param modules
+ * @param config
  * @param packageJsonPath
  * @returns {Promise<void>}
  */
-const parseReplaceModules = async (modules = [], packageJsonPath = "./package.json") =>
+const parseReplaceModules = async (config = [], packageJsonPath = "./package.json") =>
 {
+    const replaceModules = config.replaceModules
+    const replaceStart = config.replaceStart
+
     packageJsonPath = path.resolve(packageJsonPath)
     if (!fs.existsSync(packageJsonPath))
     {
@@ -309,13 +312,13 @@ const parseReplaceModules = async (modules = [], packageJsonPath = "./package.js
     }
 
     const packageJson = require(packageJsonPath)
-    const moduleList = Object.keys(modules)
+    const moduleList = Object.keys(replaceModules)
 
     for (const moduleName of moduleList)
     {
         try
         {
-            const moduleItem = modules[moduleName]
+            const moduleItem = replaceModules[moduleName]
 
             moduleItem.cjs = moduleItem.cjs || {}
             moduleItem.esm = moduleItem.esm || {}
@@ -326,12 +329,20 @@ const parseReplaceModules = async (modules = [], packageJsonPath = "./package.js
 
             installPackage({version, name, isDevDependencies, moduleName, isCjs: true, packageJson})
 
+            const addReplaceStart = {
+                search: new RegExp(`(?:const|let|var)\\s+([^=]+)\\s*=\\s*require\\(["'\`]([^"'\`]+)["'\`]\\)`),
+            }
+
             version = moduleItem.esm.version || "@latest"
             name = moduleItem.esm.name || moduleName
             isDevDependencies = !!moduleItem.esm.devDependencies
 
             installPackage({version, name, isDevDependencies, moduleName, isCjs: false, packageJson})
-            debugger
+
+            addReplaceStart.replace = `import $1 from "${name}"`
+            addReplaceStart.regex = true
+
+            replaceStart.push(addReplaceStart)
         }
         catch (e)
         {
@@ -365,7 +376,9 @@ const convert = async (cliOptions) =>
             // Replacement
             confFileOptions.replaceStart = parseReplace(confFileOptions.replaceStart)
             confFileOptions.replaceEnd = parseReplace(confFileOptions.replaceEnd)
-            confFileOptions.replaceModules = await parseReplaceModules(confFileOptions.replaceModules)
+
+            // Module Install
+            await parseReplaceModules(confFileOptions)
         }
 
         // Input Files
