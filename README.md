@@ -141,7 +141,7 @@ or
 const val = {
     COLOR_TABLE: ["#FFA07A", "#FF7F50", "#FF6347"]
 };
-module.exports = val.COLOR_TABLE;
+module.exports.COLOR_TABLE = val.COLOR_TABLE;
 ```
 
 <br><br>
