@@ -1,3 +1,4 @@
+const chalk = require("chalk");
 const INFO1 = require("./dep-1.cjs");
 const INFO2 = require("./dep-2.cjs");
 const INFO3 = require('./dep-3.js');

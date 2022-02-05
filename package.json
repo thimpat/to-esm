@@ -11,7 +11,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "demo1": "toesm.cmd  --input=\"example/cjs/*.cjs\" --output=example/esm/",
     "demo2": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo": "npm run demo1 && npm run demo2"
+    "demo3": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.js\"",
+    "demo": "npm run demo3"
   },
   "author": "Patrice Thimothee",
   "homepage": "https://github.com/thimpat/to-esm",
