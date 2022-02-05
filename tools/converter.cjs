@@ -124,13 +124,29 @@ const parseImport = (text, list, fileProp, workingDir) =>
     });
 }
 
+const applyReplace = (replace, converted) =>
+{
+    replace.forEach((item)=>
+    {
+        if (item.regex)
+        {
+            converted = converted.replace(item.search, item.replace)
+        }
+        else
+        {
+            converted = converted.split(item.search).join(item.replace)
+        }
+    })
+    return converted
+}
+
 /**
  * Convert cjs file into esm
  * @param {string[]} list File list to convert
  * @param {string} outputDir Target directory to put converted file
  * @param {boolean} noHeader Whether to add extra info on top of converted file
  */
-const convertListFiles = (list, {noHeader = false} = {}) =>
+const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = false} = {}) =>
 {
     if (!list || !list.length)
     {
@@ -143,6 +159,8 @@ const convertListFiles = (list, {noHeader = false} = {}) =>
     list.forEach(({source, outputDir, rootDir}) =>
     {
         let converted = fs.readFileSync(source, "utf-8");
+
+        converted = applyReplace(replaceStart, converted)
 
         converted = parseImport(converted, list, {source, outputDir, rootDir}, workingDir)
 
@@ -181,6 +199,7 @@ const convertListFiles = (list, {noHeader = false} = {}) =>
 ` + converted;
         }
 
+        converted = applyReplace(replaceEnd, converted)
 
         const targetFile = path.basename(source, path.extname(source));
 
@@ -207,14 +226,80 @@ const convertListFiles = (list, {noHeader = false} = {}) =>
     });
 };
 
+const getOptionsConfigFile = async (configPath) =>
+{
+    let confFileOptions = {}
+
+    configPath = path.resolve(configPath)
+    if (fs.existsSync(configPath))
+    {
+        const extension = path.parse(configPath).ext
+
+        if ([".js", ".cjs"].includes(extension))
+        {
+            confFileOptions = require(configPath)
+        }
+        else if ([".mjs"].includes(extension))
+        {
+            const {default: options} = await import(configPath)
+            confFileOptions = options
+        }
+        else
+        {
+            const contents = fs.readFileSync(configPath, {encoding: "utf8"})
+            try
+            {
+                confFileOptions = JSON.parse(contents.toString())
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}:`, e.message);
+                console.info(`Skipping config file options`)
+            }
+        }
+    }
+
+    return confFileOptions
+}
+
+const parseReplace = (replace = []) =>
+{
+    replace.forEach((item)=>
+    {
+        if (item.search instanceof RegExp)
+        {
+            item.regex = true
+        }
+        else if (item.regex)
+        {
+            item.replace = new RegExp(item.replace)
+        }
+    })
+
+    return replace || []
+}
+
 /**
  * Use command line arguments to apply conversion
  * @param {*} cliOptions Options to pass to converter
  */
-const convert = (cliOptions) =>
+const convert = async (cliOptions) =>
 {
     try
     {
+        let confFileOptions = {replace: []}
+
+        // Config Files
+        let configPath = cliOptions.config
+        if (configPath)
+        {
+            confFileOptions = await getOptionsConfigFile(configPath)
+
+            // Replacement
+            confFileOptions.replaceStart = parseReplace(confFileOptions.replaceStart)
+            confFileOptions.replaceEnd = parseReplace(confFileOptions.replaceEnd)
+        }
+
         // Input Files
         const inputFileMaskArr = Array.isArray(cliOptions.input) ? cliOptions.input : [cliOptions.input];
 
@@ -250,7 +335,7 @@ const convert = (cliOptions) =>
 
         // No header
         const noheader = !!cliOptions.noheader;
-        convertListFiles(newList, {noheader});
+        convertListFiles(newList, {replaceStart: confFileOptions.replaceStart,replaceEnd: confFileOptions.replaceEnd, noheader});
 
     }
     catch (e)
