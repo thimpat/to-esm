@@ -73,6 +73,8 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 ---
 ## Options
 
+<br><br>
+
 ### Options to not generate automatic header
 >
 > --noheader
@@ -97,7 +99,7 @@ module.exports = {
             replace: "// ***"
         },
         {
-            search : /const\s+chalk\s*=\s*require\(.colors.\);/g,
+            search : /const\s+colors\s*=\s*require\(.colors.\);/g,
             replace: "// ***"
         }
     ],
@@ -119,32 +121,36 @@ module.exports = {
 
 ### Options to use two different modules of the same library.
 
-Some libraries
+Sometimes, you may find libraries where only ESM is available when CJS was available on older versions.
+This option allows setting a different version depending on the environment used.
+For instance, the module "chalk" uses ESM for its export on its latest version (5.0.0) and CJS for the older version (4.
+1.2).
+You can setup toesm to use the appropriate version depending on your config file:
 
 📝 .toesm.js ↴
 ```javascript
 module.exports = {
     replaceModules:
-    {
-        chalk: {
-            cjs: {
-                name: "chalk-cjs",
-                version: "@^4.1.2"
+        {
+            chalk: {
+                cjs: {
+                    name: "chalk-cjs",
+                    version: "@^4.1.2"
+                },
+                esm: {
+                    version: "latest"
+                }
             },
-            esm: {
-                version: "latest"
-            }
-        },
-        "color-convert": {
-            cjs: {
-                name: "color-convert-cjs",
-                version: "@^2.0.1"
-            },
-            esm: {
-                version: "latest"
+            "color-convert": {
+                cjs: {
+                    name: "color-convert-cjs",
+                    version: "@^2.0.1"
+                },
+                esm: {
+                    version: "latest"
+                }
             }
         }
-    }
 }        
 ```
 
