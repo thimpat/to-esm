@@ -279,6 +279,73 @@ const parseReplace = (replace = []) =>
     return replace || []
 }
 
+const installPackage =
+    ({name, version, isDevDependencies, moduleName, isCjs, packageJson} = {}) =>
+    {
+        const devOption = isDevDependencies ? " -D" : ""
+
+        const child_process = require('child_process');
+
+        const environment = isCjs ? "CommonJs modules" : "ES Modules"
+
+        console.info(`${packageJson.name}: Installing (${environment}) package [${moduleName}${version}] as [${name}]`)
+        child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
+        console.info(`${packageJson.name}: ✔ Success`)
+    }
+
+/**
+ * Install two modules versions for each specified package
+ * @param modules
+ * @param packageJsonPath
+ * @returns {Promise<void>}
+ */
+const parseReplaceModules = async (modules = [], packageJsonPath = "./package.json") =>
+{
+    packageJsonPath = path.resolve(packageJsonPath)
+    if (!fs.existsSync(packageJsonPath))
+    {
+        console.error(`${packageJson.name}: Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`)
+        return
+    }
+
+    const packageJson = require(packageJsonPath)
+    const moduleList = Object.keys(modules)
+
+    for (const moduleName of moduleList)
+    {
+        try
+        {
+            const moduleItem = modules[moduleName]
+
+            moduleItem.cjs = moduleItem.cjs || {}
+            moduleItem.esm = moduleItem.esm || {}
+
+            let version = moduleItem.cjs.version || "@latest"
+            let name = moduleItem.cjs.name || moduleName
+            let isDevDependencies = !!moduleItem.cjs.devDependencies
+
+            installPackage({version, name, isDevDependencies, moduleName, isCjs: true, packageJson})
+
+            version = moduleItem.esm.version || "@latest"
+            name = moduleItem.esm.name || moduleName
+            isDevDependencies = !!moduleItem.esm.devDependencies
+
+            installPackage({version, name, isDevDependencies, moduleName, isCjs: false, packageJson})
+            debugger
+        }
+        catch (e)
+        {
+            console.error(`${packageJson.name}:`, e.message)
+        }
+
+
+    }
+
+    // moduleList.forEach( (moduleName)=>
+    // {
+    // })
+}
+
 /**
  * Use command line arguments to apply conversion
  * @param {*} cliOptions Options to pass to converter
@@ -298,6 +365,7 @@ const convert = async (cliOptions) =>
             // Replacement
             confFileOptions.replaceStart = parseReplace(confFileOptions.replaceStart)
             confFileOptions.replaceEnd = parseReplace(confFileOptions.replaceEnd)
+            confFileOptions.replaceModules = await parseReplaceModules(confFileOptions.replaceModules)
         }
 
         // Input Files
