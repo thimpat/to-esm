@@ -117,7 +117,7 @@ module.exports = {
 **_search_** can be a plain string or a regex
 <br><br>
 
-### Options to use a module version for .cjs different from the .esm one.
+### Options to use two different modules of the same library.
 
 Some libraries
 
@@ -131,7 +131,7 @@ module.exports = {
                 name: "chalk-cjs",
                 version: "@^4.1.2"
             },
-            mjs: {
+            esm: {
                 version: "latest"
             }
         },
@@ -140,7 +140,7 @@ module.exports = {
                 name: "color-convert-cjs",
                 version: "@^2.0.1"
             },
-            mjs: {
+            esm: {
                 version: "latest"
             }
         }
