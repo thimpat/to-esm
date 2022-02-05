@@ -279,9 +279,54 @@ const parseReplace = (replace = []) =>
     return replace || []
 }
 
+const getLibraryInfo = (modulePackname) =>
+{
+    const info = {
+        installed: false
+    }
+    try
+    {
+        const installed = require.resolve(modulePackname)
+        if (installed)
+        {
+            info.installed = true
+
+            const dir = path.parse(installed).dir
+            const packageJsonPath = path.join(dir, "package.json")
+            const packageJson = require(packageJsonPath)
+            info.version = packageJson.version
+        }
+
+    }
+    catch (e)
+    {
+
+    }
+    return info
+}
+
 const installPackage =
     ({name, version, isDevDependencies, moduleName, isCjs, packageJson} = {}) =>
     {
+        try
+        {
+            const info = getLibraryInfo(name)
+            if (info.installed && (version.split(info.version).length === 1 || version.split(info.version).length === 2))
+            {
+                console.info(`${packageJson.name}: The module [${moduleName}${version}] / [${name}] is already installed.`)
+                return
+            }
+
+            if (info.installed && info.version.indexOf("latest") > -1)
+            {
+                return
+            }
+        }
+        catch (e)
+        {
+
+        }
+
         const devOption = isDevDependencies ? " -D" : ""
 
         const child_process = require('child_process');
