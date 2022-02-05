@@ -1,7 +1,7 @@
 module.exports = {
     replaceStart: [
         {
-            search : /const\s+chalk\s*=\s*require\(.mama-magnimus.\);/g,
+            search : /const\s+ttt\s*=\s*require\(.mama-magnimus.\);/g,
             replace: "// ***"
         }
     ],
@@ -18,8 +18,8 @@ module.exports = {
                     name: "chalk-cjs",
                     version: "@^4.1.2",
                 },
-                mjs: {
-                    version: "latest"
+                esm: {
+                    version: "@latest"
                 }
             },
             "color-convert": {
@@ -27,8 +27,8 @@ module.exports = {
                     name: "color-convert-cjs",
                     version: "@^2.0.1"
                 },
-                mjs: {
-                    version: "latest"
+                esm: {
+                    version: "@latest"
                 }
             }
         }

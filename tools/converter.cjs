@@ -301,7 +301,7 @@ const installPackage =
  */
 const parseReplaceModules = async (config = [], packageJsonPath = "./package.json") =>
 {
-    const replaceModules = config.replaceModules
+    const replaceModules = config.replaceModules || []
     const replaceStart = config.replaceStart
 
     packageJsonPath = path.resolve(packageJsonPath)
@@ -330,7 +330,7 @@ const parseReplaceModules = async (config = [], packageJsonPath = "./package.jso
             installPackage({version, name, isDevDependencies, moduleName, isCjs: true, packageJson})
 
             const addReplaceStart = {
-                search: new RegExp(`(?:const|let|var)\\s+([^=]+)\\s*=\\s*require\\(["'\`]([^"'\`]+)["'\`]\\)`),
+                search: new RegExp(`(?:const|let|var)\\s+([^=]+)\\s*=\\s*require\\(["'\`](${name})["'\`]\\)`),
             }
 
             version = moduleItem.esm.version || "@latest"
