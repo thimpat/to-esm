@@ -37,7 +37,7 @@ The following examples will work on a folder structure that looks like this:
 ### Create a copy of input.js and convert it to ESM (input.mjs)
 ```shell
 # Generates => 📝 ./example/cjs/input.mjs
-toesm.cmd  --input=example/cjs/*.js
+toesm  --input=example/cjs/*.js
 ```
 
 <br>
@@ -45,27 +45,27 @@ toesm.cmd  --input=example/cjs/*.js
 ### Convert input.js copy (all .js in this directory) to a different location
 ```shell
 # Generates => 📝 ./example/esm/input.mjs
-toesm.cmd  --input=example/cjs/*.js --output=example/esm/
+toesm  --input=example/cjs/*.js --output=example/esm/
 ```
 <br>
 
 ### Convert all .cjs and .js files
 ```shell
-toesm.cmd  --input="example/cjs/*.?(c)js" --output=example/esm/
+toesm  --input="example/cjs/*.?(c)js" --output=example/esm/
 ```
 
 <br>
 
 ### In this example, we also, convert files in subdirectories (keeping folder structure)
 ```shell
-toesm.cmd  --input="example/cjs/**/*.?(c)js" --output=example/esm/
+toesm  --input="example/cjs/**/*.?(c)js" --output=example/esm/
 ```
 
 <br>
 
 ### When dealing with multiple folders, it's best to use this format (For better path resolution)
 ```shell
-toesm.cmd  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=outdir1/esm/ --output=outdir2/esm/
+toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=outdir1/esm/ --output=outdir2/esm/
 ```
 
 <br><br>
@@ -79,12 +79,14 @@ toesm.cmd  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output
 
 <br>
 
-### Options to pass a config file to replace strings before and/or after every conversion
+## Advanced Options (via config file)
 
-
+To apply advanced options, create a config file and make the CLI point to it.
 >
-> --config=.toesm.js
+> toesm --input=... --output=... --config=.toesm.js
 
+
+### Options to replace strings before and after every conversion
 
 📝 .toesm.js ↴
 ```javascript
@@ -113,6 +115,51 @@ module.exports = {
 **_replaceEnd_** will perform a replacement **_after_** doing the conversion to ESM
 
 **_search_** can be a plain string or a regex
+<br><br>
+
+### Options to use a module version for .cjs different from the .esm one.
+
+Some libraries
+
+📝 .toesm.js ↴
+```javascript
+module.exports = {
+    replaceModules:
+    {
+        chalk: {
+            cjs: {
+                name: "chalk-cjs",
+                version: "@^4.1.2"
+            },
+            mjs: {
+                version: "latest"
+            }
+        },
+        "color-convert": {
+            cjs: {
+                name: "color-convert-cjs",
+                version: "@^2.0.1"
+            },
+            mjs: {
+                version: "latest"
+            }
+        }
+    }
+}        
+```
+
+In the .cjs file to convert, you would do:
+
+```javascript
+import chalk  from "chalk-cjs";
+import colorConvert  from "color-convert-cjs";
+```
+Which is going to be transformed to:
+
+```javascript
+import chalk  from "chalk";
+import colorConvert  from "color-convert";
+```
 <br><br>
 
 ---
@@ -188,7 +235,7 @@ In this example, the only thing exported is "default". Hence, the system cannot 
 ⇨ ```const {something} = ...``` uses the Destructuring assignment feature of JavaScript (ES6 / ES2015), which is the
 reason things like below is possible:
 ```javascript
-Const myObject = {something: "Great"}
+const myObject = {something: "Great"}
 const {something} = myObject;          
 ```
 
@@ -199,11 +246,11 @@ const {something} = myObject;
 
 You can't do things like:
 ```javascript
-Const myObject = {something: "Great"};
+const myObject = {something: "Great"};
 import {something} from myObject;       // 👀 <= myObject is not a file path
 ```
 There is no destructuring here. ESM is expecting a file path.
-If myObject were correctly a path, ESM would look into the **table of exported named values** against
+If myObject were a path, ESM would look into the **table of exported named values** against
 the given file to do the assignment.
 
 <br>
@@ -254,6 +301,6 @@ module.exports = {
 }
 ```
 
-[MY_VAR] uses the Computed property names feature of ES2015, specifically known at runtime.
+[MY_VAR] uses the Computed property names feature of ES2015, known explicitly at runtime.
 Therefore, we let the user do the Name Export instead of assuming.
 
