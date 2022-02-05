@@ -310,3 +310,129 @@ module.exports = {
 [MY_VAR] uses the Computed property names feature of ES2015, known explicitly at runtime.
 Therefore, we let the user do the Name Export instead of assuming.
 
+
+---
+
+## Create a Hybrid Library
+
+<br><br>
+
+### 1- Have all of your CommonJs code in a subdirectories
+
+![img.png](img.png)
+
+Here we put all of our existing code within the cjs directory.
+
+<br/>
+
+### 2- Change CommonJs file extensions to .cjs
+
+Refactor the files that use CommonJs modules to have the new .cjs extensions.
+
+<br/>
+
+### 3- Run the toesm command
+
+Generate the esm code into the targeted directory.
+
+```shell
+toesm.cmd --input="src/cjs/**/*.?(c)js" --output=src/esm/
+```
+
+<br/>
+
+
+###### ⭐ Overview ↴
+
+![](docs/images/convert-to-esm-1.gif)
+
+### 4- Update your package.json to point to the correct target based on the environment
+
+```json
+{
+  "name": "my-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/cjs/add.cjs",             ← 
+  "module": "src/ejs/add.mjs",           ←  
+  "type": "module",                      ←   
+  "scripts": {
+    "gen:esm": "toesm.cmd --input=\"src/cjs/**/*.?(c)js\" --output=src/esm/"
+  },
+  "exports": {
+    ".":{
+      "require": "./src/cjs/add.cjs",    ← 
+      "import": "./src/esm/add.mjs"      ← 
+    }
+  },
+  "author": "",
+  "license": "ISC"
+}
+```
+
+### **Your module is now ready, and your user can do an install with**
+
+```shell
+npm install my-project
+```
+
+#### To use your library in Node:
+
+```javascript
+const {addSomething} = require("my-project");
+```
+
+#### In the Browser:
+
+```javascript
+import {addSomething} from "my-project";
+```
+
+But, this is not enough. Import with ES6 is not as slick as a simple "require()" in NodeJs. It does not have a
+dedicated node_modules/ folder along with a package.json.
+
+It has no idea where to find "my-project". ESM is expecting a relative path.
+
+👉 _Note that this code will work when using a bundler as they know where to find that node_modules/ folder.
+However, you're handling generated new code._
+
+Users must reference the full path to your ESM entry point to use your ESM code.
+
+```javascript
+import addSomething from "../node_modules/my-project/src/esm/add.mjs"
+```
+
+**This is expected.** 👈
+
+
+##### Adding an importmap
+
+To be able to write things like ```import {addSomething} from "my-project";```
+on the browser side, you can define an import map.
+
+In the targeted HTML file, define the path to your entry point:
+
+```html
+    <script type="importmap">
+        {
+          "imports": {
+            "my-project": "../node_modules/my-project/src/esm/add.mjs",
+            "lodash": "https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"  // ← Example 
+          }
+        }
+    </script>
+
+```
+
+Now, imports like
+
+```javascript
+import {addSomething} from "my-project";
+```
+are valid without bundler (or transpiler)
+
+
+
+
+
+
