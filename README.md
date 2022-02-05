@@ -70,10 +70,8 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 
 <br><br>
 
----
-## Options
 
-<br><br>
+## Options
 
 ### Options to not generate automatic header
 >
@@ -106,7 +104,7 @@ module.exports = {
     replaceEnd  : [
         {
             search : `// ***`,
-            replace: "// --------- chalk and colors was replaced ----------------"
+            replace: "// --------- chalk and colors were replaced ----------------"
         }
     ]
 }
@@ -134,37 +132,38 @@ module.exports = {
         {
             chalk: {
                 cjs: {
-                    name: "chalk-cjs",
+                    name   : "chalk-cjs",
                     version: "@^4.1.2"
                 },
                 esm: {
                     version: "latest"
                 }
+            }
+        },
+    "rgb-hex"     :
+        {
+            cjs: {
+                name   : "rgb-hex-cjs",
+                version: "@^3.0.0"
             },
-            "color-convert": {
-                cjs: {
-                    name: "color-convert-cjs",
-                    version: "@^2.0.1"
-                },
-                esm: {
-                    version: "latest"
-                }
+            esm: {
+                version: "@latest"
             }
         }
 }        
 ```
 
-In the .cjs file to convert, you would do:
+In the .cjs file to convert, you would write:
 
 ```javascript
-import chalk  from "chalk-cjs";
-import colorConvert  from "color-convert-cjs";
+const chalk = require("chalk-cjs");
+const rgbhex = require("rgb-hex-cjs");
 ```
 Which is going to be transformed to:
 
 ```javascript
 import chalk  from "chalk";
-import colorConvert  from "color-convert";
+import rgbhex  from "rgb-hex";
 ```
 <br><br>
 
@@ -404,13 +403,14 @@ import addSomething from "../node_modules/my-project/src/esm/add.mjs"
 
 **This is expected.** 👈
 
+<br/><br/>
 
-##### Adding an importmap
+### Adding an importmap
 
 To be able to write things like ```import {addSomething} from "my-project";```
 on the browser side, you can define an import map.
 
-In the targeted HTML file, define the path to your entry point:
+In the targeted HTML file, set the path to your entry point:
 
 ```html
     <script type="importmap">
