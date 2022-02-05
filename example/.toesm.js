@@ -1,14 +1,35 @@
 module.exports = {
     replaceStart: [
         {
-            search : /const\s+chalk\s*=\s*require\(.chalk.\);/g,
+            search : /const\s+chalk\s*=\s*require\(.mama-magnimus.\);/g,
             replace: "// ***"
         }
     ],
     replaceEnd  : [
         {
             search : `// ***`,
-            replace: "// --------- chalk was replaced ----------------"
+            replace: "// --------- mama-magnimus was replaced ----------------"
         }
-    ]
+    ],
+    replaceModules:
+        {
+            chalk: {
+                cjs: {
+                    name: "chalk-cjs",
+                    version: "@^4.1.2",
+                },
+                mjs: {
+                    version: "latest"
+                }
+            },
+            "color-convert": {
+                cjs: {
+                    name: "color-convert-cjs",
+                    version: "@^2.0.1"
+                },
+                mjs: {
+                    version: "latest"
+                }
+            }
+        }
 }

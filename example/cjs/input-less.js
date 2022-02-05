@@ -1,4 +1,6 @@
-const chalk = require("chalk");
+const chalk = require("chalk-cjs");
+const colorConvert = require("color-convert-cjs");
+const magnimus = require("mama-magnimus");
 const INFO1 = require("./dep-1.cjs");
 const INFO2 = require("./dep-2.cjs");
 const INFO3 = require('./dep-3.js');
