@@ -3,6 +3,7 @@
   "version": "1.3.6",
   "description": "Very simple tool to convert Commonjs files into ESM",
   "main": "tools/converter.cjs",
+  "type": "commonjs",
   "bin": {
     "toesm": "./index.js",
     "to-esm": "./index.js"
@@ -11,7 +12,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "demo1": "toesm.cmd  --input=\"example/cjs/*.cjs\" --output=example/esm/",
     "demo2": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.js\"",
+    "demo3": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\"",
     "demo": "npm run demo3"
   },
   "author": "Patrice Thimothee",

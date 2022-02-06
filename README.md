@@ -83,12 +83,12 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 
 To apply advanced options, create a config file and make the CLI point to it.
 >
-> toesm --input=... --output=... --config=.toesm.js
+> toesm --input=... --output=... --config=.toesm.cjs
 
 
 ### Options to replace strings before and after every conversion
 
-📝 .toesm.js ↴
+📝 .toesm.cjs ↴
 ```javascript
 module.exports = {
     replaceStart: [
@@ -125,7 +125,7 @@ For instance, the module "chalk" uses ESM for its export on its latest version (
 1.2).
 You can setup toesm to use the appropriate version depending on your config file:
 
-📝 .toesm.js ↴
+📝 .toesm.cjs ↴
 ```javascript
 module.exports = {
     replaceModules:
