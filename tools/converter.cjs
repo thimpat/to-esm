@@ -10,6 +10,8 @@ const glob = require("glob");
 const commonDir = require("commondir");
 const ESM_EXTENSION = ".mjs";
 
+const nativeModules = Object.keys(process.binding('natives'));
+
 /**
  * Build target directory.
  * Ignore, if the directory already exist
@@ -52,6 +54,69 @@ const convertNonTrivial = (converted) =>
 
 };
 
+
+const getNodeModuleProp = (moduleName) =>
+{
+    let modulePath
+
+    try
+    {
+        modulePath = require.resolve(moduleName);
+    }
+    catch (e)
+    {
+        console.info(`${packageJson.name}: Failed to locate module [${moduleName}]. Skipped.`)
+        return
+    }
+
+    return path.parse(modulePath)
+}
+
+const reviewExternalImport = (text, list, fileProp) =>
+{
+    // Locate third party
+    const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
+
+    return text.replace(re, function (match, moduleName, char)
+    {
+        if (moduleName === undefined)
+        {
+            return match;
+        }
+
+        if (/require\s*\(/.test(moduleName))
+        {
+            return match
+        }
+
+        if (~nativeModules.indexOf(moduleName))
+        {
+            return match
+        }
+
+        const module = getNodeModuleProp(moduleName)
+
+        if (!module)
+        {
+            return match
+        }
+
+        // current file's absolute path
+        const sourcePath = path.resolve(fileProp.outputDir)
+
+        // The node_modules directory package
+        let relativeNodeModulesDir = path.relative(sourcePath, module.dir)
+
+        // We add .. to point to the node_modules parent
+        let relativePath = path.join("../..", relativeNodeModulesDir, module.base)
+
+        relativePath = relativePath.replace(/\\/g, "/")
+
+        return match.replace(moduleName, relativePath)
+
+    });
+
+}
 
 const parseImport = (text, list, fileProp, workingDir) =>
 {
@@ -120,7 +185,6 @@ const parseImport = (text, list, fileProp, workingDir) =>
         }
 
         return match.replace(group, relativePath)
-
     });
 }
 
@@ -146,7 +210,7 @@ const applyReplace = (replace, converted) =>
  * @param {string} outputDir Target directory to put converted file
  * @param {boolean} noHeader Whether to add extra info on top of converted file
  */
-const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = false} = {}) =>
+const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = false, solvedep = false} = {}) =>
 {
     if (!list || !list.length)
     {
@@ -187,6 +251,11 @@ const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = 
 
         // convert require without extension to import (Third Party libraries)
         converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, `import $1 from "$2"`);
+
+        if (solvedep)
+        {
+            converted = reviewExternalImport(converted, list, {source, outputDir, rootDir})
+        }
 
         if (!noHeader)
         {
@@ -461,7 +530,15 @@ const convert = async (cliOptions) =>
 
         // No header
         const noheader = !!cliOptions.noheader;
-        convertListFiles(newList, {replaceStart: confFileOptions.replaceStart,replaceEnd: confFileOptions.replaceEnd, noheader});
+        const solvedep = !!cliOptions.solvedep;
+
+        convertListFiles(newList,
+            {
+                replaceStart: confFileOptions.replaceStart,
+                replaceEnd  : confFileOptions.replaceEnd,
+                noheader,
+                solvedep
+            });
 
     }
     catch (e)

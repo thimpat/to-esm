@@ -9,10 +9,9 @@
     "to-esm": "./index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "demo1": "toesm.cmd  --input=\"example/cjs/*.cjs\" --output=example/esm/",
     "demo2": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\"",
+    "demo3": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --solvedep",
     "demo": "npm run demo3"
   },
   "author": "Patrice Thimothee",
