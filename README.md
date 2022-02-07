@@ -738,11 +738,11 @@ We can raise another issue:
 
 
 
-In the browser environment, if your package uses external libraries, the browser may not be able to find it.
+In the browser environment, if your package uses external libraries, the browser may not be able to find them.
 
 
 
-Let's use an example where you have a call to an external library called **"external-lib"** in your code.
+Let's use an example where you have a call to an external library called **"external-lib"**.
 
 
 ```javascript
