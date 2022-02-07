@@ -8,7 +8,10 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
+const extractComments = require('extract-comments');
+
 const ESM_EXTENSION = ".mjs";
+const COMMENT_MASK = "❖✎🔏❉";
 
 const nativeModules = Object.keys(process.binding('natives'));
 
@@ -188,7 +191,7 @@ const parseImport = (text, list, fileProp, workingDir) =>
     });
 }
 
-const applyReplace = (replace, converted) =>
+const applyReplace = (converted, replace) =>
 {
     replace.forEach((item)=>
     {
@@ -202,6 +205,48 @@ const applyReplace = (replace, converted) =>
         }
     })
     return converted
+}
+
+const stripComments = (str, extracted) =>
+{
+    const commentProps = extractComments(str, {}, null);
+
+    if (!commentProps.length)
+    {
+        return str
+    }
+
+    let commentIndexer = 0
+    for (let i = commentProps.length - 1; i >= 0; --i)
+    {
+        const commentProp = commentProps[i]
+        const indexCommentStart = commentProp.range[0]
+        const indexCommentEnd = commentProp.range[1]
+        extracted[commentIndexer] = str.substring(indexCommentStart, indexCommentEnd)
+        str =
+            str.substring(0, indexCommentStart) +
+            COMMENT_MASK + commentIndexer + COMMENT_MASK +
+            str.substring(indexCommentEnd)
+
+        ++commentIndexer
+    }
+
+    return str
+}
+
+const putBackComments = (str, extracted) =>
+{
+    if (!extracted.length)
+    {
+        return str
+    }
+
+    for (let i = 0; i < extracted.length; ++i)
+    {
+        str = str.replace(COMMENT_MASK + i + COMMENT_MASK, extracted[i])
+    }
+
+    return str;
 }
 
 /**
@@ -224,7 +269,10 @@ const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = 
     {
         let converted = fs.readFileSync(source, "utf-8");
 
-        converted = applyReplace(replaceStart, converted)
+        converted = applyReplace(converted, replaceStart)
+
+        const extracted = []
+        converted = stripComments(converted, extracted)
 
         converted = parseImport(converted, list, {source, outputDir, rootDir}, workingDir)
 
@@ -257,6 +305,8 @@ const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = 
             converted = reviewExternalImport(converted, list, {source, outputDir, rootDir})
         }
 
+        converted = putBackComments(converted, extracted)
+
         if (!noHeader)
         {
             converted = `/**
@@ -268,7 +318,7 @@ const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = 
 ` + converted;
         }
 
-        converted = applyReplace(replaceEnd, converted)
+        converted = applyReplace(converted, replaceEnd)
 
         const targetFile = path.basename(source, path.extname(source));
 

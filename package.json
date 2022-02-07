@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "commondir": "^1.0.1",
+    "extract-comments": "^1.1.0",
     "glob": "^7.2.0",
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
