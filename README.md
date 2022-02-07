@@ -2,7 +2,7 @@
 
 
 
-Straightforward tool to convert Commonjs files into ESM
+A tool to convert Commonjs files into ESM
 
 
 
