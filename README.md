@@ -36,7 +36,7 @@ npm install to-esm -g
 
 ```shell
 
-toesm --input=<inputFilesPattern> [--output=<outputDirectory>] [--noheader]
+toesm --input=<inputFilesPattern> [--output=<outputDirectory>] [--noheader] [--solvedep]
 
 ```
 
