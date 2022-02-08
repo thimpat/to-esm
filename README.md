@@ -36,7 +36,7 @@ npm install to-esm -g
 
 ```shell
 
-toesm --input=<inputFilesPattern> [--output=<outputDirectory>] [--noheader] [--solvedep]
+toesm --input=<inputFilesPattern> [--output=<outputDirectory>] [--noheader] [--solvedep] [--extended] [--comments]
 
 ```
 
@@ -53,15 +53,10 @@ toesm --input=<inputFilesPattern> [--output=<outputDirectory>] [--noheader] [--s
 The following examples will work on a folder structure that looks like this:
 
 >
-
 > example/cjs/input.js
-
 >
-
 > example/cjs/dep-1.cjs
-
 >
-
 > example/cjs/dep-2.cjs
 
 
@@ -154,16 +149,21 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 > --noheader
 
 
+### Allow converting code in comments and strings
 
-<br>
+>
+> --comments
+
+### Allow converting code in strings but not comments
+
+>
+> --extended
 
 
-
-### Options to solve dependency paths
+### Allow solving dependency paths
 
 >
 > --solvedep
-
 
 
 See section [**External dependencies**](#external) for lengthy explanations.
