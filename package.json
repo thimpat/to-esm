@@ -1,6 +1,6 @@
 {
   "name": "to-esm",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Very simple tool to convert Commonjs files into ESM",
   "main": "tools/converter.cjs",
   "type": "commonjs",
@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "commondir": "^1.0.1",
+    "esprima": "^4.0.1",
+    "estraverse": "^5.3.0",
     "extract-comments": "^1.1.0",
     "glob": "^7.2.0",
     "minimist": "^1.2.5",

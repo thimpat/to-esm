@@ -1,5 +1,10 @@
+let QuickLog;
 const {LOG_CONTEXT, LOG_TARGETS} = require("./contexts-def.cjs")
-const QuickLog = require("../../src/cjs/quick-log.cjs");
+QuickLog = require("../../src/cjs/quick-log.cjs");
+let QuickLog2 = require("../../src/cjs/quick-log.cjs");
+var QuickLog3 = require("../../src/cjs/quick-log.cjs");
+const cc = `var QuickLog3 = require("../../src/cjs/quick-log.cjs")`;
+// const aa = "let QuickLog2 = require(\"../../src/cjs/quick-log.cjs\")";
 
 QuickLog.setContexts(LOG_CONTEXT);
 QuickLog.setTargets(LOG_TARGETS);
@@ -14,3 +19,5 @@ QuickLog.log(LOG_CONTEXT.C1, `Test Log example C1`);
 QuickLog.log(LOG_CONTEXT.C2, `Test Log example C2`);
 QuickLog.log(LOG_CONTEXT.C3, `Test Log example C3`);
 QuickLog.log(`Basic Log example 1`);
+QuickLog2.log(`Basic Log example 1`);
+QuickLog3.log(`Basic Log example 1`);

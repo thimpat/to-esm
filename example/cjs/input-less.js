@@ -1,6 +1,7 @@
-/** const chalk = require("chalk-cjs"); **/
-const chalk = require("chalk-cjs");         // const path = require("path");
-// const chalk = require("chalk-cjs");
+/** const chalk001 = require("chalk-cjs"); **/
+const chalk000 = require("chalk-cjs");         // const path = require("path");
+// const chalk002 = require("chalk-cjs");
+const aa = "const chalk003 = require(\"chalk-cjs\");"
 const colorConvert = require("color-convert-cjs");
 const magnimus = require("mama-magnimus");
 const magnimus = require("mama-magnimus-cjs");
@@ -8,6 +9,11 @@ const rgbhex = /** Cool **/ require("rgb-hex-cjs");
 const INFO1 = require("./dep-1.cjs");
 const INFO2 = require("./dep-2.cjs");
 const INFO3 = require('./dep-3.js');
+const bb = `
+    const chalk004 = require("chalk-cjs");
+    
+    const chalk005 = require("chalk-cjs");
+`
 const INFO4 = require("./something.js");
 const INFO5 = require("./something.cjs");
 const path = require("path");
