@@ -8,7 +8,10 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
+
 const extractComments = require('extract-comments');
+const esprima = require("esprima");
+const estraverse = require("estraverse");
 
 const ESM_EXTENSION = ".mjs";
 const COMMENT_MASK = "❖✎🔏❉";
@@ -32,7 +35,7 @@ const buildTargetDir = (targetDir) =>
     }
     catch (e)
     {
-        console.error(`${packageJson.name}:`, e.message)
+        console.error(`${packageJson.name}: (1001)`, e.message)
     }
 };
 
@@ -68,7 +71,7 @@ const getNodeModuleProp = (moduleName) =>
     }
     catch (e)
     {
-        console.info(`${packageJson.name}: Failed to locate module [${moduleName}]. Skipped.`)
+        console.info(`${packageJson.name}: (1002) Failed to locate module [${moduleName}]. Skipped.`)
         return
     }
 
@@ -207,13 +210,19 @@ const applyReplace = (converted, replace) =>
     return converted
 }
 
-const stripComments = (str, extracted) =>
+/**
+ * Remove comments from code
+ * @param code
+ * @param {[]} extracted If not null, comments are replaced instead of removed.
+ * @returns {*}
+ */
+const stripComments = (code, extracted = null) =>
 {
-    const commentProps = extractComments(str, {}, null);
+    const commentProps = extractComments(code, {}, null);
 
     if (!commentProps.length)
     {
-        return str
+        return code
     }
 
     let commentIndexer = 0
@@ -222,16 +231,202 @@ const stripComments = (str, extracted) =>
         const commentProp = commentProps[i]
         const indexCommentStart = commentProp.range[0]
         const indexCommentEnd = commentProp.range[1]
-        extracted[commentIndexer] = str.substring(indexCommentStart, indexCommentEnd)
-        str =
-            str.substring(0, indexCommentStart) +
+        if (!extracted)
+        {
+            code = code.substring(0, indexCommentStart) + code.substring(indexCommentEnd)
+            continue;
+        }
+
+        extracted[commentIndexer] = code.substring(indexCommentStart, indexCommentEnd)
+        code =
+            code.substring(0, indexCommentStart) +
             COMMENT_MASK + commentIndexer + COMMENT_MASK +
-            str.substring(indexCommentEnd)
+            code.substring(indexCommentEnd)
 
         ++commentIndexer
     }
 
-    return str
+    return code
+}
+
+const convertModuleExportsToExport = (converted) =>
+{
+    try
+    {
+        // Convert module.exports to export default
+        converted = converted.replace(/(?:module\.)?exports\s*=/gm, "export default");
+
+        // Convert module.exports.something to export something
+        converted = converted.replace(/(?:module\.)?exports\./gm, "export const ");
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1003)`, e.message);
+    }
+
+    return converted
+}
+
+const convertRequireToImport = (converted) =>
+{
+    try
+    {
+        converted = stripComments(converted)
+
+        // convert require with .json file to import
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
+
+        // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
+            ` $2${ESM_EXTENSION}$3`);
+
+        // convert require with .js extension to import
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
+
+        // convert require without extension to import .mjs extension
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
+
+        // convert require without extension to import (Third Party libraries)
+        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, `import $1 from "$2"`);
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1004)`, e.message);
+    }
+
+    return converted;
+}
+
+const applyTransformations = (converted, extracted, list, {source, outputDir, rootDir}) =>
+{
+    try
+    {
+        if (!extracted.length)
+        {
+            return converted;
+        }
+
+        for (let i = extracted.length - 1; i >= 0; --i)
+        {
+            const prop = extracted[i];
+            try
+            {
+                let transformedLines = stripComments(prop.text);
+                transformedLines = convertRequireToImport(transformedLines);
+
+                transformedLines = reviewExternalImport(transformedLines, list, {source, outputDir, rootDir});
+
+                converted = converted.substring(0, prop.start) + transformedLines + converted.substring(prop.end)
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}: (1006)`, e.message);
+            }
+        }
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1007)`, e.message);
+    }
+
+    return converted
+}
+
+const convertRequireToImportWithAST = (converted, list, {source, outputDir, rootDir}) =>
+{
+    let success = true;
+    try
+    {
+        const extracted = [];
+
+        const ast = esprima.parse(
+            converted, {
+                loc    : true,
+                range  : true,
+                tokens : true,
+                comment: true
+            }
+        );
+
+        let text, start, end, requirePath, identifier;
+        const previouses = []
+
+        estraverse.traverse(ast, {
+            enter: function(node, parent)
+            {
+                try
+                {
+                    if (node && node.type === "Literal")
+                    {
+                        if (parent && parent.type === "CallExpression" && parent.callee && parent.callee.name === "require")
+                        {
+                            requirePath = node.value
+                            end = parent ? parent.range[0] : node.range[0]
+
+                            previouses.pop()
+                            for (let i = previouses.length - 1; i >= 0; --i)
+                            {
+                                let previous = previouses[i]
+
+                                // Declaration without "kind" (=> const, let, var
+                                if (previous.parent.type === "AssignmentExpression")
+                                {
+                                    if (previous.parent.left && previous.parent.left.type === "Identifier")
+                                    {
+                                        identifier = previous.parent.left.name;
+                                    }
+                                }
+
+                                if (previous.parent.type === "AssignmentExpression" || previous.parent.kind === "const" || previous.parent.kind === "var" || previous.parent.kind === "let")
+                                {
+                                    previous = previouses[i]
+                                    start = previous.parent.range[0]
+                                    break
+                                }
+                            }
+
+                        }
+                    }
+
+                    previouses.push({
+                        parent,
+                        node
+                    })
+                }
+                catch (e)
+                {
+                    console.error(`${packageJson.name}: (1008)`, e.message);
+                }
+            },
+            leave: function(node, parent)
+            {
+                if (end > 0)
+                {
+                    end = parent.range[1]
+                    text = converted.substring(start, end)
+
+                    extracted.push({
+                        start, end, text, requirePath, source, identifier
+                    })
+
+                    requirePath = null
+                    start = 0
+                    end = 0
+                }
+
+            }
+        });
+
+        converted = applyTransformations(converted, extracted, list, {source, outputDir, rootDir});
+    }
+    catch (e)
+    {
+        success = false;
+        console.error(`${packageJson.name}: (1009) [${source}] ->`, e.message);
+        console.info(`The parsing failed on this file. Conversion falling back to extended.`)
+    }
+
+    return {converted, success}
 }
 
 const putBackComments = (str, extracted) =>
@@ -255,11 +450,17 @@ const putBackComments = (str, extracted) =>
  * @param {string} outputDir Target directory to put converted file
  * @param {boolean} noHeader Whether to add extra info on top of converted file
  */
-const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = false, solvedep = false} = {}) =>
+const convertListFiles = (list, {
+    replaceStart = [],
+    replaceEnd = [],
+    noHeader = false,
+    solvedep = false,
+    extended = false
+} = {}) =>
 {
     if (!list || !list.length)
     {
-        console.info(`${packageJson.name}: No file to convert.`);
+        console.info(`${packageJson.name} (1010): No file to convert.`);
         return
     }
 
@@ -267,82 +468,97 @@ const convertListFiles = (list, {replaceStart = [], replaceEnd = [], noHeader = 
 
     list.forEach(({source, outputDir, rootDir}) =>
     {
-        let converted = fs.readFileSync(source, "utf-8");
-
-        converted = applyReplace(converted, replaceStart)
-
-        const extracted = []
-        converted = stripComments(converted, extracted)
-
-        converted = parseImport(converted, list, {source, outputDir, rootDir}, workingDir)
-
-        converted = convertNonTrivial(converted);
-
-        // Convert module.exports to export default
-        converted = converted.replace(/(?:module\.)?exports\s*=/gm, "export default");
-
-        // Convert module.exports.something to export something
-        converted = converted.replace(/(?:module\.)?exports\./gm, "export const ");
-
-        // convert require with .json file to import
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
-
-        // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
-            ` $2${ESM_EXTENSION}$3`);
-
-        // convert require with .js extension to import
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
-
-        // convert require without extension to import .mjs extension
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
-
-        // convert require without extension to import (Third Party libraries)
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, `import $1 from "$2"`);
-
-        if (solvedep)
+        try
         {
-            converted = reviewExternalImport(converted, list, {source, outputDir, rootDir})
-        }
+            let converted = fs.readFileSync(source, "utf-8");
 
-        converted = putBackComments(converted, extracted)
+            converted = applyReplace(converted, replaceStart)
 
-        if (!noHeader)
-        {
-            converted = `/**
+            const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir});
+            converted = result.converted
+
+            converted = convertModuleExportsToExport(converted);
+
+            if (extended || !result.success)
+            {
+                converted = replaceInCommentsAndStrings(converted, list, {source, outputDir, rootDir, solvedep})
+            }
+
+            if (!noHeader)
+            {
+                converted = `/**
  * DO NOT EDIT THIS FILE DIRECTLY.
  * This file is generated following the conversion of 
  * [${source}]
  * 
  **/    
 ` + converted;
+            }
+
+            converted = applyReplace(converted, replaceEnd)
+
+            const targetFile = path.basename(source, path.extname(source));
+
+            let destinationDir
+            if (outputDir)
+            {
+                const fileDir = path.join(path.dirname(source));
+                const relativeDir = path.relative(rootDir, fileDir);
+                destinationDir = path.join(outputDir, relativeDir)
+
+                buildTargetDir(destinationDir)
+            }
+            else
+            {
+                destinationDir = path.join(path.dirname(source));
+            }
+
+            const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
+
+            fs.writeFileSync(targetFilepath, converted, "utf-8");
+
+            const reportSuccess = result.success ? "✔ SUCCESS" : "✔ FALLBACK"
+            console.log(`${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
         }
-
-        converted = applyReplace(converted, replaceEnd)
-
-        const targetFile = path.basename(source, path.extname(source));
-
-        let destinationDir
-        if (outputDir)
+        catch (e)
         {
-            const fileDir = path.join(path.dirname(source));
-            const relativeDir = path.relative(rootDir, fileDir);
-            destinationDir = path.join(outputDir, relativeDir)
-
-            buildTargetDir(destinationDir)
+            console.error(`${packageJson.name}: (1011)`, e.message);
         }
-        else
-        {
-            destinationDir = path.join(path.dirname(source));
-        }
-
-        const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
-
-        fs.writeFileSync(targetFilepath, converted, "utf-8");
-
-        console.log(`Converted [${source}] => [${targetFilepath}]`);
 
     });
+};
+
+const replaceInCommentsAndStrings = (converted, list, {source, outputDir, rootDir, solvedep} = {}) =>
+{
+    const workingDir = process.cwd()
+
+    try
+    {
+        const extractedComments = [];
+        converted = stripComments(converted, extractedComments);
+
+        converted = parseImport(converted, list, {source, outputDir, rootDir}, workingDir)
+
+        converted = convertNonTrivial(converted);
+
+        converted = convertModuleExportsToExport(converted);
+
+        converted = convertRequireToImport(converted);
+
+        if (solvedep)
+        {
+            converted = reviewExternalImport(converted, list, {source, outputDir, rootDir})
+        }
+
+        converted = putBackComments(converted, extractedComments)
+
+
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1012)`, e.message);
+    }
+    return converted
 };
 
 const getOptionsConfigFile = async (configPath) =>
@@ -372,7 +588,7 @@ const getOptionsConfigFile = async (configPath) =>
             }
             catch (e)
             {
-                console.error(`${packageJson.name}:`, e.message);
+                console.error(`${packageJson.name}: (1013)`, e.message);
                 console.info(`Skipping config file options`)
             }
         }
@@ -471,7 +687,7 @@ const parseReplaceModules = async (config = [], packageJsonPath = "./package.jso
     packageJsonPath = path.resolve(packageJsonPath)
     if (!fs.existsSync(packageJsonPath))
     {
-        console.error(`${packageJson.name}: Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`)
+        console.error(`${packageJson.name}: (1014) Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`)
         return
     }
 
@@ -510,15 +726,12 @@ const parseReplaceModules = async (config = [], packageJsonPath = "./package.jso
         }
         catch (e)
         {
-            console.error(`${packageJson.name}:`, e.message)
+            console.error(`${packageJson.name}: (1015)`, e.message)
         }
 
 
     }
 
-    // moduleList.forEach( (moduleName)=>
-    // {
-    // })
 }
 
 /**
@@ -581,19 +794,21 @@ const convert = async (cliOptions) =>
         // No header
         const noheader = !!cliOptions.noheader;
         const solvedep = !!cliOptions.solvedep;
+        const extended = !!cliOptions.extended;
 
         convertListFiles(newList,
             {
                 replaceStart: confFileOptions.replaceStart,
                 replaceEnd  : confFileOptions.replaceEnd,
                 noheader,
-                solvedep
+                solvedep,
+                extended
             });
 
     }
     catch (e)
     {
-        console.error(`${packageJson.name}:`, e.message)
+        console.error(`${packageJson.name}: (1016)`, e.message)
     }
 
 };
