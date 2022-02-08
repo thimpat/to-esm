@@ -455,7 +455,8 @@ const convertListFiles = (list, {
     replaceEnd = [],
     noHeader = false,
     solvedep = false,
-    extended = false
+    extended = false,
+    comments = false
 } = {}) =>
 {
     if (!list || !list.length)
@@ -463,8 +464,6 @@ const convertListFiles = (list, {
         console.info(`${packageJson.name} (1010): No file to convert.`);
         return
     }
-
-    const workingDir = process.cwd()
 
     list.forEach(({source, outputDir, rootDir}) =>
     {
@@ -479,9 +478,9 @@ const convertListFiles = (list, {
 
             converted = convertModuleExportsToExport(converted);
 
-            if (extended || !result.success)
+            if (extended || !result.success || comments)
             {
-                converted = replaceInCommentsAndStrings(converted, list, {source, outputDir, rootDir, solvedep})
+                converted = replaceWithRegex(converted, list, {source, outputDir, rootDir, solvedep, comments})
             }
 
             if (!noHeader)
@@ -528,14 +527,18 @@ const convertListFiles = (list, {
     });
 };
 
-const replaceInCommentsAndStrings = (converted, list, {source, outputDir, rootDir, solvedep} = {}) =>
+const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep, comments} = {}) =>
 {
     const workingDir = process.cwd()
 
     try
     {
         const extractedComments = [];
-        converted = stripComments(converted, extractedComments);
+
+        if (!comments)
+        {
+            converted = stripComments(converted, extractedComments);
+        }
 
         converted = parseImport(converted, list, {source, outputDir, rootDir}, workingDir)
 
@@ -795,6 +798,7 @@ const convert = async (cliOptions) =>
         const noheader = !!cliOptions.noheader;
         const solvedep = !!cliOptions.solvedep;
         const extended = !!cliOptions.extended;
+        const comments = !!cliOptions.comments;
 
         convertListFiles(newList,
             {
@@ -802,7 +806,8 @@ const convert = async (cliOptions) =>
                 replaceEnd  : confFileOptions.replaceEnd,
                 noheader,
                 solvedep,
-                extended
+                extended,
+                comments,
             });
 
     }
