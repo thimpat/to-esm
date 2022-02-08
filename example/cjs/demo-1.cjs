@@ -9,6 +9,8 @@ const cc = `var QuickLog3 = require("../../src/cjs/quick-log.cjs")`;
 QuickLog.setContexts(LOG_CONTEXT);
 QuickLog.setTargets(LOG_TARGETS);
 
+const {COLOR_TABLE, SYSTEM} = require("./constants.cjs");
+
 QuickLog.setFormat(({context, id, message})=>`${context}: (${id}) ${message}`);
 
 
