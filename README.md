@@ -579,7 +579,7 @@ original code.
 
 
 
-![img.png](docs/images/img.png)
+![img.png](https://github.com/thimpat/to-esm/blob/main/docs/images/img.png)
 
 
 
@@ -773,7 +773,7 @@ So, it's very likely that you'll see this message:
 
 
 
-![img_1.png](docs/images/img_1.png)
+![img_1.png](https://github.com/thimpat/to-esm/blob/main/docs/images/img_1.png)
 
 
 
@@ -793,7 +793,7 @@ But this is not enough. You are referencing the path to your **node_modules/**. 
 
 
 
-![img_2.png](docs/images/img_2.png)
+![img_2.png](https://github.com/thimpat/to-esm/blob/main/docs/images/img_2.png)
 
 
 
