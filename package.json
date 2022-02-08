@@ -16,7 +16,7 @@
     "demo": "npm run demo3 && npm run demo4"
   },
   "author": "Patrice Thimothee",
-  "homepage": "https://github.com/thimpat/to-esm",
+  "homepage": "https://github.com/thimpat/to-esm/blob/main/README.md",
   "license": "MIT",
   "repository": {
     "type": "git",
