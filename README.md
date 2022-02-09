@@ -148,31 +148,16 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 ## Options
 
 
-
-### Options to not generate automatic header
-
->
-> --noheader
-
-
-### Allow converting code in comments and strings
-
->
-> --comments
-
-### Allow converting code in strings but not comments
-
->
-> --extended
+| **Options**  | **Description**                                   | 
+|--------------|-----------------------------------------------|
+| --noHeader   | _Options to not generate automatic header_      |
+| --withReport | _Output conversion in the console_              |
+| --comments   | _Allow converting code in comments and strings_ 
+| --extended   | _Allow solving dependency paths_    
+| --solveDep   | Allow solving dependency paths
 
 
-### Allow solving dependency paths
-
->
-> --solvedep
-
-
-See section [**External dependencies**](#external) for lengthy explanations.
+--solvedep: See section [**External dependencies**](#external) for lengthy explanations.
 
 
 
