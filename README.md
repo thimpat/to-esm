@@ -1,7 +1,7 @@
 
-![Test workflow](https://github.com/thimpat/to-esm/actions/workflows/test.yml/badge.svg)
-![Version workflow](https://github.com/thimpat/to-esm/actions/workflows/versioning.yml/badge.svg)
-[![npm version](https://badge.fury.io/js/to-esm.svg)](https://badge.fury.io/js/to-esm)
+[![Test workflow](https://github.com/thimpat/to-esm/actions/workflows/test.yml/badge.svg)](https://github.com/thimpat/to-esm/blob/main/README.md)
+[![Version workflow](https://github.com/thimpat/to-esm/actions/workflows/versioning.yml/badge.svg)](https://github.com/thimpat/to-esm/blob/main/README.md)
+[![npm version](https://badge.fury.io/js/to-esm.svg)](https://www.npmjs.com/package/to-esm)
 
 
 ## Description
@@ -145,7 +145,7 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 
 
 
-## Options
+## Options (via command line)
 
 
 | **Options**  | **Description**                                   | 
@@ -161,7 +161,7 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 
 
 
-<br>
+<br><br>
 
 
 
@@ -552,12 +552,12 @@ original code.
 
 
 
+<br><br><br><br>
 
+----
+**_From this point, everything below is informative and can be skipped._**
 
----
-
-
-
+<br><br><br><br>
 ## Create a Hybrid Library
 
 
