@@ -11,20 +11,6 @@ const {buildTargetDir, convert} = require("../tools/converter.cjs");
 
 describe('The converter tool', function ()
 {
-    before(() =>
-    {
-    })
-
-    beforeEach(function ()
-    {
-
-    })
-
-    afterEach(function ()
-    {
-
-    })
-
     after(function ()
     {
         // fs.rmdirSync(path.join(rootDir, "/esm"))
@@ -48,7 +34,7 @@ describe('The converter tool', function ()
             expect(res).to.be.true
         });
 
-        it('should reject an unexisting directory', function ()
+        it('should reject an non-existent directory', function ()
         {
             let targetDir3 = path.join(rootDir, "/esm3")
             if (fs.existsSync(targetDir3))
@@ -59,29 +45,13 @@ describe('The converter tool', function ()
             expect(res).to.be.true
         });
 
-        // it("should convert ./cjs/demo-test.cjs into ./expected/demo-test.esm", async function ()
-        // {
-        //     const input = "./test/virtual/**/*.?(c)js";
-        //     const options = {
-        //         input,
-        //         "output": path.join(rootDir, "/esm"),
-        //         "withreport": true
-        //     }
-        //
-        //     const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test.mjs"), "utf8")
-        //
-        //     const success = await convert(options)
-        //     const converted = success["./test/virtual/cjs/demo-test.cjs"]
-        //
-        //     expect(converted).to.equal(expectedConversion)
-        // })
-
         it("should convert ./cjs/demo-test.cjs into ./expected/demo-test.esm", async function ()
         {
             const input = "./test/virtual/cjs/demo-test.cjs";
             const options = {
                 input,
                 "output": path.join(rootDir, "/esm"),
+                "noHeader": true,
                 "withreport": true
             }
 
