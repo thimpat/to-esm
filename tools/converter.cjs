@@ -29,14 +29,18 @@ const buildTargetDir = (targetDir) =>
     {
         if (fs.existsSync(targetDir))
         {
-            return;
+            return true;
         }
+
         fs.mkdirSync(targetDir, {recursive: true});
+        return true;
     }
     catch (e)
     {
         console.error(`${packageJson.name}: (1001)`, e.message)
     }
+
+    return false;
 };
 
 /**
@@ -460,10 +464,11 @@ const convertListFiles = (list, {
     comments = false
 } = {}) =>
 {
+    let result = true
     if (!list || !list.length)
     {
         console.info(`${packageJson.name} (1010): No file to convert.`);
-        return
+        return result
     }
 
     list.forEach(({source, outputDir, rootDir}) =>
@@ -523,9 +528,11 @@ const convertListFiles = (list, {
         catch (e)
         {
             console.error(`${packageJson.name}: (1011)`, e.message);
+            result = false
         }
-
     });
+
+    return result
 };
 
 const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep, comments} = {}) =>
@@ -781,7 +788,9 @@ const convert = async (cliOptions) =>
                 buildTargetDir(outputDir);
             }
 
-            const list = glob.sync(inputFileMask);
+            const list = glob.sync(inputFileMask, {
+                dot: true
+            });
 
             const rootDir = list && list.length > 1 ? commonDir(workingDir, list) : path.join(workingDir, path.dirname(list[0]))
 
@@ -801,7 +810,7 @@ const convert = async (cliOptions) =>
         const extended = !!cliOptions.extended;
         const comments = !!cliOptions.comments;
 
-        convertListFiles(newList,
+        const result = convertListFiles(newList,
             {
                 replaceStart: confFileOptions.replaceStart,
                 replaceEnd  : confFileOptions.replaceEnd,
@@ -811,6 +820,8 @@ const convert = async (cliOptions) =>
                 comments,
             });
 
+        return result
+
     }
     catch (e)
     {
@@ -819,6 +830,7 @@ const convert = async (cliOptions) =>
 
 };
 
+module.exports.COMMENT_MASK = COMMENT_MASK
 module.exports.buildTargetDir = buildTargetDir
 module.exports.convertNonTrivial = convertNonTrivial
 module.exports.getNodeModuleProp = getNodeModuleProp
