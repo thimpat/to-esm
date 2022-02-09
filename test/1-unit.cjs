@@ -1,11 +1,24 @@
+/**
+ * We keep the number of unit tests low. Most of the functions will be exported
+ * during the integration tests.
+ * Having a rigid approach on testing would require tests more complicated
+ * and longer to develop than the code itself due to the many system calls
+ * (require, package installations, ...).
+ * @type {Chai.ChaiStatic}
+ */
 const chai = require("chai");
 const expect = chai.expect;
 
 const {convertRequireToImport, stripComments} = require("../tools/converter.cjs");
 
-describe('converter.cjs', function() {
-    describe('#stripComments()', function() {
-        it('should strip comments from strings', function() {
+describe('converter.cjs', function ()
+{
+
+    describe('#stripComments()', function ()
+    {
+
+        it('should strip comments from strings', function ()
+        {
 
             // Arrange
             const input = `const cc = /* tttk k[gr */ \`var QuickLog3 = require("../../src/cjs/quick-log.cjs")\`;       // -------------
@@ -43,4 +56,5 @@ describe('converter.cjs', function() {
             expect(result).to.contain('import INFO1  from "./dep-1.mjs";');
         });
     });
+
 });
