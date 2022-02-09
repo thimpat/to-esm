@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Check out Git repository
-        uses: thimpat/to-esm/.github/actions/checkout@ci
+        uses: thimpat/to-esm/.github/actions/checkout@main
       - name: Install dependencies
         shell: powershell
         run: npm install
