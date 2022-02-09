@@ -1,6 +1,8 @@
 name: Test
 env:
-  ANALOGGER_APP_NAME: "release/analogger"
+  TO_ESM_APP_NAME: "release/to-esm"
+  GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
 on:
   push:
     branches:
@@ -14,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Check out Git repository
-        uses: thimpat/analogger/.github/actions/checkout@ci
+        uses: thimpat/to-esm/.github/actions/checkout@ci
       - name: Install dependencies
         shell: powershell
         run: npm install
