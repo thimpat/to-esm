@@ -819,4 +819,24 @@ const convert = async (cliOptions) =>
 
 };
 
-module.exports = convert
+module.exports.buildTargetDir = buildTargetDir
+module.exports.convertNonTrivial = convertNonTrivial
+module.exports.getNodeModuleProp = getNodeModuleProp
+module.exports.reviewExternalImport = reviewExternalImport
+module.exports.parseImport = parseImport
+module.exports.applyReplace = applyReplace
+module.exports.stripComments = stripComments
+module.exports.convertModuleExportsToExport = convertModuleExportsToExport
+module.exports.convertRequireToImport = convertRequireToImport
+module.exports.applyTransformations = applyTransformations
+module.exports.convertRequireToImportWithAST = convertRequireToImportWithAST
+module.exports.putBackComments = putBackComments
+module.exports.convertListFiles = convertListFiles
+module.exports.replaceWithRegex = replaceWithRegex
+module.exports.getOptionsConfigFile = getOptionsConfigFile
+module.exports.parseReplace = parseReplace
+module.exports.getLibraryInfo = getLibraryInfo
+module.exports.installPackage = installPackage
+module.exports.parseReplaceModules = parseReplaceModules
+
+module.exports.convert = convert
