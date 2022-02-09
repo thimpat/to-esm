@@ -97,6 +97,7 @@ const reviewExternalImport = (text, list, fileProp) =>
 
         if (~nativeModules.indexOf(moduleName))
         {
+            console.info(`${packageJson.name}: (1017) ${moduleName} is a built-in NodeJs module.`);
             return match
         }
 
