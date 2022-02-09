@@ -14,7 +14,7 @@
     "demo3": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\"",
     "demo4": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --solvedep",
     "demo": "npm run demo3 && npm run demo4",
-    "test": "nyc mocha"
+    "test": "nyc mocha --sort"
   },
   "author": "Patrice Thimothee",
   "homepage": "https://github.com/thimpat/to-esm/blob/main/README.md",
@@ -42,6 +42,7 @@
     "chai": "^4.3.6",
     "mocha": "^9.2.0",
     "nyc": "^15.1.0",
-    "semantic-release": "^19.0.2"
+    "semantic-release": "^19.0.2",
+    "sinon": "^13.0.1"
   }
 }

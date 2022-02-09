@@ -1,7 +1,7 @@
 {
-    "lines": 95,
-    "statements": 95,
-    "functions": 95,
+    "lines": 50,
+    "statements": 50,
+    "functions": 50,
     "branches": 50,
   "reporter": [
     "json",

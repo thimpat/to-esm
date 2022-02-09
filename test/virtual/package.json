@@ -1,0 +1,29 @@
+{
+  "name": "to-esm",
+  "version": "1.0.0",
+  "description": "Package Json for the virtual file system",
+  "type": "commonjs",
+  "dependencies": {
+    "commondir": "^1.0.1",
+    "esprima": "^4.0.1",
+    "estraverse": "^5.3.0",
+    "extract-comments": "^1.1.0",
+    "glob": "^7.2.0",
+    "minimist": "^1.2.5",
+    "rgb-hex": "^4.0.0",
+    "rgb-hex-cjs": "npm:rgb-hex@^3.0.0"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/commit-analyzer": "^9.0.2",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/npm": "^9.0.0",
+    "@semantic-release/release-notes-generator": "^10.0.3",
+    "chai": "^4.3.6",
+    "memory-fs": "^0.5.0",
+    "mocha": "^9.2.0",
+    "nyc": "^15.1.0",
+    "semantic-release": "^19.0.2",
+    "sinon": "^13.0.1"
+  }
+}
