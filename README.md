@@ -1,3 +1,10 @@
+
+![Test workflow](https://github.com/thimpat/to-esm/actions/workflows/test.yml/badge.svg)
+![nycrc Coverage](https://img.shields.io/nycrc/thimpat/to-esm?preferredThreshold=lines)
+![Version workflow](https://github.com/thimpat/to-esm/actions/workflows/versioning.yml/badge.svg)
+[![npm version](https://badge.fury.io/js/to-esm.svg)](https://badge.fury.io/js/to-esm)
+
+
 ## Description
 
 
