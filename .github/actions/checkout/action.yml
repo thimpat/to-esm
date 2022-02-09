@@ -1,0 +1,10 @@
+name: Version
+description: 'Version builds automatically'
+author: 'thimpat'
+runs:
+  using: composite
+  steps:
+    - name: Welcome
+      shell: powershell
+      run: |
+        echo Welcome

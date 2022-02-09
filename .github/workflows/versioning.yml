@@ -1,0 +1,25 @@
+name: Build
+env:
+  ANALOGGER_APP_NAME: "release/analogger"
+on:
+  push:
+    branches:
+      - main
+      - ci
+    paths-ignore:
+      - "**.md"
+      - ".vscode/**"
+jobs:
+  set-version:
+    runs-on: [self-hosted]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check out Git repository
+        uses: thimpat/analogger/.github/actions/checkout@ci
+      - name: Install dependencies
+        shell: powershell
+        run: npm install
+      - name: Upgrade version
+        shell: powershell
+        run: |
+          npx semantic-release
