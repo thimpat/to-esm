@@ -87,7 +87,7 @@ const reviewExternalImport = (text, list, fileProp) =>
     // Locate third party
     const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
 
-    return text.replace(re, function (match, moduleName, char)
+    return text.replace(re, function (match, moduleName)
     {
         if (moduleName === undefined)
         {
@@ -134,10 +134,9 @@ const parseImport = (text, list, fileProp, workingDir) =>
     const parsedFilePath = path.join(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
 
-    // All your regexps combined into one:
     const re = /require\(["'`]([.\/][^)]+)["'`]\)/gmu;
 
-    return text.replace(re, function (match, group, char)
+    return text.replace(re, function (match, group)
     {
         if (group === undefined)
         {
@@ -167,7 +166,7 @@ const parseImport = (text, list, fileProp, workingDir) =>
             targets.push(target);
         }
 
-        const index = list.findIndex(function ({source, outputDir, rootDir})
+        const index = list.findIndex(function ({source})
         {
             const possibleFilePath = path.join(workingDir, source);
             return (targets.includes(possibleFilePath));
@@ -181,7 +180,7 @@ const parseImport = (text, list, fileProp, workingDir) =>
         // current file's absolute path
         const sourcePath = path.resolve(fileProp.outputDir);
 
-        const {source, outputDir, rootDir} = list[index];
+        const {source, outputDir} = list[index];
         const basename = path.parse(source).name;
 
         // Absolute path in the require
@@ -302,7 +301,47 @@ const convertRequireToImport = (converted) =>
     return converted;
 };
 
-const applyTransformations = (converted, extracted, list, {source, outputDir, rootDir}) =>
+/**
+ * An import is a declaration + assignment, so we need to remove cjs
+ * delarations that were not combined in the same line.
+ * TODO: Needs optimisation
+ * @param converted
+ * @param extracted
+ */
+const removeDeclarationForAST = (converted, extracted) =>
+{
+    let regexp;
+    for (let i = 0; i < extracted.length; ++i)
+    {
+        const prop = extracted[i];
+        if (!prop.declareNotOnTheSameLine)
+        {
+            continue;
+        }
+
+        const identifier = prop.identifier;
+
+        // Replace declaration of type `let something =`
+        regexp = new RegExp(`(var|let|const)\\s+(${identifier}\\s+=)`);
+        converted = converted.replace(regexp, "$2");
+
+        // Remove declaration of type `let something, something2;`
+        regexp = new RegExp(`(var|let|const)\\s+(${identifier}\\s*\,)`);
+        converted = converted.replace(regexp, "$1");
+
+        // Remove declaration of type `let something2, something`
+        regexp = new RegExp(`(var|let|const)(.*)\\,\\s*${identifier}`);
+        converted = converted.replace(regexp, "$1$2");
+
+        // Remove declaration of type `log something;`
+        regexp = new RegExp(`(?:var|let|const)\\s+${identifier}\\s*[;]`);
+        converted = converted.replace(regexp, "");
+    }
+
+    return converted;
+};
+
+const applyRequireToImportTransformationsForAST = (converted, extracted, list, {source, outputDir, rootDir}) =>
 {
     try
     {
@@ -311,23 +350,32 @@ const applyTransformations = (converted, extracted, list, {source, outputDir, ro
             return converted;
         }
 
+        const importList = [];
         for (let i = extracted.length - 1; i >= 0; --i)
         {
             const prop = extracted[i];
             try
             {
+                if (prop.declareNotOnTheSameLine)
+                {
+                    prop.text = "let " + prop.text;
+                }
+
                 let transformedLines = stripComments(prop.text);
                 transformedLines = convertRequireToImport(transformedLines);
 
                 transformedLines = reviewExternalImport(transformedLines, list, {source, outputDir, rootDir});
 
-                converted = converted.substring(0, prop.start) + transformedLines + converted.substring(prop.end);
+                importList.push(transformedLines);
+                converted = converted.substring(0, prop.start) + converted.substring(prop.end);
             }
             catch (e)
             {
                 console.error(`${packageJson.name}: (1006)`, e.message);
             }
         }
+
+        converted = importList.join("") + converted;
     }
     catch (e)
     {
@@ -361,6 +409,17 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
             {
                 try
                 {
+                    const lastFound = extracted[extracted.length - 1];
+                    if (lastFound)
+                    {
+                        if (!lastFound.validated)
+                        {
+                            lastFound.validated = true;
+                            lastFound.end = node.range[0] - 1;
+                            lastFound.text = converted.substring(lastFound.start, lastFound.end);
+                        }
+                    }
+
                     if (node && node.type === "Literal")
                     {
                         if (parent && parent.type === "CallExpression" && parent.callee && parent.callee.name === "require")
@@ -410,9 +469,18 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
                     end = parent.range[1];
                     text = converted.substring(start, end);
 
-                    extracted.push({
+                    const textTrimmed = text.trim();
+
+                    const info = {
                         start, end, text, requirePath, source, identifier
-                    });
+                    };
+
+                    if (!(textTrimmed.indexOf("const") === 0 || textTrimmed.indexOf("let") === 0 || textTrimmed.indexOf("var") === 0))
+                    {
+                        info.declareNotOnTheSameLine = true;
+                    }
+
+                    extracted.push(info);
 
                     requirePath = null;
                     start = 0;
@@ -422,7 +490,8 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
             }
         });
 
-        converted = applyTransformations(converted, extracted, list, {source, outputDir, rootDir});
+        converted = applyRequireToImportTransformationsForAST(converted, extracted, list, {source, outputDir, rootDir});
+        converted = removeDeclarationForAST(converted, extracted);
     }
     catch (e)
     {
@@ -859,7 +928,7 @@ module.exports.applyReplace = applyReplace;
 module.exports.stripComments = stripComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
 module.exports.convertRequireToImport = convertRequireToImport;
-module.exports.applyTransformations = applyTransformations;
+module.exports.applyTransformations = applyRequireToImportTransformationsForAST;
 module.exports.convertRequireToImportWithAST = convertRequireToImportWithAST;
 module.exports.putBackComments = putBackComments;
 module.exports.convertListFiles = convertListFiles;
