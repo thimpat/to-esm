@@ -10,7 +10,7 @@ const glob = require("glob");
 const commonDir = require("commondir");
 
 const extractComments = require("extract-comments");
-const esprima = require("esprima");
+const espree = require("espree");
 const estraverse = require("estraverse");
 
 const ESM_EXTENSION = ".mjs";
@@ -198,6 +198,12 @@ const parseImport = (text, list, fileProp, workingDir) =>
     });
 };
 
+/**
+ * Apply replacements from user config file or modules parsing
+ * @param converted
+ * @param replace
+ * @returns {*}
+ */
 const applyReplace = (converted, replace) =>
 {
     replace.forEach((item)=>
@@ -341,6 +347,16 @@ const removeDeclarationForAST = (converted, extracted) =>
     return converted;
 };
 
+/**
+ * Covert require and move import to the top
+ * @param converted
+ * @param extracted
+ * @param list
+ * @param source
+ * @param outputDir
+ * @param rootDir
+ * @returns {string|*}
+ */
 const applyRequireToImportTransformationsForAST = (converted, extracted, list, {source, outputDir, rootDir}) =>
 {
     try
@@ -392,14 +408,27 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
     {
         const extracted = [];
 
-        const ast = esprima.parse(
-            converted, {
-                loc    : true,
-                range  : true,
-                tokens : true,
-                comment: true
-            }
-        );
+        let ast;
+        try
+        {
+            ast = espree.parse(
+                converted, {
+                    sourceType   : "commonjs",
+                    ecmaVersion  : "latest",
+                    allowReserved: false,
+                    loc          : true,
+                    range        : true,
+                    tokens       : true,
+                    comment      : true
+                }
+            );
+        }
+        catch (e)
+        {
+            console.warn(`${packageJson.name}: (1052) ------- CJS: Syntax issues found on [${source}]`);
+            console.info("                  ➔ ➔ ➔ ➔ ➔ ➔ ", e.message);
+            return {converted, success: false};
+        }
 
         let text, start, end, requirePath, identifier;
         const previouses = [];
@@ -497,7 +526,8 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
     {
         success = false;
         console.error(`${packageJson.name}: (1009) [${source}] ->`, e.message);
-        console.info("The parsing failed on this file. Conversion falling back to extended.");
+        console.info(`${packageJson.name}: (1056) The parsing failed on [${source}]. ` +
+            "Conversion mode falling back to --extended.");
     }
 
     return {converted, success};
@@ -527,6 +557,7 @@ const putBackComments = (str, extracted) =>
 const convertListFiles = (list, {
     replaceStart = [],
     replaceEnd = [],
+    replaceDetectedModules = [],
     noheader = false,
     solvedep = false,
     extended = false,
@@ -543,6 +574,21 @@ const convertListFiles = (list, {
         return report;
     }
 
+    const parserOtions = {
+        range        : false,
+        loc          : false,
+        comment      : false,
+        tokens       : false,
+        ecmaVersion  : "latest",
+        allowReserved: false,
+        sourceType   : "commonjs",
+        ecmaFeatures : {
+            jsx          : false,
+            globalReturn : false,
+            impliedStrict: false
+        }
+    };
+
     list.forEach(({source, outputDir, rootDir}) =>
     {
         try
@@ -553,6 +599,8 @@ const convertListFiles = (list, {
 
             const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir});
             converted = result.converted;
+
+            converted = applyReplace(converted, replaceDetectedModules);
 
             converted = convertModuleExportsToExport(converted);
 
@@ -592,11 +640,22 @@ const convertListFiles = (list, {
 
             const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
 
+            let reportSuccess = result.success ? "✔ SUCCESS" : "✔ SUCCESS (with fallback)";
+            try
+            {
+                parserOtions.sourceType = "module";
+                espree.parse(converted, parserOtions);
+            }
+            catch (e)
+            {
+                // Failed even with fallback
+                console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion failed even with fallback process on [${source}] -------`);
+                result.success = false;
+                return;
+            }
+
+            console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
             fs.writeFileSync(targetFilepath, converted, "utf-8");
-
-            const reportSuccess = result.success ? "✔ SUCCESS" : "✔ FALLBACK";
-            console.log(`${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
-
             if (withreport)
             {
                 report[source] = converted;
@@ -739,7 +798,6 @@ const installPackage =
             const info = getLibraryInfo(name);
             if (info.installed && (version.split(info.version).length === 1 || version.split(info.version).length === 2))
             {
-                console.info(`${packageJson.name}: The module [${moduleName}${version}] / [${name}] is already installed.`);
                 return;
             }
 
@@ -773,7 +831,7 @@ const installPackage =
 const parseReplaceModules = async (config = [], packageJsonPath = "./package.json") =>
 {
     const replaceModules = config.replaceModules || [];
-    const replaceStart = config.replaceStart;
+    const replaceStart = [];
 
     packageJsonPath = path.resolve(packageJsonPath);
     if (!fs.existsSync(packageJsonPath))
@@ -820,7 +878,7 @@ const parseReplaceModules = async (config = [], packageJsonPath = "./package.jso
             console.error(`${packageJson.name}: (1015)`, e.message);
         }
 
-
+        config.replaceDetectedModules = replaceStart;
     }
 
 };
@@ -899,8 +957,9 @@ const convert = async (rawCliOptions) =>
 
         const result = convertListFiles(newList,
             {
-                replaceStart: confFileOptions.replaceStart,
-                replaceEnd  : confFileOptions.replaceEnd,
+                replaceStart          : confFileOptions.replaceStart,
+                replaceEnd            : confFileOptions.replaceEnd,
+                replaceDetectedModules: confFileOptions.replaceDetectedModules,
                 noheader,
                 solvedep,
                 extended,
