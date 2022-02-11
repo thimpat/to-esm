@@ -7,7 +7,7 @@ const path = require("path")
 
 let rootDir = path.join(__dirname, "virtual")
 
-const {buildTargetDir, convert} = require("../tools/converter.cjs");
+const {buildTargetDir, convert} = require("../src/converter.cjs");
 
 describe('The converter tool', function ()
 {

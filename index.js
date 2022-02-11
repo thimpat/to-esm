@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const packageJson = require("./package.json");
 const minimist = require("minimist");
-const {convert} = require("./tools/converter.cjs");
+const {convert} = require("./src/converter.cjs");
 
 (async () =>
 {
