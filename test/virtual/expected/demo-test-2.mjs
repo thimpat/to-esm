@@ -1,8 +1,8 @@
-import chalk  from "chalk-cjs";
-import colorConvert  from 'color-convert-cjs';
-import rgbHex  from 'rgb-hex-cjs';
-
 import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
+import rgbHex  from '../../../../../node_modules/rgb-hex-cjs/index.js';
+import colorConvert  from 'color-convert-cjs';import chalk  from "chalk-cjs";
+
+
 
 class Demo2
 {

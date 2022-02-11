@@ -4,7 +4,7 @@ const chalk000 = require("chalk-cjs");         // const path = require("path");
 const aa = "const chalk003 = require(\"chalk-cjs\");"
 const colorConvert = require("color-convert-cjs");
 const magnimus = require("mama-magnimus");
-const magnimus = require("mama-magnimus-cjs");
+const magnimus2 = require("mama-magnimus-cjs");
 const rgbhex = /** Cool **/ require("rgb-hex-cjs");
 const INFO1 = require("./dep-1.cjs");
 const INFO2 = require("./dep-2.cjs");
