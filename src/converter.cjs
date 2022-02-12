@@ -414,7 +414,6 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
 
                 let transformedLines = stripComments(prop.text);
                 transformedLines = convertRequireToImport(transformedLines);
-                transformedLines = transformedLines.trim();
 
                 const valid = validateSyntax(transformedLines, "module");
                 if (!valid)
@@ -424,6 +423,7 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
 
                 transformedLines = reviewExternalImport(transformedLines, list, {source, outputDir, rootDir});
 
+                transformedLines = transformedLines.trim();
                 if (transformedLines.charAt(transformedLines.length - 1) !== ";")
                 {
                     transformedLines = transformedLines + ";";
@@ -651,10 +651,6 @@ const convertListFiles = (list, {
 
             converted = applyReplace(converted, replaceStart);
 
-            if (source.indexOf("demo-3.cjs") > -1)
-            {
-                console.log("Not ok");
-            }
             const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir});
             converted = result.converted;
 
