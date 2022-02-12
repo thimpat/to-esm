@@ -102,6 +102,82 @@ describe("The converter tool", function ()
                 expect(expectedConversion).to.equal(converted);
             }
         );
+
+        it("should convert ./cjs/demo-test-4.cjs into ./expected/demo-test-4.esm", async function ()
+            {
+                const input = "./test/virtual/cjs/demo-test-4.cjs";
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/esm"),
+                    "config"    : path.join(__dirname, "virtual", ".toesm.json"),
+                    "noheader"  : true,
+                    "withreport": true,
+                    replaceStart: [
+                        {
+                            "search" : "/const\\s+ttt\\s*=\\s*require\\(.mama-magnimus.\\);/g",
+                            "replace": "// ***",
+                            "regex"  : true
+                        }
+                    ],
+                    replaceEnd  : [
+                        {
+                            "search" : "// ***",
+                            "replace": "// --------- mama-magnimus was replaced ----------------"
+                        }
+                    ]
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-4.mjs"), "utf8");
+
+                const success = await convert(options);
+                const converted = success["./test/virtual/cjs/demo-test-4.cjs"];
+
+                expect(expectedConversion).to.equal(converted);
+            }
+        );
+
+        it("should fail ./cjs/demo-bad-syntax.cjs into ./expected/demo-bad-syntax.esm", async function ()
+            {
+                const input = "./test/virtual/cjs/demo-bad-syntax.cjs";
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/esm"),
+                    "config"    : path.join(__dirname, ".toesm.json"),
+                    "noheader"  : false,
+                    "withreport": false,
+                };
+
+                const success = await convert(options);
+
+                chai.expect(success).to.be.false;
+            }
+        );
+
+        it("should fail ./cjs/demo-test-5.cjs when a glob is passed", async function ()
+            {
+                const input = "./test/virtual/cjs/**/*.cjs";
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/esm"),
+                    "config"    : path.join(__dirname, ".toesm.json"),
+                    "noheader"  : false,
+                    "withreport": false,
+                };
+
+                const success = await convert(options);
+
+                chai.expect(success).to.be.false;
+            }
+        );
+
+        it("should do nothing when the list of files is empty", async function ()
+            {
+                const result = await convert();
+                chai.expect(result).to.be.false;
+            }
+        );
+
+
     });
 
 
