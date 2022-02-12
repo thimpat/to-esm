@@ -55,14 +55,15 @@ const buildTargetDir = (targetDir) =>
 const convertNonTrivial = (converted) =>
 {
     let converted0;
-    do
-    {
-        const regex = /((?<!export\s+)(?:const|let|var)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
-        const subst = "export $1$2$3";
-        converted0 = converted;
-        converted = converted0.replace(regex, subst);
-    }
-    while (converted0.length !== converted.length);
+    let regex = /((?<!export\s+)(?:const|let|var)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
+    let subst = "export $1$2$3";
+    converted0 = converted;
+    converted = converted0.replaceAll(regex, subst);
+
+    regex = /(?:const|let|var)\s+([\w]+)([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
+    subst = "import $1 from $3$2";
+    converted0 = converted;
+    converted = converted0.replaceAll(regex, subst);
 
     return converted;
 
@@ -103,12 +104,12 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
         );
         return true;
     }
+        /* istanbul ignore next */
     catch (e)
     {
     }
 
     return false;
-
 };
 
 const reviewExternalImport = (text, list, fileProp) =>
@@ -118,11 +119,6 @@ const reviewExternalImport = (text, list, fileProp) =>
 
     return text.replace(re, function (match, moduleName)
     {
-        if (moduleName === undefined)
-        {
-            return match;
-        }
-
         if (/require\s*\(/.test(moduleName))
         {
             return match;
@@ -158,6 +154,14 @@ const reviewExternalImport = (text, list, fileProp) =>
 
 };
 
+/**
+ * Parse the string within "requires" to evaluate given paths
+ * @param text
+ * @param list
+ * @param fileProp
+ * @param workingDir
+ * @returns {*}
+ */
 const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 {
     const parsedFilePath = path.join(workingDir, fileProp.source);
@@ -167,16 +171,6 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 
     return text.replace(re, function (match, group)
     {
-        if (group === undefined)
-        {
-            return match;
-        }
-
-        if (/require\s*\(/.test(group))
-        {
-            return match;
-        }
-
         const target = path.join(parsedFileDir, group);
         const extension = path.extname(target);
 
@@ -217,7 +211,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 
         let relativePath = path.relative(sourcePath, destinationPath);
         relativePath = path.join(relativePath, basename + ESM_EXTENSION);
-        relativePath = relativePath.replace(/\\/g,"/");
+        relativePath = relativePath.replace(/\\/g, "/");
         if (!([".", "/"].includes(relativePath.charAt(0))))
         {
             relativePath = "./" + relativePath;
@@ -235,7 +229,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
  */
 const applyReplace = (converted, replace) =>
 {
-    replace.forEach((item)=>
+    replace.forEach((item) =>
     {
         if (item.regex)
         {
@@ -290,18 +284,11 @@ const stripComments = (code, extracted = null) =>
 
 const convertModuleExportsToExport = (converted) =>
 {
-    try
-    {
-        // Convert module.exports to export default
-        converted = converted.replace(/(?:module\.)?exports\s*=/gm, "export default");
+    // Convert module.exports to export default
+    converted = converted.replace(/(?:module\.)?exports\s*=/gm, "export default");
 
-        // Convert module.exports.something to export something
-        converted = converted.replace(/(?:module\.)?exports\./gm, "export const ");
-    }
-    catch (e)
-    {
-        console.error(`${packageJson.name}: (1003)`, e.message);
-    }
+    // Convert module.exports.something to export something
+    converted = converted.replace(/(?:module\.)?exports\./gm, "export const ");
 
     return converted;
 };
@@ -314,30 +301,23 @@ const convertModuleExportsToExport = (converted) =>
  */
 const convertRequireToImport = (converted) =>
 {
-    try
-    {
-        converted = stripComments(converted);
+    converted = stripComments(converted);
 
-        // convert require with .json file to import
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
+    // convert require with .json file to import
+    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
 
-        // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
-            ` $2${ESM_EXTENSION}$3`);
+    // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
+    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
+        ` $2${ESM_EXTENSION}$3`);
 
-        // convert require with .js extension to import
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
+    // convert require with .js extension to import
+    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
 
-        // convert require without extension to import .mjs extension
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
+    // convert require without extension to import .mjs extension
+    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
 
-        // convert require without extension to import (Third Party libraries)
-        converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
-    }
-    catch (e)
-    {
-        console.error(`${packageJson.name}: (1004)`, e.message);
-    }
+    // convert require without extension to import (Third Party libraries)
+    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
     return converted;
 };
@@ -481,7 +461,7 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
         const previouses = [];
 
         estraverse.traverse(ast, {
-            enter: function(node, parent)
+            enter: function (node, parent)
             {
                 try
                 {
@@ -538,7 +518,7 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
                     console.error(`${packageJson.name}: (1008)`, e.message);
                 }
             },
-            leave: function(node, parent)
+            leave: function (node, parent)
             {
                 try
                 {
@@ -566,7 +546,7 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
                     }
 
                 }
-                catch(e)
+                catch (e)
                 {
                     console.error(`${packageJson.name}: (1057)`, e.message);
                 }
@@ -704,9 +684,9 @@ const convertListFiles = (list, {
             {
                 // Failed even with fallback
                 console.error(`${packageJson.name}: (1054) FAULTY: ESM: Conversion may have failed even with fallback processing on` +
-                    ` [${source}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
+                    ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
                 reportSuccess = "❌ FAULTY";
-                console.log(`${packageJson.name}: (1075) Note that the file is still generated as it may also be a parsing error.`);
+                console.log(`${packageJson.name}: (1075) Note that the file is still generated to allow checking the error.`);
                 result.success = false;
                 if (!withreport)
                 {
@@ -809,7 +789,7 @@ const getOptionsConfigFile = async (configPath) =>
 
 const parseReplace = (replace = []) =>
 {
-    replace.forEach((item)=>
+    replace.forEach((item) =>
     {
         if (item.search instanceof RegExp)
         {
@@ -969,18 +949,18 @@ const convert = async (rawCliOptions = {}) =>
     let confFileOptions = {replace: []};
 
     // Config Files
-        let configPath = cliOptions.config;
-        if (configPath)
-        {
-            confFileOptions = await getOptionsConfigFile(configPath);
+    let configPath = cliOptions.config;
+    if (configPath)
+    {
+        confFileOptions = await getOptionsConfigFile(configPath);
 
-            // Replacement
-            confFileOptions.replaceStart = parseReplace(confFileOptions.replaceStart);
-            confFileOptions.replaceEnd = parseReplace(confFileOptions.replaceEnd);
+        // Replacement
+        confFileOptions.replaceStart = parseReplace(confFileOptions.replaceStart);
+        confFileOptions.replaceEnd = parseReplace(confFileOptions.replaceEnd);
 
-            // Module Install
-            await parseReplaceModules(confFileOptions);
-        }
+        // Module Install
+        await parseReplaceModules(confFileOptions);
+    }
 
     // Input Files
     let inputFileMaskArr = [];
@@ -998,35 +978,35 @@ const convert = async (rawCliOptions = {}) =>
     for (let i = 0; i < inputFileMaskArr.length; ++i)
     {
         const inputFileMask = inputFileMaskArr[i];
-            const outputDir = outputDirArr[i];
+        const outputDir = outputDirArr[i];
 
-            if (outputDir)
-            {
-                buildTargetDir(outputDir);
-            }
-
-            const list = glob.sync(inputFileMask, {
-                dot: true
-            });
-
-            const rootDir = list && list.length > 1 ? commonDir(workingDir, list) : path.join(workingDir, path.dirname(list[0]));
-
-            list.forEach((item)=>
-            {
-                newList.push({
-                    source: item,
-                    outputDir,
-                    rootDir
-                });
-            });
+        if (outputDir)
+        {
+            buildTargetDir(outputDir);
         }
 
-        // No header
-        const noheader = !!cliOptions.noheader;
-        const solvedep = !!cliOptions.solvedep;
-        const extended = !!cliOptions.extended;
-        const comments = !!cliOptions.comments;
-        const withreport = !!cliOptions.withreport;
+        const list = glob.sync(inputFileMask, {
+            dot: true
+        });
+
+        const rootDir = list && list.length > 1 ? commonDir(workingDir, list) : path.join(workingDir, path.dirname(list[0]));
+
+        list.forEach((item) =>
+        {
+            newList.push({
+                source: item,
+                outputDir,
+                rootDir
+            });
+        });
+    }
+
+    // No header
+    const noheader = !!cliOptions.noheader;
+    const solvedep = !!cliOptions.solvedep;
+    const extended = !!cliOptions.extended;
+    const comments = !!cliOptions.comments;
+    const withreport = !!cliOptions.withreport;
 
     return convertListFiles(newList,
         {
@@ -1053,6 +1033,7 @@ module.exports.applyReplace = applyReplace;
 module.exports.stripComments = stripComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
 module.exports.convertRequireToImport = convertRequireToImport;
+module.exports.validateSyntax = validateSyntax;
 module.exports.applyTransformations = applyRequireToImportTransformationsForAST;
 module.exports.convertRequireToImportWithAST = convertRequireToImportWithAST;
 module.exports.putBackComments = putBackComments;
