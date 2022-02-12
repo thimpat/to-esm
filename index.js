@@ -7,9 +7,8 @@ const {convert} = require("./src/converter.cjs");
 {
     const cliOptions = minimist(process.argv.slice(2));
     await convert(cliOptions);
-
 })().catch(err =>
 {
-    console.error(`${packageJson.name}:`, err);
+    console.error(`${packageJson.name}: (1016)`, err);
 });
 

@@ -129,7 +129,7 @@ const reviewExternalImport = (text, list, fileProp) =>
 
 };
 
-const parseImport = (text, list, fileProp, workingDir) =>
+const parseImportRegex = (text, list, fileProp, workingDir) =>
 {
     const parsedFilePath = path.join(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
@@ -571,7 +571,7 @@ const convertListFiles = (list, {
     if (!list || !list.length)
     {
         console.info(`${packageJson.name} (1010): No file to convert.`);
-        return report;
+        return false;
     }
 
     const parserOtions = {
@@ -651,6 +651,10 @@ const convertListFiles = (list, {
                 // Failed even with fallback
                 console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion failed even with fallback process on [${source}] -------`);
                 result.success = false;
+                if (!withreport)
+                {
+                    report = false;
+                }
                 return;
             }
 
@@ -687,7 +691,7 @@ const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep
             converted = stripComments(converted, extractedComments);
         }
 
-        converted = parseImport(converted, list, {source, outputDir, rootDir}, workingDir);
+        converted = parseImportRegex(converted, list, {source, outputDir, rootDir}, workingDir);
 
         converted = convertNonTrivial(converted);
 
@@ -887,19 +891,17 @@ const parseReplaceModules = async (config = [], packageJsonPath = "./package.jso
  * Use command line arguments to apply conversion
  * @param rawCliOptions
  */
-const convert = async (rawCliOptions) =>
+const convert = async (rawCliOptions = {}) =>
 {
-    try
+    const cliOptions = {};
+    Object.keys(rawCliOptions).forEach((key) =>
     {
-        const cliOptions = {};
-        Object.keys(rawCliOptions).forEach((key)=>
-        {
-            cliOptions[key.toLowerCase()] = rawCliOptions[key];
-        });
+        cliOptions[key.toLowerCase()] = rawCliOptions[key];
+    });
 
-        let confFileOptions = {replace: []};
+    let confFileOptions = {replace: []};
 
-        // Config Files
+    // Config Files
         let configPath = cliOptions.config;
         if (configPath)
         {
@@ -913,18 +915,22 @@ const convert = async (rawCliOptions) =>
             await parseReplaceModules(confFileOptions);
         }
 
-        // Input Files
-        const inputFileMaskArr = Array.isArray(cliOptions.input) ? cliOptions.input : [cliOptions.input];
+    // Input Files
+    let inputFileMaskArr = [];
+    if (cliOptions.input)
+    {
+        inputFileMaskArr = Array.isArray(cliOptions.input) ? cliOptions.input : [cliOptions.input];
+    }
 
-        // Output Files
-        const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
+    // Output Files
+    const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
 
-        const workingDir = process.cwd();
+    const workingDir = process.cwd();
 
-        const newList = [];
-        for (let i = 0; i < inputFileMaskArr.length; ++i)
-        {
-            const inputFileMask = inputFileMaskArr[i];
+    const newList = [];
+    for (let i = 0; i < inputFileMaskArr.length; ++i)
+    {
+        const inputFileMask = inputFileMaskArr[i];
             const outputDir = outputDirArr[i];
 
             if (outputDir)
@@ -955,25 +961,18 @@ const convert = async (rawCliOptions) =>
         const comments = !!cliOptions.comments;
         const withreport = !!cliOptions.withreport;
 
-        const result = convertListFiles(newList,
-            {
-                replaceStart          : confFileOptions.replaceStart,
-                replaceEnd            : confFileOptions.replaceEnd,
-                replaceDetectedModules: confFileOptions.replaceDetectedModules,
-                noheader,
-                solvedep,
-                extended,
-                comments,
-                withreport,
-            });
+    return convertListFiles(newList,
+        {
+            replaceStart          : confFileOptions.replaceStart,
+            replaceEnd            : confFileOptions.replaceEnd,
+            replaceDetectedModules: confFileOptions.replaceDetectedModules,
+            noheader,
+            solvedep,
+            extended,
+            comments,
+            withreport,
+        });
 
-        return result;
-
-    }
-    catch (e)
-    {
-        console.error(`${packageJson.name}: (1016)`, e.message);
-    }
 
 };
 
@@ -982,7 +981,7 @@ module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
 module.exports.getNodeModuleProp = getNodeModuleProp;
 module.exports.reviewExternalImport = reviewExternalImport;
-module.exports.parseImport = parseImport;
+module.exports.parseImport = parseImportRegex;
 module.exports.applyReplace = applyReplace;
 module.exports.stripComments = stripComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
