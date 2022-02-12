@@ -707,8 +707,9 @@ const convertListFiles = (list, {
             catch (e)
             {
                 // Failed even with fallback
-                console.error(`${packageJson.name}: (1054) ❌ FAULTY: ESM: Conversion may have failed even with fallback processing on` +
+                console.error(`${packageJson.name}: (1054) FAULTY: ESM: Conversion may have failed even with fallback processing on` +
                     ` [${source}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
+                reportSuccess = "❌ FAULTY";
                 console.log(`${packageJson.name}: (1075) Note that the file is still generated as it may also be a parsing error.`);
                 result.success = false;
                 if (!withreport)
