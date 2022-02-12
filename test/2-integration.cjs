@@ -1,6 +1,9 @@
 const chai = require("chai");
 const expect = chai.expect;
+const chaiString = require("chai-string");
 const sinon = require("sinon");
+
+chai.use(chaiString);
 
 const fs = require("fs");
 const path = require("path");
@@ -60,7 +63,7 @@ describe("The converter tool", function ()
             const success = await convert(options);
             const converted = success["./test/virtual/cjs/demo-test.cjs"];
 
-            expect(converted).to.equal(expectedConversion);
+            expect(converted).to.equalIgnoreSpaces(expectedConversion);
         }); 
 
         it("should convert ./cjs/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
@@ -79,7 +82,7 @@ describe("The converter tool", function ()
                 const success = await convert(options);
                 const converted = success["./test/virtual/cjs/demo-test-2.cjs"];
 
-                expect(expectedConversion).to.equal(converted);
+                expect(expectedConversion).to.equalIgnoreSpaces(converted);
             }
         );
 
@@ -99,7 +102,7 @@ describe("The converter tool", function ()
                 const success = await convert(options);
                 const converted = success["./test/virtual/cjs/demo-test-3.cjs"];
 
-                expect(expectedConversion).to.equal(converted);
+                expect(expectedConversion).to.equalIgnoreSpaces(converted);
             }
         );
 
