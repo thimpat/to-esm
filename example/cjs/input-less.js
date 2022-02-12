@@ -38,4 +38,7 @@ class SomeClass
     }
 }
 
+const {COLOR_TABLE, SYSTEM} = require("./constants.cjs");
+const chalk = require("chalk-cjs");
+
 module.exports = SomeClass;

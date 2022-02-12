@@ -5,6 +5,10 @@ let QuickLog2 = require("../../src/cjs/quick-log.cjs");
 var QuickLog3 = require("../../src/cjs/quick-log.cjs");
 var QuickLog4 = "rr";
 
+let some1 = require("./demo-test-2.cjs");
+var some2 = require("./demo-test-3");
+
+
 const cc = `var QuickLog3 = require("../../src/cjs/quick-log.cjs")`;
 // const aa = "let QuickLog2 = require(\"../../src/cjs/quick-log.cjs\")";
 
@@ -12,7 +16,7 @@ QuickLog4 = require("../../src/cjs/quick-log.cjs")
 
 let myLog1, QuickLog5, yourLog;
 let myLog2, QuickLog6, yourLog2;
-let QuickLog7, myLog2, yourLog2;
+let QuickLog7, yourLog2;
 
 QuickLog.setContexts(LOG_CONTEXT);
 QuickLog.setTargets(LOG_TARGETS);

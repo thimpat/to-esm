@@ -23,4 +23,5 @@ jobs:
       - name: Test
         shell: powershell
         run: |
+          npm lint
           npm test

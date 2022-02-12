@@ -9,7 +9,7 @@
 const chai = require("chai");
 const expect = chai.expect;
 
-const {convertRequireToImport, stripComments} = require("../tools/converter.cjs");
+const {convertRequireToImport, stripComments} = require("../src/converter.cjs");
 
 describe('converter.cjs', function ()
 {
