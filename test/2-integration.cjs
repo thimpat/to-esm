@@ -155,10 +155,10 @@ describe("The converter tool", function ()
 
         it("should fail ./cjs/demo-test-5.cjs when a glob is passed", async function ()
             {
-                const input = "./test/virtual/cjs/**/*.cjs";
+                const input = "./test/virtual/cjs/multi/**/*.cjs";
                 const options = {
                     input,
-                    "output"    : path.join(rootDir, "/esm"),
+                    "output"    : path.join(rootDir, "/esm/multi"),
                     "config"    : path.join(__dirname, ".toesm.json"),
                     "noheader"  : false,
                     "withreport": false,
