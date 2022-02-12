@@ -86,6 +86,31 @@ const getNodeModuleProp = (moduleName) =>
     return path.parse(modulePath);
 };
 
+const validateSyntax = (str, syntaxType = "commonjs") =>
+{
+    try
+    {
+        espree.parse(
+            str, {
+                sourceType   : syntaxType,
+                ecmaVersion  : "latest",
+                allowReserved: false,
+                loc          : false,
+                range        : false,
+                tokens       : false,
+                comment      : false
+            }
+        );
+        return true;
+    }
+    catch (e)
+    {
+    }
+
+    return false;
+
+};
+
 const reviewExternalImport = (text, list, fileProp) =>
 {
     // Locate third party
@@ -133,7 +158,7 @@ const reviewExternalImport = (text, list, fileProp) =>
 
 };
 
-const parseImportRegex = (text, list, fileProp, workingDir) =>
+const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 {
     const parsedFilePath = path.join(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
@@ -281,6 +306,12 @@ const convertModuleExportsToExport = (converted) =>
     return converted;
 };
 
+/**
+ * Use regex to do the transformation into imports.
+ * @note This function is used with both parser (AST or Regex)
+ * @param converted
+ * @returns {*}
+ */
 const convertRequireToImport = (converted) =>
 {
     try
@@ -313,7 +344,7 @@ const convertRequireToImport = (converted) =>
 
 /**
  * An import is a declaration + assignment, so we need to remove cjs
- * delarations that were not combined in the same line.
+ * declarations that were not combined in the same line.
  * TODO: Needs optimisation
  * @param converted
  * @param extracted
@@ -352,7 +383,7 @@ const removeDeclarationForAST = (converted, extracted) =>
 };
 
 /**
- * Covert require and move import to the top
+ * Covert require and move imports to the top
  * @param converted
  * @param extracted
  * @param list
@@ -383,9 +414,20 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
 
                 let transformedLines = stripComments(prop.text);
                 transformedLines = convertRequireToImport(transformedLines);
+                transformedLines = transformedLines.trim();
+
+                const valid = validateSyntax(transformedLines, "module");
+                if (!valid)
+                {
+                    continue;
+                }
 
                 transformedLines = reviewExternalImport(transformedLines, list, {source, outputDir, rootDir});
 
+                if (transformedLines.charAt(transformedLines.length - 1) !== ";")
+                {
+                    transformedLines = transformedLines + ";";
+                }
                 importList.push(transformedLines);
                 converted = converted.substring(0, prop.start) + converted.substring(prop.end);
             }
@@ -395,7 +437,8 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
             }
         }
 
-        converted = importList.join("") + converted;
+        const EOL = require("os").EOL;
+        converted = importList.join(EOL) + converted;
     }
     catch (e)
     {
@@ -445,9 +488,9 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
                     const lastFound = extracted[extracted.length - 1];
                     if (lastFound)
                     {
-                        if (!lastFound.validated)
+                        if (!lastFound.wholeLine)
                         {
-                            lastFound.validated = true;
+                            lastFound.wholeLine = true;
                             lastFound.end = node.range[0] - 1;
                             lastFound.text = converted.substring(lastFound.start, lastFound.end);
                         }
@@ -497,29 +540,36 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
             },
             leave: function(node, parent)
             {
-                if (end > 0)
+                try
                 {
-                    end = parent.range[1];
-                    text = converted.substring(start, end);
-
-                    const textTrimmed = text.trim();
-
-                    const info = {
-                        start, end, text, requirePath, source, identifier
-                    };
-
-                    if (!(textTrimmed.indexOf("const") === 0 || textTrimmed.indexOf("let") === 0 || textTrimmed.indexOf("var") === 0))
+                    if (end > 0)
                     {
-                        info.declareNotOnTheSameLine = true;
+                        end = parent.range[1];
+                        text = converted.substring(start, end);
+
+                        const textTrimmed = text.trim();
+
+                        const info = {
+                            start, end, text, requirePath, source, identifier
+                        };
+
+                        if (!(textTrimmed.indexOf("const") === 0 || textTrimmed.indexOf("let") === 0 || textTrimmed.indexOf("var") === 0))
+                        {
+                            info.declareNotOnTheSameLine = true;
+                        }
+
+                        extracted.push(info);
+
+                        requirePath = null;
+                        start = 0;
+                        end = 0;
                     }
 
-                    extracted.push(info);
-
-                    requirePath = null;
-                    start = 0;
-                    end = 0;
                 }
-
+                catch(e)
+                {
+                    console.error(`${packageJson.name}: (1057)`, e.message);
+                }
             }
         });
 
@@ -601,6 +651,10 @@ const convertListFiles = (list, {
 
             converted = applyReplace(converted, replaceStart);
 
+            if (source.indexOf("demo-3.cjs") > -1)
+            {
+                console.log("Not ok");
+            }
             const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir});
             converted = result.converted;
 
@@ -653,13 +707,14 @@ const convertListFiles = (list, {
             catch (e)
             {
                 // Failed even with fallback
-                console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion failed even with fallback process on [${source}] -------`);
+                console.error(`${packageJson.name}: (1054) ❌ FAULTY: ESM: Conversion may have failed even with fallback processing on` +
+                    ` [${source}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
+                console.log(`${packageJson.name}: (1075) Note that the file is still generated as it may also be a parsing error.`);
                 result.success = false;
                 if (!withreport)
                 {
                     report = false;
                 }
-                return;
             }
 
             console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
@@ -695,7 +750,7 @@ const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep
             converted = stripComments(converted, extractedComments);
         }
 
-        converted = parseImportRegex(converted, list, {source, outputDir, rootDir}, workingDir);
+        converted = parseImportWithRegex(converted, list, {source, outputDir, rootDir}, workingDir);
 
         converted = convertNonTrivial(converted);
 
@@ -996,7 +1051,7 @@ module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
 module.exports.getNodeModuleProp = getNodeModuleProp;
 module.exports.reviewExternalImport = reviewExternalImport;
-module.exports.parseImport = parseImportRegex;
+module.exports.parseImport = parseImportWithRegex;
 module.exports.applyReplace = applyReplace;
 module.exports.stripComments = stripComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
