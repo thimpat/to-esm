@@ -22,4 +22,5 @@ jobs:
       - name: Upgrade version
         shell: powershell
         run: |
+          npm test
           npx semantic-release
