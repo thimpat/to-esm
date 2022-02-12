@@ -112,7 +112,14 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
     return false;
 };
 
-const reviewExternalImport = (text, list, fileProp) =>
+/**
+ * Parse the imported library
+ * @param text
+ * @param list
+ * @param fileProp
+ * @returns {*}
+ */
+const reviewExternalImport = (text, list, {outputDir, importMaps}) =>
 {
     // Locate third party
     const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
@@ -138,7 +145,7 @@ const reviewExternalImport = (text, list, fileProp) =>
         }
 
         // current file's absolute path
-        const sourcePath = path.resolve(fileProp.outputDir);
+        const sourcePath = path.resolve(outputDir);
 
         // The node_modules directory package
         let relativeNodeModulesDir = path.relative(sourcePath, module.dir);
@@ -147,6 +154,8 @@ const reviewExternalImport = (text, list, fileProp) =>
         let relativePath = path.join("../..", relativeNodeModulesDir, module.base);
 
         relativePath = relativePath.replace(/\\/g, "/");
+
+        importMaps[moduleName] = relativePath;
 
         return match.replace(moduleName, relativePath);
 
@@ -370,9 +379,10 @@ const removeDeclarationForAST = (converted, extracted) =>
  * @param source
  * @param outputDir
  * @param rootDir
+ * @param importMaps
  * @returns {string|*}
  */
-const applyRequireToImportTransformationsForAST = (converted, extracted, list, {source, outputDir, rootDir}) =>
+const applyRequireToImportTransformationsForAST = (converted, extracted, list, {source, outputDir, rootDir, importMaps}) =>
 {
     try
     {
@@ -401,7 +411,8 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
                     continue;
                 }
 
-                transformedLines = reviewExternalImport(transformedLines, list, {source, outputDir, rootDir});
+                transformedLines = reviewExternalImport(transformedLines, list,
+                    {source, outputDir, rootDir, importMaps});
 
                 transformedLines = transformedLines.trim();
                 if (transformedLines.charAt(transformedLines.length - 1) !== ";")
@@ -428,7 +439,7 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
     return converted;
 };
 
-const convertRequireToImportWithAST = (converted, list, {source, outputDir, rootDir}) =>
+const convertRequireToImportWithAST = (converted, list, {source, outputDir, rootDir, importMaps}) =>
 {
     let success = true;
     try
@@ -553,7 +564,7 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
             }
         });
 
-        converted = applyRequireToImportTransformationsForAST(converted, extracted, list, {source, outputDir, rootDir});
+        converted = applyRequireToImportTransformationsForAST(converted, extracted, list, {source, outputDir, rootDir, importMaps});
         converted = removeDeclarationForAST(converted, extracted);
     }
     catch (e)
@@ -588,7 +599,7 @@ const putBackComments = (str, extracted) =>
  * @param {string} outputDir Target directory to put converted file
  * @param {boolean} noheader Whether to add extra info on top of converted file
  */
-const convertListFiles = (list, {
+const convertCjsFiles = (list, {
     replaceStart = [],
     replaceEnd = [],
     replaceDetectedModules = [],
@@ -596,7 +607,8 @@ const convertListFiles = (list, {
     solvedep = false,
     extended = false,
     comments = false,
-    withreport = false
+    withreport = false,
+    importMaps = {}
 } = {}) =>
 {
     let report;
@@ -631,7 +643,7 @@ const convertListFiles = (list, {
 
             converted = applyReplace(converted, replaceStart);
 
-            const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir});
+            const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir, importMaps});
             converted = result.converted;
 
             converted = applyReplace(converted, replaceDetectedModules);
@@ -640,7 +652,7 @@ const convertListFiles = (list, {
 
             if (extended || !result.success || comments)
             {
-                converted = replaceWithRegex(converted, list, {source, outputDir, rootDir, solvedep, comments});
+                converted = replaceWithRegex(converted, list, {source, outputDir, rootDir, importMaps, solvedep, comments});
             }
 
             if (!noheader)
@@ -714,7 +726,59 @@ const convertListFiles = (list, {
     return report;
 };
 
-const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep, comments} = {}) =>
+
+
+const parseHTMLFiles = (htmlPath, {importMaps = {}})=>
+{
+    htmlPath = path.resolve(htmlPath);
+    if (!fs.existsSync(htmlPath))
+    {
+        console.error(`${packageJson.name}: (1080) Could not find HTML file at [${htmlPath}]`);
+        return;
+    }
+
+    const content = fs.readFileSync(htmlPath, "utf-8");
+    const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
+    // const found = content.match(regex);
+    // if (!found)
+    // {
+    //
+    // }
+    // else
+    // {
+    //     console.log( );
+    // }
+
+    let jsonImportMap = {};
+    let match;
+    while(match = regex.exec(content))
+    {
+        console.log(match);
+        if (match.length > 1)
+        {
+            let rawImportMap = match[1].trim();
+            try
+            {
+                jsonImportMap = JSON.parse(rawImportMap);
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}: (1090)`, e.message);
+            }
+        }
+    }
+};
+
+const convertHTMLFiles = (list, {importMaps = {}}) =>
+    {
+        list.forEach((html)=>
+        {
+            console.log(html);
+            parseHTMLFiles(html, {importMaps});
+        });
+    };
+
+const replaceWithRegex = (converted, list, {source, outputDir, rootDir, importMaps, solvedep, comments} = {}) =>
 {
     const workingDir = process.cwd();
 
@@ -737,7 +801,7 @@ const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep
 
         if (solvedep)
         {
-            converted = reviewExternalImport(converted, list, {source, outputDir, rootDir});
+            converted = reviewExternalImport(converted, list, {source, outputDir, rootDir , importMaps});
         }
 
         converted = putBackComments(converted, extractedComments);
@@ -974,7 +1038,7 @@ const convert = async (rawCliOptions = {}) =>
 
     const workingDir = process.cwd();
 
-    const newList = [];
+    const cjsList = [];
     for (let i = 0; i < inputFileMaskArr.length; ++i)
     {
         const inputFileMask = inputFileMaskArr[i];
@@ -993,7 +1057,7 @@ const convert = async (rawCliOptions = {}) =>
 
         list.forEach((item) =>
         {
-            newList.push({
+            cjsList.push({
                 source: item,
                 outputDir,
                 rootDir
@@ -1008,7 +1072,9 @@ const convert = async (rawCliOptions = {}) =>
     const comments = !!cliOptions.comments;
     const withreport = !!cliOptions.withreport;
 
-    return convertListFiles(newList,
+    const importMaps = {};
+
+    const result = convertCjsFiles(cjsList,
         {
             replaceStart          : confFileOptions.replaceStart,
             replaceEnd            : confFileOptions.replaceEnd,
@@ -1018,7 +1084,13 @@ const convert = async (rawCliOptions = {}) =>
             extended,
             comments,
             withreport,
+            importMaps
         });
+
+    const html = cliOptions.html;
+    const htmlList = glob.sync(html);
+
+    convertHTMLFiles(htmlList, {importMaps});
 
 
 };
@@ -1037,7 +1109,7 @@ module.exports.validateSyntax = validateSyntax;
 module.exports.applyTransformations = applyRequireToImportTransformationsForAST;
 module.exports.convertRequireToImportWithAST = convertRequireToImportWithAST;
 module.exports.putBackComments = putBackComments;
-module.exports.convertListFiles = convertListFiles;
+module.exports.convertListFiles = convertCjsFiles;
 module.exports.replaceWithRegex = replaceWithRegex;
 module.exports.getOptionsConfigFile = getOptionsConfigFile;
 module.exports.parseReplace = parseReplace;
