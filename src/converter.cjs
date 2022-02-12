@@ -22,6 +22,8 @@ const nativeModules = Object.keys(process.binding("natives"));
  * Build target directory.
  * Ignore, if the directory already exist
  * @param {string} targetDir Directory to build
+ * @test Some parts are ignored for the coverage (needs to simulate conditions
+ * linked to filesystem like root access or bad hard drive)
  */
 const buildTargetDir = (targetDir) =>
 {
@@ -37,9 +39,11 @@ const buildTargetDir = (targetDir) =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error(`${packageJson.name}: (1001)`, e.message);
     }
 
+    /* istanbul ignore next */
     return false;
 };
 
@@ -794,6 +798,17 @@ const getLibraryInfo = (modulePackname) =>
     return info;
 };
 
+/* istanbul ignore next */
+/**
+ * Install npm packages on the users project.
+ * Ignore for the tests as it requires some End to End testing.
+ * @param name
+ * @param version
+ * @param isDevDependencies
+ * @param moduleName
+ * @param isCjs
+ * @param packageJson
+ */
 const installPackage =
     ({name, version, isDevDependencies, moduleName, isCjs, packageJson} = {}) =>
     {
