@@ -1,18 +1,27 @@
-import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
-import QuickLog3  from "../../src/cjs/quick-log.mjs";
-import QuickLog2  from "../../src/cjs/quick-log.mjs";
-import QuickLog  from "../../src/cjs/quick-log.mjs";
-import {LOG_CONTEXT, LOG_TARGETS}  from "./contexts-def.mjs";
-
-
-
+let QuickLog;
+const {LOG_CONTEXT, LOG_TARGETS} = require("./contexts-def.cjs")
+QuickLog = require("../../src/cjs/quick-log.cjs");
+let QuickLog2 = require("../../src/cjs/quick-log.cjs");
+var QuickLog3 = require("../../src/cjs/quick-log.cjs");
+var QuickLog4 = "rr";
 
 const cc = `var QuickLog3 = require("../../src/cjs/quick-log.cjs")`;
 // const aa = "let QuickLog2 = require(\"../../src/cjs/quick-log.cjs\")";
 
+QuickLog4 = require("../../src/cjs/quick-log.cjs")
+
+let myLog1, QuickLog5, yourLog;
+let myLog2, QuickLog6, yourLog2;
+let QuickLog7, myLog2, yourLog2;
+
 QuickLog.setContexts(LOG_CONTEXT);
 QuickLog.setTargets(LOG_TARGETS);
 
+QuickLog5 = require("../../src/cjs/quick-log.cjs");
+QuickLog6 = require("../../src/cjs/quick-log.cjs")
+QuickLog7 = require("../../src/cjs/quick-log.cjs")
+
+const {COLOR_TABLE, SYSTEM} = require("./constants.cjs");
 
 QuickLog.setFormat(({context, id, message})=>`${context}: (${id}) ${message}`);
 

@@ -74,3 +74,4 @@ dist
 /example/browser/
 /example/esm/
 /test/virtual/esm/
+/test/virtual/actual/

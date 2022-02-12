@@ -1,9 +1,8 @@
-import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
-import rgbHex  from '../../../../../node_modules/rgb-hex-cjs/index.js';
-import colorConvert  from 'color-convert-cjs';
-import chalk  from "chalk-cjs";
+const chalk = require("chalk-cjs");
+const colorConvert = require('color-convert-cjs');
+const rgbHex = require('rgb-hex-cjs');
 
-
+const {COLOR_TABLE, SYSTEM} = require("./constants.cjs");
 
 class Demo2
 {
@@ -514,4 +513,4 @@ class Demo2
 
 }
 
-export const anaLogger = new Demo2()
+module.exports.anaLogger = new Demo2()
