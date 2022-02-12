@@ -1,6 +1,6 @@
 {
   "name": "to-esm",
-  "version": "1.6.7",
+  "version": "1.7.0",
   "description": "Very simple tool to convert Commonjs files into ESM",
   "main": "src/converter.cjs",
   "type": "commonjs",
