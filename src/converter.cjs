@@ -1691,11 +1691,6 @@ const convert = async (rawCliOptions = {}) =>
     let followlinked = !cliOptions.ignorelinked;
 
     const importMaps = {};
-    const html = cliOptions.html;
-
-    if (!!html)
-    {
-    }
 
     const result = convertCjsFiles(cjsList,
         {
@@ -1712,6 +1707,7 @@ const convert = async (rawCliOptions = {}) =>
             fallback
         });
 
+    const html = cliOptions.html;
     if (!html)
     {
         return result;

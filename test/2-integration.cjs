@@ -10,7 +10,7 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {buildTargetDir, convert, normalisePath} = require("../src/converter.cjs");
+const {buildTargetDir, convert} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
@@ -21,6 +21,11 @@ describe("The converter tool", function ()
         {
             fs.rmSync(assetsFolder, {recursive: true});
         }
+
+        fs.mkdirSync(assetsFolder, {recursive: true});
+
+        fs.copyFileSync(path.join(rootDir, "index.html"), path.join(rootDir, "actual", "index.html"));
+        fs.copyFileSync(path.join(rootDir, "other.html"), path.join(rootDir, "actual", "other.html"));
     });
 
     after(function ()
@@ -28,8 +33,12 @@ describe("The converter tool", function ()
         if (fs.existsSync(path.join(rootDir, "/esm2")))
         {
             // fs.rmSync(path.join(rootDir, "/esm"))
-            fs.rmSync(path.join(rootDir, "/esm2"), {recursive: true});
-            fs.rmSync(path.join(rootDir, "/esm3"), {recursive: true});
+            fs.rmSync(path.join(rootDir, "esm2"), {recursive: true});
+        }
+
+        if (fs.existsSync(path.join(rootDir, "/esm2")))
+        {
+            fs.rmSync(path.join(rootDir, "esm3"), {recursive: true});
         }
     });
 
@@ -49,15 +58,11 @@ describe("The converter tool", function ()
             expect(res).to.be.true;
         });
 
-        it("should reject an non-existent directory", function ()
+        it("should reject an invalid directory name", function ()
         {
-            let targetDir3 = path.join(rootDir, "/esm3");
-            if (fs.existsSync(targetDir3))
-            {
-                fs.rmSync(targetDir3);
-            }
+            let targetDir3 = path.join(rootDir, "/esm3><");
             const res = buildTargetDir(targetDir3);
-            expect(res).to.be.true;
+            expect(res).to.be.false;
         });
 
         it("should convert ./cjs/demo-test.cjs into ./expected/demo-test.esm", async function ()
@@ -180,13 +185,44 @@ describe("The converter tool", function ()
             }
         );
 
-        it("should parse html files and add importmaps to them", async function ()
+        /**
+         * Testing:
+         * $> toesm --input="assets/cjs/demo-test-7.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         */
+        it("should solve node_modules paths using the toesm translation of rgb-hex-cjs to rgb-hex", async function ()
             {
                 const input = "./test/assets/cjs/demo-test-7.cjs";
                 /**
+                 * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
+                 *     config: string}}
+                 */
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
+                    "noheader"  : false,
+                    "withreport": true,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-7.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-7.mjs"), "utf8");
+
+                expect(expectedConversion).to.equal(converted);
+            }
+        );
+
+        /**
+         * Testing:
+         * $> toesm --input="assets/cjs/demo-test-7.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         */
+        it("should generate an import maps into the parsed html files", async function ()
+            {
+                const input = "./test/assets/cjs/demo-test-7.cjs";
+                const htmlPattern = "./test/assets/actual/*.html";
+                /**
                  * @example
                  * CLI equivalent:
-                 * toesm --input="assets/cjs/demo-test-7.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
                  * --html="assets/*.html"
                  * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
                  *     config: string}}
@@ -196,14 +232,14 @@ describe("The converter tool", function ()
                     "output"    : path.join(rootDir, "/actual"),
                     "config"    : path.join(__dirname, "assets", ".toesm.json"),
                     "noheader"  : false,
-                    "importmaps": true,
                     "withreport": true,
-                    "html": "./test/assets/*.html",
+                    "html": htmlPattern,
                 };
 
-                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-7.mjs"), "utf8");
                 await convert(options);
-                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-7.mjs"), "utf8");
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "index.html"), "utf8");
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "index.html"), "utf8");
 
                 expect(expectedConversion).to.equal(converted);
             }
