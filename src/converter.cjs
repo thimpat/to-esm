@@ -566,7 +566,7 @@ const reviewExternalImport = (text, list, {
                 if (requiredPath === null)
                 {
                     console.warn(`${packageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
-                        + "It won't be part of the importmaps.");
+                        + "Skipping.");
                     return match;
                 }
 
@@ -907,6 +907,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
  * @param importMaps
  * @param nonHybridModuleMap
  * @param workingDir
+ * @param followlinked
  * @returns {{converted, success: boolean}}
  */
 const convertRequiresToImportsWithAST = (converted, list, {
@@ -941,7 +942,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         }
         catch (e)
         {
-            console.warn(`${packageJson.name}: (1052) ------- CJS: Syntax issues found on [${source}]`);
+            console.warn(`${packageJson.name}: (1052) WARNING: Syntax issues found on [${source}]`);
             console.info("                  ➔ ➔ ➔ ➔ ➔ ➔ ", e.message);
             return {converted, success: false};
         }
@@ -1139,7 +1140,8 @@ const convertCjsFiles = (list, {
     comments = false,
     withreport = false,
     importMaps = {},
-    followlinked = true
+    followlinked = true,
+    fallback = false
 } = {}) =>
 {
     let report;
@@ -1189,6 +1191,13 @@ const convertCjsFiles = (list, {
             converted = result.converted;
 
             converted = convertModuleExportsToExport(converted);
+
+            if (!fallback && !result.success)
+            {
+                // Failed even with fallback
+                console.error(`${packageJson.name}: (1173) ❌ FAILED: ESM: Conversion failed for ${source}`);
+                return false;
+            }
 
             // Apply fallback in case of conversion error
             if (extended || !result.success || comments)
@@ -1247,11 +1256,10 @@ const convertCjsFiles = (list, {
             catch (e)
             {
                 // Failed even with fallback
-                console.error(`${packageJson.name}: (1054) FAULTY: ESM: Conversion may have failed even with fallback processing on` +
+                console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
                     ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
-                reportSuccess = "❌ FAULTY";
+                reportSuccess = "❌ FAILED";
                 console.log(`${packageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
-                result.success = false;
                 if (!withreport)
                 {
                     report = false;
@@ -1701,6 +1709,7 @@ const convert = async (rawCliOptions = {}) =>
     const extended = !!cliOptions.extended;
     const comments = !!cliOptions.comments;
     const withreport = !!cliOptions.withreport;
+    const fallback = !!cliOptions.fallback;
     let followlinked = !cliOptions.ignorelinked;
 
     const importMaps = {};
@@ -1711,7 +1720,7 @@ const convert = async (rawCliOptions = {}) =>
         solvedep = true;
     }
 
-    convertCjsFiles(cjsList,
+    const result = convertCjsFiles(cjsList,
         {
             replaceStart: confFileOptions.replaceStart,
             replaceEnd  : confFileOptions.replaceEnd,
@@ -1723,8 +1732,19 @@ const convert = async (rawCliOptions = {}) =>
             followlinked,
             withreport,
             importMaps,
-            workingDir
+            workingDir,
+            fallback
         });
+
+    if (!html)
+    {
+        return result;
+    }
+
+    if (!Object.keys(importMaps).length)
+    {
+        return result;
+    }
 
     const htmlList = glob.sync(html);
 
