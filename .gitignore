@@ -75,3 +75,4 @@ dist
 /example/esm/
 /test/virtual/esm/
 /test/virtual/actual/
+/test/assets/actual/

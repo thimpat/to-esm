@@ -8,7 +8,7 @@ chai.use(chaiString);
 const fs = require("fs");
 const path = require("path");
 
-let rootDir = path.join(__dirname, "virtual");
+let rootDir = path.join(__dirname, "assets");
 
 const {buildTargetDir, convert} = require("../src/converter.cjs");
 
@@ -55,11 +55,11 @@ describe("The converter tool", function ()
 
         it("should convert ./cjs/demo-test.cjs into ./expected/demo-test.esm", async function ()
         {
-            const input = "./test/virtual/cjs/demo-test.cjs";
+            const input = "./test/assets/cjs/demo-test.cjs";
             const options = {
                 input,
                 "output": path.join(rootDir, "/actual"),
-                "noHeader": true,
+                "noHeader": false,
                 "withreport": true
             };
 
@@ -67,12 +67,12 @@ describe("The converter tool", function ()
             await convert(options);
             const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.mjs"), "utf8");
 
-            expect(converted).to.equalIgnoreSpaces(expectedConversion);
+            expect(converted).to.equal(expectedConversion);
         });
 
         it("should convert ./cjs/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
             {
-                const input = "./test/virtual/cjs/demo-test-2.cjs";
+                const input = "./test/assets/cjs/demo-test-2.cjs";
                 const options = {
                     input,
                     "output": path.join(rootDir, "/actual"),
@@ -91,7 +91,7 @@ describe("The converter tool", function ()
 
         it("should convert ./cjs/demo-test-3.cjs into ./expected/demo-test-3.esm", async function ()
             {
-                const input = "./test/virtual/cjs/demo-test-3.cjs";
+                const input = "./test/assets/cjs/demo-test-3.cjs";
                 const options = {
                     input,
                     "output": path.join(rootDir, "/actual"),
@@ -104,17 +104,17 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-3.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
         it("should convert ./cjs/demo-test-4.cjs into ./expected/demo-test-4.esm", async function ()
             {
-                const input = "./test/virtual/cjs/demo-test-4.cjs";
+                const input = "./test/assets/cjs/demo-test-4.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
-                    "config"    : path.join(__dirname, "virtual", ".toesm.json"),
+                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
                     "noheader"  : false,
                     "withreport": true,
                     replaceStart: [
@@ -142,11 +142,11 @@ describe("The converter tool", function ()
 
         it("should parse with regex and convert ./cjs/demo-test-6.cjs into ./expected/demo-test-6.esm", async function ()
             {
-                const input = "./test/virtual/cjs/demo-test-6.cjs";
+                const input = "./test/assets/cjs/demo-test-6.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
-                    "config"    : path.join(__dirname, "virtual", ".toesm.json"),
+                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
                     "noheader"  : false,
                     "withreport": true,
                     "solvedep"  : true,
@@ -175,7 +175,7 @@ describe("The converter tool", function ()
 
         it("should fail ./cjs/demo-bad-syntax.cjs into ./expected/demo-bad-syntax.esm", async function ()
             {
-                const input = "./test/virtual/cjs/demo-bad-syntax.cjs";
+                const input = "./test/assets/cjs/demo-bad-syntax.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
@@ -192,7 +192,7 @@ describe("The converter tool", function ()
 
         it("should fail ./cjs/demo-test-5.cjs when a glob is passed", async function ()
             {
-                const input = "./test/virtual/cjs/multi/**/*.cjs";
+                const input = "./test/assets/cjs/multi/**/*.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual/multi"),
