@@ -76,6 +76,8 @@ const convertNonTrivial = (converted) =>
 
 };
 
+/* istanbul ignore next */
+
 /**
  * Retrieve module entrypoint
  * @param modulePath
@@ -164,6 +166,7 @@ const getNodeModuleProperties = (moduleName) =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.info(`${packageJson.name}: (1002) Failed to locate module [${moduleName}]. Skipped.`);
     }
 
@@ -351,7 +354,7 @@ const substractPath = (wholePath, pathToSubstract) =>
     if (wholePath.length < pathToSubstract.length)
     {
         console.error(`${packageJson.name}: (1123)` + "Path substraction will not work here. " +
-            "The substracting path bigger than the whole path");
+            "The substracting path is bigger than the whole path");
         return {
             subPath: wholePath
         };
@@ -483,7 +486,7 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, wo
         {
             if (followlinked)
             {
-                addFileToConverting({
+                addFileToConvertingList({
                     source : requiredPath,
                     rootDir: workingDir,
                     outputDir,
@@ -588,6 +591,7 @@ const reviewEsmImports = (text, list, {
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.error(`${packageJson.name}: (1108)`, e.message);
         }
 
@@ -1277,6 +1281,7 @@ const parseHTMLFile = (htmlPath, {importMaps = {}}) =>
     const EOL = require("os").EOL;
 
     htmlPath = path.resolve(htmlPath);
+    /* istanbul ignore next */
     if (!fs.existsSync(htmlPath))
     {
         console.error(`${packageJson.name}: (1080) Could not find HTML file at [${htmlPath}]`);
@@ -1467,8 +1472,8 @@ const getLibraryInfo = (modulePackname) =>
     }
     return info;
 };
-/* istanbul ignore next */
 
+/* istanbul ignore next */
 /**
  * Install npm packages on the users project.
  * Ignore for the tests as it requires some End to End testing.
@@ -1531,7 +1536,7 @@ const installNonHybridModules = async (config = []) =>
     if (!fs.existsSync(packageJsonPath))
     {
         console.error(`${packageJson.name}: (1014) Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`);
-        return;
+        return null;
     }
 
     // const packageJson = require(packageJsonPath);
@@ -1573,7 +1578,7 @@ const installNonHybridModules = async (config = []) =>
     return nonHybridModules;
 };
 
-const addFileToConverting = ({source, rootDir, outputDir, workingDir}) =>
+const addFileToConvertingList = ({source, rootDir, outputDir, workingDir}) =>
 {
     try
     {
@@ -1660,6 +1665,7 @@ const convert = async (rawCliOptions = {}) =>
             dot: true
         });
 
+        /* istanbul ignore next */
         if (!list.length)
         {
             console.error(`${packageJson.name}: (1151) The pattern did not match any file.`);
@@ -1678,7 +1684,7 @@ const convert = async (rawCliOptions = {}) =>
 
         list.forEach((source) =>
         {
-            addFileToConverting({source, rootDir, outputDir, workingDir});
+            addFileToConvertingList({source, rootDir, outputDir, workingDir});
         });
     }
 
