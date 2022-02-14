@@ -85,7 +85,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-2.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -136,7 +136,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-4.mjs"), "utf8");
 
-                expect(expectedConversion).to.equal(converted);
+                expect(expectedConversion).to.equalIgnoreSpaces(converted);
             }
         );
 
@@ -169,7 +169,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-6.mjs"), "utf8");
 
-                expect(expectedConversion).to.equal(converted);
+                expect(expectedConversion).to.equalIgnoreSpaces(converted);
             }
         );
 
