@@ -875,7 +875,7 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
         }
 
         const EOL = require("os").EOL;
-        converted = importList.join(EOL) + converted;
+        converted = importList.reverse().join(EOL) + converted;
     }
     catch (e)
     {
