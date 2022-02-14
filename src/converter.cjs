@@ -525,7 +525,8 @@ const reviewEsmImports = (text, list, {
     importMaps,
     nonHybridModuleMap,
     workingDir,
-    followlinked
+    followlinked,
+    moreOptions
 }) =>
 {
     // Locate third party
@@ -536,7 +537,7 @@ const reviewEsmImports = (text, list, {
     {
         try
         {
-             if (~nativeModules.indexOf(regexRequiredPath))
+            if (~nativeModules.indexOf(regexRequiredPath))
             {
                 console.info(`${packageJson.name}: (1017) ${regexRequiredPath} is a built-in NodeJs module.`);
                 return match;
@@ -551,7 +552,7 @@ const reviewEsmImports = (text, list, {
                     moduleName = nonHybridModuleMap[moduleName];
                 }
 
-                const requiredPath = getModuleEntryPointPath(moduleName);
+                let requiredPath = getModuleEntryPointPath(moduleName);
 
                 if (requiredPath === null)
                 {
@@ -564,10 +565,21 @@ const reviewEsmImports = (text, list, {
                 let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
 
                 let projectedRequiredPath = calculateRequiredPath(
-                    {sourcePath: projectedPath, requiredPath, list,
-                        followlinked, workingDir, outputDir});
+                    {
+                        sourcePath: projectedPath, requiredPath, list,
+                        followlinked, workingDir, outputDir
+                    });
 
                 importMaps[moduleName] = requiredPath;
+                if (moreOptions.useImportMaps)
+                {
+                    projectedRequiredPath = moduleName;
+                    if (requiredPath.indexOf("node_modules") > -1)
+                    {
+                        requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
+                    }
+                    importMaps[moduleName] = requiredPath;
+                }
 
                 return match.replace(regexRequiredPath, projectedRequiredPath);
             }
@@ -581,8 +593,10 @@ const reviewEsmImports = (text, list, {
                 let requiredPath = concatenatePaths(source, regexRequiredPath);
 
                 let projectedRequiredPath = calculateRequiredPath(
-                    {sourcePath: projectedPath, requiredPath, outputDir,
-                        list, followlinked, workingDir});
+                    {
+                        sourcePath: projectedPath, requiredPath, outputDir,
+                        list, followlinked, workingDir
+                    });
 
                 return match.replace(regexRequiredPath, projectedRequiredPath);
             }
@@ -816,6 +830,8 @@ const removeDeclarationForAST = (converted, extracted) =>
  * @param importMaps
  * @param nonHybridModuleMap
  * @param workingDir
+ * @param followlinked
+ * @param moreOptions
  * @returns {string|*}
  * @private
  */
@@ -826,7 +842,8 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     importMaps,
     nonHybridModuleMap,
     workingDir,
-    followlinked
+    followlinked,
+    moreOptions
 }) =>
 {
     try
@@ -859,7 +876,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
                 transformedLines = reviewEsmImports(transformedLines, list,
                     {
                         source, outputDir, rootDir, importMaps,
-                        nonHybridModuleMap, workingDir, followlinked
+                        nonHybridModuleMap, workingDir, followlinked, moreOptions
                     });
 
                 transformedLines = transformedLines.trim();
@@ -898,6 +915,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
  * @param nonHybridModuleMap
  * @param workingDir
  * @param followlinked
+ * @param moreOptions
  * @returns {{converted, success: boolean}}
  */
 const convertRequiresToImportsWithAST = (converted, list, {
@@ -907,7 +925,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
     importMaps,
     nonHybridModuleMap,
     workingDir,
-    followlinked
+    followlinked,
+    moreOptions
 }) =>
 {
     let success = true;
@@ -1040,7 +1059,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
             importMaps,
             nonHybridModuleMap,
             workingDir,
-            followlinked
+            followlinked,
+            moreOptions
         });
         converted = removeDeclarationForAST(converted, extracted);
     }
@@ -1130,7 +1150,8 @@ const convertCjsFiles = (list, {
     withreport = false,
     importMaps = {},
     followlinked = true,
-    fallback = false
+    fallback = false,
+    moreOptions = {}
 } = {}) =>
 {
     let report;
@@ -1168,15 +1189,17 @@ const convertCjsFiles = (list, {
 
             converted = applyReplaceFromConfig(converted, replaceStart);
 
-            const result = convertRequiresToImportsWithAST(converted, list, {
-                source,
-                outputDir,
-                rootDir,
-                importMaps,
-                nonHybridModuleMap,
-                workingDir,
-                followlinked
-            });
+            const result = convertRequiresToImportsWithAST(converted, list,
+                {
+                    source,
+                    outputDir,
+                    rootDir,
+                    importMaps,
+                    nonHybridModuleMap,
+                    workingDir,
+                    followlinked,
+                    moreOptions
+                });
             converted = result.converted;
 
             converted = convertModuleExportsToExport(converted);
@@ -1190,16 +1213,18 @@ const convertCjsFiles = (list, {
             // Apply fallback in case of conversion error
             if (extended || !result.success || comments)
             {
-                converted = convertRequiresToImportsWithRegex(converted, list, {
-                    source,
-                    outputDir,
-                    rootDir,
-                    importMaps,
-                    comments,
-                    nonHybridModuleMap,
-                    workingDir,
-                    followlinked
-                });
+                converted = convertRequiresToImportsWithRegex(converted,
+                    list,
+                    {
+                        source,
+                        outputDir,
+                        rootDir,
+                        importMaps,
+                        comments,
+                        nonHybridModuleMap,
+                        workingDir,
+                        followlinked
+                    });
             }
 
             if (!noheader)
@@ -1276,7 +1301,14 @@ const convertCjsFiles = (list, {
     return report;
 };
 
-const parseHTMLFile = (htmlPath, {importMaps = {}}) =>
+/**
+ * Insert importmaps into the passed html file
+ * @param htmlPath
+ * @param importMaps
+ * @param confFileOptions
+ * @param moreOptions
+ */
+const parseHTMLFile = (htmlPath, {importMaps = {}, confFileOptions = {}, moreOptions = {}}) =>
 {
     const EOL = require("os").EOL;
 
@@ -1310,7 +1342,14 @@ const parseHTMLFile = (htmlPath, {importMaps = {}}) =>
 
                 if (existingImportMap.imports)
                 {
-                    newMaps = Object.assign({}, importMaps, existingImportMap.imports);
+                    if (moreOptions.overwriteim)
+                    {
+                        newMaps = Object.assign({}, existingImportMap.imports, importMaps);
+                    }
+                    else
+                    {
+                        newMaps = Object.assign({}, importMaps, existingImportMap.imports);
+                    }
                 }
             }
             catch (e)
@@ -1320,14 +1359,36 @@ const parseHTMLFile = (htmlPath, {importMaps = {}}) =>
         } while (match = regex.exec(content));
     }
 
+    if (confFileOptions.html && confFileOptions.html.importmap)
+    {
+        newMaps = Object.assign({}, newMaps, confFileOptions.html.importmap);
+    }
+
+    if (confFileOptions.html && confFileOptions.html.importmapReplace)
+    {
+        regexifySearchList(confFileOptions.html.importmapReplace);
+
+        for (let kk in newMaps)
+        {
+            try
+            {
+                newMaps[kk] = applyReplaceFromConfig(newMaps[kk], confFileOptions.html.importmapReplace);
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}: (1205)`, e.message);
+            }
+        }
+    }
+
+    newMaps = JSON.stringify({imports: newMaps}, null, 4);
+
     if (scriptTagExist)
     {
-        newMaps = JSON.stringify({imports: newMaps}, null, 4);
         content = content.replace(/(\<script.+importmap.+\>)([\s\S]+?)(\<\/script>)/gm, `$1${newMaps}$3`);
     }
     else
     {
-        newMaps = JSON.stringify({imports: newMaps}, null, 4);
         const ins = `<script type="importmap">
     ${newMaps}
 </script>
@@ -1338,12 +1399,18 @@ const parseHTMLFile = (htmlPath, {importMaps = {}}) =>
     fs.writeFileSync(htmlPath, content, "utf-8");
 };
 
-const updateHTMLFiles = (list, {importMaps = {}}) =>
+/**
+ * Browse and update all specified html files with importmaps
+ * @param list
+ * @param importMaps
+ * @param moreOptions
+ */
+const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptions = {}}) =>
 {
     list.forEach((html) =>
     {
         console.error(`${packageJson.name}: (1200) Processing [${html}] for import maps updates.`);
-        parseHTMLFile(html, {importMaps});
+        parseHTMLFile(html, {importMaps, confFileOptions, moreOptions});
     });
 };
 
@@ -1354,7 +1421,8 @@ const convertRequiresToImportsWithRegex = (converted, list, {
     importMaps,
     comments,
     workingDir,
-    followlinked
+    followlinked,
+    moreOptions
 } = {}) =>
 {
     try
@@ -1375,7 +1443,10 @@ const convertRequiresToImportsWithRegex = (converted, list, {
         converted = convertRequiresToImport(converted);
 
         converted = reviewEsmImports(converted, list,
-                {source, outputDir, rootDir, importMaps, workingDir, followlinked});
+            {
+                source, outputDir, rootDir,
+                importMaps, workingDir, followlinked, moreOptions
+            });
 
         converted = putBackComments(converted, extractedComments);
 
@@ -1694,9 +1765,16 @@ const convert = async (rawCliOptions = {}) =>
     const comments = !!cliOptions.comments;
     const withreport = !!cliOptions.withreport;
     const fallback = !!cliOptions.fallback;
+
     let followlinked = !cliOptions.ignorelinked;
 
     const importMaps = {};
+    const html = cliOptions.html;
+
+    const moreOptions = {
+        useImportMaps: !!html,
+        overwriteim  : !!cliOptions.overwriteim
+    };
 
     const result = convertCjsFiles(cjsList,
         {
@@ -1710,10 +1788,10 @@ const convert = async (rawCliOptions = {}) =>
             withreport,
             importMaps,
             workingDir,
-            fallback
+            fallback,
+            moreOptions
         });
 
-    const html = cliOptions.html;
     if (!html)
     {
         return result;
@@ -1721,12 +1799,13 @@ const convert = async (rawCliOptions = {}) =>
 
     if (!Object.keys(importMaps).length)
     {
+        console.info(`${packageJson.name}: (1202) No importmap entry found.`);
         return result;
     }
 
     const htmlList = glob.sync(html);
 
-    updateHTMLFiles(htmlList, {importMaps});
+    updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions});
 
 
 };
