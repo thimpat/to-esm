@@ -1135,7 +1135,6 @@ const convertCjsFiles = (list, {
     nonHybridModuleMap = {},
     workingDir,
     noheader = false,
-    solvedep = false,
     extended = false,
     comments = false,
     withreport = false,
@@ -1207,7 +1206,6 @@ const convertCjsFiles = (list, {
                     outputDir,
                     rootDir,
                     importMaps,
-                    solvedep,
                     comments,
                     nonHybridModuleMap,
                     workingDir,
@@ -1364,7 +1362,6 @@ const convertRequiresToImportsWithRegex = (converted, list, {
     outputDir,
     rootDir,
     importMaps,
-    solvedep,
     comments,
     workingDir,
     followlinked
@@ -1387,11 +1384,8 @@ const convertRequiresToImportsWithRegex = (converted, list, {
 
         converted = convertRequiresToImport(converted);
 
-        if (solvedep)
-        {
-            converted = reviewExternalImport(converted, list,
+        converted = reviewExternalImport(converted, list,
                 {source, outputDir, rootDir, importMaps, workingDir, followlinked});
-        }
 
         converted = putBackComments(converted, extractedComments);
 
@@ -1705,7 +1699,6 @@ const convert = async (rawCliOptions = {}) =>
 
     // No header
     const noheader = !!cliOptions.noheader;
-    let solvedep = !!cliOptions.solvedep;
     const extended = !!cliOptions.extended;
     const comments = !!cliOptions.comments;
     const withreport = !!cliOptions.withreport;
@@ -1717,7 +1710,6 @@ const convert = async (rawCliOptions = {}) =>
 
     if (!!html)
     {
-        solvedep = true;
     }
 
     const result = convertCjsFiles(cjsList,
@@ -1726,7 +1718,6 @@ const convert = async (rawCliOptions = {}) =>
             replaceEnd  : confFileOptions.replaceEnd,
             nonHybridModuleMap,
             noheader,
-            solvedep,
             extended,
             comments,
             followlinked,

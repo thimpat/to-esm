@@ -12,7 +12,7 @@
     "demo1": "toesm.cmd  --input=\"example/cjs/*.cjs\" --output=example/esm/",
     "demo2": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
     "demo3": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\"",
-    "demo4": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --solvedep",
+    "demo4": "toesm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo": "npm run demo3 && npm run demo4",
     "lint": "eslint.cmd \"src/**/*.{cjs,js}\"",
     "test": "nyc mocha --sort"
