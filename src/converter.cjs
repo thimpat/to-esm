@@ -858,7 +858,10 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
                 }
 
                 transformedLines = reviewExternalImport(transformedLines, list,
-                    {source, outputDir, rootDir, importMaps});
+                    {
+                        source, outputDir, rootDir, importMaps,
+                        nonHybridModuleMap, workingDir, followlinked
+                    });
 
                 transformedLines = transformedLines.trim();
                 if (transformedLines.charAt(transformedLines.length - 1) !== ";")
@@ -885,7 +888,27 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
     return converted;
 };
 
-const convertRequireToImportWithAST = (converted, list, {source, outputDir, rootDir, importMaps}) =>
+/**
+ * Extract information related to cjs imports and use them to de the transformation.
+ * @param converted
+ * @param list
+ * @param source
+ * @param outputDir
+ * @param rootDir
+ * @param importMaps
+ * @param nonHybridModuleMap
+ * @param workingDir
+ * @returns {{converted, success: boolean}}
+ */
+const convertRequiresToImportsWithAST = (converted, list, {
+    source,
+    outputDir,
+    rootDir,
+    importMaps,
+    nonHybridModuleMap,
+    workingDir,
+    followlinked
+}) =>
 {
     let success = true;
     try
@@ -1039,6 +1062,49 @@ const putBackComments = (str, extracted) =>
     return str;
 };
 
+const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
+{
+    try
+    {
+        let sourceAbs = path.join(workingDir, source);
+        sourceAbs = normalisePath(sourceAbs);
+
+        let {subPath, subDir} = substractPath(sourceAbs, rootDir);
+
+        let targetName = path.parse(subPath).name + ESM_EXTENSION;
+
+        let target = path.join(outputDir, subDir, targetName);
+        target = normalisePath(target);
+
+        let targetAbs = path.join(workingDir, target);
+
+        let extra = path.parse(source);
+        let sourceNoExt = path.join(extra.dir, extra.name);
+        sourceNoExt = normalisePath(sourceNoExt);
+
+        source = normalisePath(source);
+
+        outputDir = normalisePath(outputDir, {isFolder: true});
+
+        return {
+            source,
+            sourceAbs,
+            sourceNoExt,
+            outputDir,
+            rootDir,
+            subPath,
+            subDir,
+            target,
+            targetAbs
+        };
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1011)`, e.message);
+    }
+};
+
+
 /**
  * Convert cjs file into esm
  * @param {string[]} list File list to convert
@@ -1048,13 +1114,15 @@ const putBackComments = (str, extracted) =>
 const convertCjsFiles = (list, {
     replaceStart = [],
     replaceEnd = [],
-    replaceDetectedModules = [],
+    nonHybridModuleMap = {},
+    workingDir,
     noheader = false,
     solvedep = false,
     extended = false,
     comments = false,
     withreport = false,
-    importMaps = {}
+    importMaps = {},
+    followlinked = true
 } = {}) =>
 {
     let report;
@@ -1081,24 +1149,44 @@ const convertCjsFiles = (list, {
         }
     };
 
-    list.forEach(({source, outputDir, rootDir}) =>
+    for (let dynamicIndex = 0; dynamicIndex < list.length; ++dynamicIndex)
     {
         try
         {
+            let {source, outputDir, rootDir} = list[dynamicIndex];
+            console.log(`${packageJson.name}: (1132) Processing ==========================================> ${source}`);
+
             let converted = fs.readFileSync(source, "utf-8");
 
-            converted = applyReplace(converted, replaceStart);
+            converted = applyReplaceFromConfig(converted, replaceStart);
 
-            const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir, importMaps});
+            const result = convertRequiresToImportsWithAST(converted, list, {
+                source,
+                outputDir,
+                rootDir,
+                importMaps,
+                nonHybridModuleMap,
+                workingDir,
+                followlinked
+            });
             converted = result.converted;
-
-            converted = applyReplace(converted, replaceDetectedModules);
 
             converted = convertModuleExportsToExport(converted);
 
+            // Apply fallback in case of conversion error
             if (extended || !result.success || comments)
             {
-                converted = replaceWithRegex(converted, list, {source, outputDir, rootDir, importMaps, solvedep, comments});
+                converted = convertRequiresToImportsWithRegex(converted, list, {
+                    source,
+                    outputDir,
+                    rootDir,
+                    importMaps,
+                    solvedep,
+                    comments,
+                    nonHybridModuleMap,
+                    workingDir,
+                    followlinked
+                });
             }
 
             if (!noheader)
@@ -1158,6 +1246,8 @@ const convertCjsFiles = (list, {
             {
                 report[source] = converted;
             }
+
+
         }
         catch (e)
         {
@@ -1167,15 +1257,16 @@ const convertCjsFiles = (list, {
                 report = false;
             }
         }
-    });
+
+    }
 
     return report;
 };
 
-
-
-const parseHTMLFiles = (htmlPath, {importMaps = {}})=>
+const parseHTMLFiles = (htmlPath, {importMaps = {}}) =>
 {
+    const EOL = require("os").EOL;
+
     htmlPath = path.resolve(htmlPath);
     if (!fs.existsSync(htmlPath))
     {
@@ -1243,11 +1334,12 @@ const replaceWithRegex = (converted, list, {source, outputDir, rootDir, importMa
 
         converted = convertModuleExportsToExport(converted);
 
-        converted = convertRequireToImport(converted);
+        converted = convertRequiresToImport(converted);
 
         if (solvedep)
         {
-            converted = reviewExternalImport(converted, list, {source, outputDir, rootDir , importMaps});
+            converted = reviewExternalImport(converted, list,
+                {source, outputDir, rootDir, importMaps, workingDir, followlinked});
         }
 
         converted = putBackComments(converted, extractedComments);
