@@ -202,51 +202,408 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
 };
 
 /**
- * Parse the imported library
+ * If source finishes with a "/", it's a folder,
+ * otherwise, it's not.
+ * @param source
+ */
+const isConventionalFolder = (source) =>
+{
+    if (!source)
+    {
+        return false;
+    }
+    return source.charAt(source.length - 1) === "/";
+};
+
+/**
+ * Returns the path of a relative path relative to source.
+ * @param source File that contains the require or import
+ * @param requiredPath Relative path inside the require or import
+ * @todo Change function name to more appropriate name
+ */
+const concatenatePaths = (source, requiredPath) =>
+{
+    try
+    {
+        source = normalisePath(source);
+        const sourceDir = isConventionalFolder(source) ? source : path.parse(source).dir;
+        let importPath = path.join(sourceDir, requiredPath);
+        return normalisePath(importPath);
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1125)`, e.message);
+    }
+};
+
+/**
+ * Use conventions (See file top)
+ * @todo Change function name to more appropriate name
+ * @param source
+ * @param requiredPath
+ * @returns {string}
+ */
+const calculateRelativePath = (source, requiredPath) =>
+{
+    source = normalisePath(source);
+    requiredPath = normalisePath(requiredPath);
+
+    if (!isConventionalFolder(source))
+    {
+        source = path.parse(source).dir + "/";
+    }
+
+    const relativePath = path.relative(source, requiredPath);
+    return normalisePath(relativePath);
+};
+
+const getModuleEntryPointPath = (moduleName, outputDir) =>
+{
+    const module = getNodeModuleProperties(moduleName);
+
+    if (!module)
+    {
+        return null;
+    }
+
+    // current file's absolute path
+    // const sourcePath = path.resolve(outputDir);
+
+    const modulePath = path.join(module.dir, module.base);
+    return normalisePath(modulePath);
+
+    // // The node_modules directory package
+    // let relativeNodeModulesDir = path.relative(sourcePath, module.dir);
+    //
+    // // We add .. to point to the node_modules parent
+    // // let relativePath = path.join("../..", relativeNodeModulesDir, module.base);
+    // let relativePath = path.join(relativeNodeModulesDir, module.base);
+    //
+    // relativePath = relativePath.replace(/\\/g, "/");
+    // return relativePath;
+};
+
+// ---------------------------------------------------
+// NEW STUFF
+// ---------------------------------------------------
+
+/**
+ *
+ * @param somePath
+ * @returns {string}
+ */
+const normalisePath = (somePath, {isFolder = false} = {}) =>
+{
+    somePath = somePath.replace(/\\/gm, "/");
+    if (isFolder)
+    {
+        if (!isConventionalFolder(somePath))
+        {
+            somePath = somePath + "/";
+        }
+    }
+
+    if (path.isAbsolute(somePath))
+    {
+        return somePath;
+    }
+
+    const firstChar = somePath.charAt(0);
+    if (!somePath)
+    {
+        somePath = "./";
+    }
+    else if (somePath === ".")
+    {
+        somePath = "./";
+    }
+    else if (!([".", "/"].includes(firstChar)))
+    {
+        somePath = "./" + somePath;
+
+    }
+    return somePath;
+};
+
+/**
+ * Convert path like:
+ * C:/a/b/c/d => /a/b/c/d
+ * So, they can be created as subdirectory
+ * @param wholePath
+ * @returns {*|string[]}
+ */
+const convertToSubRootDir = (wholePath) =>
+{
+    // if (wholePath.indexOf(workingDir) > -1)
+    // {
+    //     substractPath(wholePath, workingDir);
+    // }
+    const arr = wholePath.split("/");
+    arr.shift();
+    return arr.join("/");
+};
+
+/**
+ * Remove part of path by substracting a given directory from a whole path
+ * @param wholePath File Path
+ * @param pathToSubstract Subdirectory to remove from path
+ * @returns {*}
+ */
+const substractPath = (wholePath, pathToSubstract) =>
+{
+    let subPath, subDir;
+    // Get mapped path by substracting rootDir
+    wholePath = wholePath.replace(/\\/gm, "/");
+    pathToSubstract = pathToSubstract.replace(/\\/gm, "/");
+
+    if (wholePath.length < pathToSubstract.length)
+    {
+        console.error(`${packageJson.name}: (1123)` + "Path substraction will not work here. " +
+            "The substracting path bigger than the whole path");
+        return {
+            subPath: wholePath
+        };
+    }
+
+    if (pathToSubstract === "./")
+    {
+        subPath = convertToSubRootDir(wholePath);
+        subDir = path.parse(subPath).dir;
+        subDir = normalisePath(subDir, {isFolder: true});
+
+        return {
+            subDir, subPath
+        };
+    }
+    else if (wholePath.indexOf(pathToSubstract) === -1)
+    {
+        console.error(`${packageJson.name}: (1125)` + "Path substraction will not work here. " +
+            "The substracting path is not part of the whole path");
+        return {
+            subPath: wholePath
+        };
+    }
+
+    if (pathToSubstract.charAt(pathToSubstract.length - 1) !== "/")
+    {
+        pathToSubstract = pathToSubstract + "/";
+    }
+
+    let subPaths = wholePath.split(pathToSubstract);
+    subPath = subPaths[1];
+    subPath = normalisePath(subPath);
+
+    subDir = path.parse(subPath).dir;
+    subDir = normalisePath(subDir);
+
+    return {
+        subDir, subPath
+    };
+};
+
+const getTranslatedPath = (requiredPath, list) =>
+{
+    try
+    {
+        requiredPath = normalisePath(requiredPath);
+        for (let i = 0; i < list.length; ++i)
+        {
+            const item = list[i];
+
+            const source = normalisePath(item.source);
+            if (requiredPath === source)
+            {
+                return item;
+            }
+        }
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1127)`, e.message);
+    }
+    return {};
+};
+
+const getProjectedPathAll = ({source, rootDir, outputDir}) =>
+{
+    try
+    {
+        const sourcePath = path.resolve(source);
+        rootDir = path.resolve(rootDir);
+
+        // Get mapped path by substracting rootDir
+        let {subPath, subDir} = substractPath(sourcePath, rootDir);
+
+        let projectedDir = path.join(outputDir, subDir);
+        projectedDir = normalisePath(projectedDir);
+
+        let projectedPath = path.join(outputDir, subPath);
+        projectedPath = normalisePath(projectedPath);
+
+        return {
+            sourcePath,
+            subPath,
+            subDir,
+            projectedPath,
+            projectedDir
+        };
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1120)`, e.message);
+    }
+
+};
+
+const changeExtensionToESM = (filepath) =>
+{
+    const parsed = path.parse(filepath);
+    const renamed = path.join(parsed.dir, parsed.name + ESM_EXTENSION);
+    return normalisePath(renamed);
+};
+
+/**
+ *
+ * @param sourcePath
+ * @param requiredPath
+ * @param list
+ * @param followlinked
+ * @param workingDir
+ * @param outputDir
+ * @returns {string}
+ */
+const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, workingDir, outputDir}) =>
+{
+    try
+    {
+        let projectedRequiredPath;
+
+        // Projected path of required path
+        const requiredPathProperties = getTranslatedPath(requiredPath, list);
+        const target = requiredPathProperties.target;
+
+        if (target)
+        {
+            // The relative path of the two projected paths above (projectedPath + target)
+            projectedRequiredPath = calculateRelativePath(sourcePath, target);
+        }
+        else
+        {
+            if (followlinked)
+            {
+                addFileToConverting({
+                    source : requiredPath,
+                    rootDir: workingDir,
+                    outputDir,
+                    workingDir,
+                    followlinked
+                });
+                const newPath = concatenatePaths(outputDir, requiredPath);
+                projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
+                projectedRequiredPath = changeExtensionToESM(projectedRequiredPath);
+            }
+            else
+            {
+                projectedRequiredPath = calculateRelativePath(sourcePath, requiredPath);
+            }
+        }
+
+        return projectedRequiredPath;
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1151)`, e.message);
+    }
+};
+
+/**
+ * Parse imported libraries (the ones that don't have a relative or absolute path)
  * @param text
  * @param list
  * @param fileProp
  * @returns {*}
  */
-const reviewExternalImport = (text, list, {outputDir, importMaps}) =>
+const reviewExternalImport = (text, list, {
+    source,
+    rootDir,
+    outputDir,
+    importMaps,
+    nonHybridModuleMap,
+    workingDir,
+    followlinked
+}) =>
 {
     // Locate third party
-    const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
+    // const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
+    const re = /\bfrom\s+["']([^"']+?)["'];?/gmu;
 
-    return text.replace(re, function (match, moduleName)
+    return text.replace(re, function (match, regexRequiredPath)
     {
-        if (/require\s*\(/.test(moduleName))
+        try
         {
+            if (/require\s*\(/.test(regexRequiredPath))
+            {
+                return match;
+            }
+
+            if (~nativeModules.indexOf(regexRequiredPath))
+            {
+                console.info(`${packageJson.name}: (1017) ${regexRequiredPath} is a built-in NodeJs module.`);
+                return match;
+            }
+
+            // Third party libraries
+            if (!regexRequiredPath.startsWith("."))
+            {
+                let moduleName = regexRequiredPath;
+                if (nonHybridModuleMap[moduleName])
+                {
+                    moduleName = nonHybridModuleMap[moduleName];
+                }
+
+                const requiredPath = getModuleEntryPointPath(moduleName, outputDir);
+
+                if (requiredPath === null)
+                {
+                    console.warn(`${packageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
+                        + "It won't be part of the importmaps.");
+                    return match;
+                }
+
+                // Source path of projected original source (the .cjs)
+                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+
+                let projectedRequiredPath = calculateRequiredPath(
+                    {sourcePath: projectedPath, requiredPath, list,
+                        followlinked, workingDir, outputDir});
+
+                importMaps[moduleName] = requiredPath;
+
+                // return match.replace(moduleName, relativePath);
+                return match.replace(regexRequiredPath, projectedRequiredPath);
+            }
+
+            if (regexRequiredPath.startsWith("./") || regexRequiredPath.startsWith("..") || translated)
+            {
+                // Source path of projected original source (the .cjs)
+                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+
+                // The required path from the source path above
+                let requiredPath = concatenatePaths(source, regexRequiredPath);
+
+                let projectedRequiredPath = calculateRequiredPath(
+                    {sourcePath: projectedPath, requiredPath, outputDir,
+                        list, followlinked, workingDir});
+
+                return match.replace(regexRequiredPath, projectedRequiredPath);
+            }
+
             return match;
         }
-
-        if (~nativeModules.indexOf(moduleName))
+        catch (e)
         {
-            console.info(`${packageJson.name}: (1017) ${moduleName} is a built-in NodeJs module.`);
-            return match;
+            console.error(`${packageJson.name}: (1108)`, e.message);
         }
-
-        const module = getNodeModuleProp(moduleName);
-
-        if (!module)
-        {
-            return match;
-        }
-
-        // current file's absolute path
-        const sourcePath = path.resolve(outputDir);
-
-        // The node_modules directory package
-        let relativeNodeModulesDir = path.relative(sourcePath, module.dir);
-
-        // We add .. to point to the node_modules parent
-        let relativePath = path.join("../..", relativeNodeModulesDir, module.base);
-
-        relativePath = relativePath.replace(/\\/g, "/");
-
-        importMaps[moduleName] = relativePath;
-
-        return match.replace(moduleName, relativePath);
 
     });
 
