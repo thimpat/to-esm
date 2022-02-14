@@ -1769,7 +1769,11 @@ const convert = async (rawCliOptions = {}) =>
     let followlinked = !cliOptions.ignorelinked;
 
     const importMaps = {};
-    const html = cliOptions.html;
+    let html = cliOptions.html;
+    if (!html && confFileOptions.html && confFileOptions.html.pattern)
+    {
+        html = confFileOptions.html.pattern;
+    }
 
     const moreOptions = {
         useImportMaps: !!html,
@@ -1806,7 +1810,6 @@ const convert = async (rawCliOptions = {}) =>
     const htmlList = glob.sync(html);
 
     updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions});
-
 
 };
 
