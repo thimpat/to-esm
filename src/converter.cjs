@@ -943,7 +943,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         catch (e)
         {
             console.warn(`${packageJson.name}: (1052) WARNING: Syntax issues found on [${source}]`);
-            console.info("                  ➔ ➔ ➔ ➔ ➔ ➔ ", e.message);
+            console.error("                  ➔ ➔ ➔ ➔ ➔ ➔ ", e.message);
             return {converted, success: false};
         }
 
@@ -1195,7 +1195,6 @@ const convertCjsFiles = (list, {
             {
                 // Failed even with fallback
                 console.error(`${packageJson.name}: (1173) ❌ FAILED: ESM: Conversion failed for ${source}`);
-                return false;
             }
 
             // Apply fallback in case of conversion error
@@ -1245,7 +1244,7 @@ const convertCjsFiles = (list, {
 
             const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
 
-            let reportSuccess = result.success ? "✔ SUCCESS" : "✔ SUCCESS (with fallback)";
+            let reportSuccess = result.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
             try
             {
                 parserOtions.sourceType = "module";
