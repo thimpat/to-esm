@@ -2,6 +2,9 @@
  * This file is to convert a Commonjs file into an ESM library
  * by just replacing module.exports to export default.
  * It's for very simple library, but will allow me to avoid using a bundler.
+ *
+ * CONVENTION: All folders must finish with a "/"
+ *
  */
 const packageJson = require("../package.json");
 const path = require("path");
@@ -14,9 +17,13 @@ const espree = require("espree");
 const estraverse = require("estraverse");
 
 const ESM_EXTENSION = ".mjs";
+
 const COMMENT_MASK = "❖✎🔏❉";
 
 const nativeModules = Object.keys(process.binding("natives"));
+
+// The whole list of files to convert
+const cjsList = [];
 
 /**
  * Build target directory.
@@ -69,24 +76,106 @@ const convertNonTrivial = (converted) =>
 
 };
 
+/**
+ * Retrieve module entrypoint
+ * @param modulePath
+ * @returns {ParsedPath|null}
+ */
+const findPackageEntryPoint = (modulePath) =>
+{
+    let entryPoint;
+    try
+    {
+        entryPoint = require.resolve(modulePath);
+        return path.parse(entryPoint);
+    }
+    catch (e)
+    {
+        console.info(`${packageJson.name}: (1140) Checking [${modulePath}] package.json`);
+    }
 
-const getNodeModuleProp = (moduleName) =>
+    try
+    {
+        const externalPackageJsonPath = path.join(modulePath, "package.json");
+        if (!fs.existsSync(externalPackageJsonPath))
+        {
+            return null;
+        }
+
+        const externalRawPackageJson = fs.readFileSync(externalPackageJsonPath, "utf-8");
+        const externalPackageJson = JSON.parse(externalRawPackageJson);
+
+        const exports = externalPackageJson.exports;
+        if (typeof exports === "string" || exports instanceof String)
+        {
+            entryPoint = path.join(modulePath, exports);
+            entryPoint = normalisePath(entryPoint);
+            return path.parse(entryPoint);
+        }
+
+        const arr = Object.values(exports);
+        for (let i = 0; i < arr.length; ++i)
+        {
+            const entry = arr[i];
+            if (!entry.import)
+            {
+                continue;
+            }
+            const imports = entry.import;
+            entryPoint = path.join(modulePath, imports);
+            entryPoint = normalisePath(entryPoint);
+            return path.parse(entryPoint);
+        }
+    }
+    catch (e)
+    {
+
+    }
+    return null;
+};
+
+/**
+ * Returns path information related to a Node module
+ * @param moduleName
+ * @returns {*}
+ */
+const getNodeModuleProperties = (moduleName) =>
 {
     let modulePath;
 
     try
     {
-        modulePath = require.resolve(moduleName);
+        modulePath = path.join("node_modules", moduleName);
+        if (!fs.existsSync(modulePath))
+        {
+            console.info(`${packageJson.name}: (1100) Failed to locate module [${moduleName}]. Skipped.`);
+            return null;
+        }
+
+        const entryPointInfo = findPackageEntryPoint(modulePath);
+
+        if (!entryPointInfo)
+        {
+            console.info(`${packageJson.name}: (1145) Failed to locate module [${moduleName}]. Skipped.`);
+            return null;
+        }
+
+        return entryPointInfo;
     }
     catch (e)
     {
         console.info(`${packageJson.name}: (1002) Failed to locate module [${moduleName}]. Skipped.`);
-        return;
     }
 
-    return path.parse(modulePath);
+    return null;
 };
 
+/**
+ * Check whether the given text has a valid JavaScript syntax
+ * @param str
+ * @param syntaxType
+ * @returns {boolean}
+ */
 const validateSyntax = (str, syntaxType = "commonjs") =>
 {
     try
