@@ -14,11 +14,16 @@ const {buildTargetDir, convert} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
+    before(function ()
+    {
+        fs.rmdirSync(path.join(rootDir, "/actual"), { recursive: true });
+    });
+
     after(function ()
     {
         // fs.rmdirSync(path.join(rootDir, "/esm"))
-        fs.rmdirSync(path.join(rootDir, "/esm2"));
-        fs.rmdirSync(path.join(rootDir, "/esm3"));
+        fs.rmdirSync(path.join(rootDir, "/esm2"), { recursive: true });
+        fs.rmdirSync(path.join(rootDir, "/esm3"), { recursive: true });
     });
 
     describe("from the file system", function ()
@@ -59,12 +64,11 @@ describe("The converter tool", function ()
             };
 
             const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test.mjs"), "utf8");
-
-            const success = await convert(options);
-            const converted = success["./test/virtual/cjs/demo-test.cjs"];
+            await convert(options);
+            const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.mjs"), "utf8");
 
             expect(converted).to.equalIgnoreSpaces(expectedConversion);
-        }); 
+        });
 
         it("should convert ./cjs/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
             {
@@ -73,16 +77,15 @@ describe("The converter tool", function ()
                     input,
                     "output": path.join(rootDir, "/actual"),
                     "config": path.join(__dirname, ".toesm.json"),
-                    "noheader": true,
+                    "noheader": false,
                     "withreport": true
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-2.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-2.mjs"), "utf8");
 
-                const success = await convert(options);
-                const converted = success["./test/virtual/cjs/demo-test-2.cjs"];
-
-                expect(expectedConversion).to.equalIgnoreSpaces(converted);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -93,16 +96,15 @@ describe("The converter tool", function ()
                     input,
                     "output": path.join(rootDir, "/actual"),
                     "config": path.join(__dirname, ".toesm.json"),
-                    "noheader": true,
+                    "noheader": false,
                     "withreport": true
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-3.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-3.mjs"), "utf8");
 
-                const success = await convert(options);
-                const converted = success["./test/virtual/cjs/demo-test-3.cjs"];
-
-                expect(expectedConversion).to.equalIgnoreSpaces(converted);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -113,7 +115,7 @@ describe("The converter tool", function ()
                     input,
                     "output"    : path.join(rootDir, "/actual"),
                     "config"    : path.join(__dirname, "virtual", ".toesm.json"),
-                    "noheader"  : true,
+                    "noheader"  : false,
                     "withreport": true,
                     replaceStart: [
                         {
@@ -131,9 +133,8 @@ describe("The converter tool", function ()
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-4.mjs"), "utf8");
-
-                const success = await convert(options);
-                const converted = success["./test/virtual/cjs/demo-test-4.cjs"];
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-4.mjs"), "utf8");
 
                 expect(expectedConversion).to.equal(converted);
             }
@@ -146,7 +147,7 @@ describe("The converter tool", function ()
                     input,
                     "output"    : path.join(rootDir, "/actual"),
                     "config"    : path.join(__dirname, "virtual", ".toesm.json"),
-                    "noheader"  : true,
+                    "noheader"  : false,
                     "withreport": true,
                     "solvedep"  : true,
                     replaceStart: [
@@ -165,9 +166,8 @@ describe("The converter tool", function ()
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-6.mjs"), "utf8");
-
-                const success = await convert(options);
-                const converted = success["./test/virtual/cjs/demo-test-6.cjs"];
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-6.mjs"), "utf8");
 
                 expect(expectedConversion).to.equal(converted);
             }

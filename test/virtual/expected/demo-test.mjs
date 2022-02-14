@@ -1,8 +1,8 @@
-import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
-import QuickLog3  from "../../src/cjs/quick-log.mjs";
-import QuickLog2  from "../../src/cjs/quick-log.mjs";
-import QuickLog  from "../../src/cjs/quick-log.mjs";
-import {LOG_CONTEXT, LOG_TARGETS}  from "./contexts-def.mjs";
+import {LOG_CONTEXT, LOG_TARGETS}  from "./test/virtual/cjs/contexts-def.mjs";
+import QuickLog  from "./test/src/cjs/quick-log.mjs";
+import QuickLog2  from "./test/src/cjs/quick-log.mjs";
+import QuickLog3  from "./test/src/cjs/quick-log.mjs";
+import {COLOR_TABLE, SYSTEM}  from "./test/virtual/cjs/constants.mjs";
 
 
 

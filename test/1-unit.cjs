@@ -77,7 +77,7 @@ describe("converter.cjs", function ()
             // Act
             const result = convertRequireToImport(input);
 
-            expect(result).to.contain("import INFO1  from \"./dep-1.mjs\";");
+            expect(result).to.contain("import INFO1  from \"./dep-1.cjs\";");
         });
     });
 
