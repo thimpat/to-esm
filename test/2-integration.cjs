@@ -10,20 +10,27 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {buildTargetDir, convert} = require("../src/converter.cjs");
+const {buildTargetDir, convert, normalisePath} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
     before(function ()
     {
-        fs.rmdirSync(path.join(rootDir, "/actual"), { recursive: true });
+        const assetsFolder = path.join(rootDir, "/actual");
+        if (fs.existsSync(assetsFolder))
+        {
+            fs.rmSync(assetsFolder, {recursive: true});
+        }
     });
 
     after(function ()
     {
-        // fs.rmdirSync(path.join(rootDir, "/esm"))
-        fs.rmdirSync(path.join(rootDir, "/esm2"), { recursive: true });
-        fs.rmdirSync(path.join(rootDir, "/esm3"), { recursive: true });
+        if (fs.existsSync(path.join(rootDir, "/esm2")))
+        {
+            // fs.rmSync(path.join(rootDir, "/esm"))
+            fs.rmSync(path.join(rootDir, "/esm2"), {recursive: true});
+            fs.rmSync(path.join(rootDir, "/esm3"), {recursive: true});
+        }
     });
 
     describe("from the file system", function ()
@@ -47,7 +54,7 @@ describe("The converter tool", function ()
             let targetDir3 = path.join(rootDir, "/esm3");
             if (fs.existsSync(targetDir3))
             {
-                fs.rmdirSync(targetDir3);
+                fs.rmSync(targetDir3);
             }
             const res = buildTargetDir(targetDir3);
             expect(res).to.be.true;
@@ -170,6 +177,35 @@ describe("The converter tool", function ()
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-6.mjs"), "utf8");
 
                 expect(expectedConversion).to.equalIgnoreSpaces(converted);
+            }
+        );
+
+        it("should parse html files and add importmaps to them", async function ()
+            {
+                const input = "./test/assets/cjs/demo-test-7.cjs";
+                /**
+                 * @example
+                 * CLI equivalent:
+                 * toesm --input="assets/cjs/demo-test-7.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+                 * --html="assets/*.html"
+                 * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
+                 *     config: string}}
+                 */
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
+                    "noheader"  : false,
+                    "importmaps": true,
+                    "withreport": true,
+                    "html": "./test/assets/*.html",
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-7.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-7.mjs"), "utf8");
+
+                expect(expectedConversion).to.equal(converted);
             }
         );
 

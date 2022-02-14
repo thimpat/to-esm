@@ -257,7 +257,12 @@ const calculateRelativePath = (source, requiredPath) =>
     return normalisePath(relativePath);
 };
 
-const getModuleEntryPointPath = (moduleName, outputDir) =>
+/**
+ *
+ * @param moduleName
+ * @returns {string|null}
+ */
+const getModuleEntryPointPath = (moduleName) =>
 {
     const module = getNodeModuleProperties(moduleName);
 
@@ -266,21 +271,8 @@ const getModuleEntryPointPath = (moduleName, outputDir) =>
         return null;
     }
 
-    // current file's absolute path
-    // const sourcePath = path.resolve(outputDir);
-
     const modulePath = path.join(module.dir, module.base);
     return normalisePath(modulePath);
-
-    // // The node_modules directory package
-    // let relativeNodeModulesDir = path.relative(sourcePath, module.dir);
-    //
-    // // We add .. to point to the node_modules parent
-    // // let relativePath = path.join("../..", relativeNodeModulesDir, module.base);
-    // let relativePath = path.join(relativeNodeModulesDir, module.base);
-    //
-    // relativePath = relativePath.replace(/\\/g, "/");
-    // return relativePath;
 };
 
 // ---------------------------------------------------
@@ -523,7 +515,7 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, wo
  * @param fileProp
  * @returns {*}
  */
-const reviewExternalImport = (text, list, {
+const reviewEsmImports = (text, list, {
     source,
     rootDir,
     outputDir,
@@ -541,12 +533,7 @@ const reviewExternalImport = (text, list, {
     {
         try
         {
-            if (/require\s*\(/.test(regexRequiredPath))
-            {
-                return match;
-            }
-
-            if (~nativeModules.indexOf(regexRequiredPath))
+             if (~nativeModules.indexOf(regexRequiredPath))
             {
                 console.info(`${packageJson.name}: (1017) ${regexRequiredPath} is a built-in NodeJs module.`);
                 return match;
@@ -561,7 +548,7 @@ const reviewExternalImport = (text, list, {
                     moduleName = nonHybridModuleMap[moduleName];
                 }
 
-                const requiredPath = getModuleEntryPointPath(moduleName, outputDir);
+                const requiredPath = getModuleEntryPointPath(moduleName);
 
                 if (requiredPath === null)
                 {
@@ -579,7 +566,6 @@ const reviewExternalImport = (text, list, {
 
                 importMaps[moduleName] = requiredPath;
 
-                // return match.replace(moduleName, relativePath);
                 return match.replace(regexRequiredPath, projectedRequiredPath);
             }
 
@@ -866,7 +852,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
                     continue;
                 }
 
-                transformedLines = reviewExternalImport(transformedLines, list,
+                transformedLines = reviewEsmImports(transformedLines, list,
                     {
                         source, outputDir, rootDir, importMaps,
                         nonHybridModuleMap, workingDir, followlinked
@@ -1286,7 +1272,7 @@ const convertCjsFiles = (list, {
     return report;
 };
 
-const parseHTMLFiles = (htmlPath, {importMaps = {}}) =>
+const parseHTMLFile = (htmlPath, {importMaps = {}}) =>
 {
     const EOL = require("os").EOL;
 
@@ -1347,12 +1333,12 @@ const parseHTMLFiles = (htmlPath, {importMaps = {}}) =>
     fs.writeFileSync(htmlPath, content, "utf-8");
 };
 
-const convertHTMLFiles = (list, {importMaps = {}}) =>
+const updateHTMLFiles = (list, {importMaps = {}}) =>
 {
     list.forEach((html) =>
     {
-        console.log(html);
-        parseHTMLFiles(html, {importMaps});
+        console.error(`${packageJson.name}: (1200) Processing [${html}] for import maps updates.`);
+        parseHTMLFile(html, {importMaps});
     });
 };
 
@@ -1383,7 +1369,7 @@ const convertRequiresToImportsWithRegex = (converted, list, {
 
         converted = convertRequiresToImport(converted);
 
-        converted = reviewExternalImport(converted, list,
+        converted = reviewEsmImports(converted, list,
                 {source, outputDir, rootDir, importMaps, workingDir, followlinked});
 
         converted = putBackComments(converted, extractedComments);
@@ -1541,7 +1527,7 @@ const installNonHybridModules = async (config = []) =>
 {
     const replaceModules = config.replaceModules || [];
 
-    packageJsonPath = path.resolve("./package.json");
+    let packageJsonPath = path.resolve("./package.json");
     if (!fs.existsSync(packageJsonPath))
     {
         console.error(`${packageJson.name}: (1014) Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`);
@@ -1738,7 +1724,7 @@ const convert = async (rawCliOptions = {}) =>
 
     const htmlList = glob.sync(html);
 
-    convertHTMLFiles(htmlList, {importMaps});
+    updateHTMLFiles(htmlList, {importMaps});
 
 
 };
@@ -1747,7 +1733,7 @@ module.exports.COMMENT_MASK = COMMENT_MASK;
 module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
 module.exports.getNodeModuleProp = getNodeModuleProperties;
-module.exports.reviewExternalImport = reviewExternalImport;
+module.exports.reviewExternalImport = reviewEsmImports;
 module.exports.parseImport = parseImportWithRegex;
 module.exports.applyReplace = applyReplaceFromConfig;
 module.exports.stripComments = stripComments;
@@ -1763,5 +1749,5 @@ module.exports.parseReplace = regexifySearchList;
 module.exports.getLibraryInfo = getLibraryInfo;
 module.exports.installPackage = installPackage;
 module.exports.parseReplaceModules = installNonHybridModules;
-
+module.exports.normalisePath = normalisePath;
 module.exports.convert = convert;
