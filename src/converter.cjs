@@ -1701,8 +1701,7 @@ const convert = async (rawCliOptions = {}) =>
     const extended = !!cliOptions.extended;
     const comments = !!cliOptions.comments;
     const withreport = !!cliOptions.withreport;
-    let followlinked = !!cliOptions.followlinked;
-    followlinked = true;
+    let followlinked = !cliOptions.ignorelinked;
 
     const importMaps = {};
     const html = cliOptions.html;
