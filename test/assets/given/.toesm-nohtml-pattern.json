@@ -1,0 +1,25 @@
+{
+    "replaceStart": [
+        {
+            "search" : "/const\\s+ttt\\s*=\\s*require\\(.mama-magnimus.\\);/g",
+            "replace": "// ***"
+        }
+    ],
+    "replaceEnd"  : [
+        {
+            "search" : "// ***",
+            "replace": "// --------- mama-magnimus was replaced ----------------"
+        }
+    ],
+    "html":
+    {
+        "importmap": {
+        },
+        "importmapReplace":        [{
+            "search" : "node0000_modules",
+            "replace": "../node000_modules"
+        }],
+        "overwriteim": true
+    }
+
+}

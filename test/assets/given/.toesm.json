@@ -22,5 +22,18 @@
                     "version": "@latest"
                 }
             }
-        }
+        },
+    "html"          :
+    {
+        "importmap"       : {
+            "ttt2": "http://somewhere",
+            "ttt": "http://anywhere"
+        },
+        "importmapReplace": [{
+            "search" : "./anywhere",
+            "replace": "/foundwhere",
+            "regex": false
+        }]
+    }
+
 }

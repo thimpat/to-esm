@@ -1,6 +1,7 @@
 const chai = require("chai");
 const expect = chai.expect;
 const chaiString = require("chai-string");
+const EOL = require("os").EOL;
 const sinon = require("sinon");
 
 chai.use(chaiString);
@@ -25,6 +26,7 @@ describe("The converter tool", function ()
         fs.mkdirSync(assetsFolder, {recursive: true});
 
         fs.copyFileSync(path.join(rootDir, "index.html"), path.join(rootDir, "actual", "index.html"));
+        fs.copyFileSync(path.join(rootDir, "index-2.html"), path.join(rootDir, "actual", "index-2.html"));
         fs.copyFileSync(path.join(rootDir, "other.html"), path.join(rootDir, "actual", "other.html"));
     });
 
@@ -65,9 +67,9 @@ describe("The converter tool", function ()
             expect(res).to.be.false;
         });
 
-        it("should convert ./cjs/demo-test.cjs into ./expected/demo-test.esm", async function ()
+        it("should convert ./given/demo-test.cjs into ./expected/demo-test.esm", async function ()
         {
-            const input = "./test/assets/cjs/demo-test.cjs";
+            const input = "./test/assets/given/demo-test.cjs";
             const options = {
                 input,
                 "output": path.join(rootDir, "/actual"),
@@ -79,16 +81,16 @@ describe("The converter tool", function ()
             await convert(options);
             const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.mjs"), "utf8");
 
-            expect(converted).to.equalIgnoreSpaces(expectedConversion);
+            expect(converted).to.equal(expectedConversion);
         });
 
-        it("should convert ./cjs/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
+        it("should convert ./given/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
             {
-                const input = "./test/assets/cjs/demo-test-2.cjs";
+                const input = "./test/assets/given/demo-test-2.cjs";
                 const options = {
                     input,
                     "output": path.join(rootDir, "/actual"),
-                    "config": path.join(__dirname, ".toesm.json"),
+                    "config": path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
                     "noheader": false,
                     "withreport": true
                 };
@@ -97,17 +99,17 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-2.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
-        it("should convert ./cjs/demo-test-3.cjs into ./expected/demo-test-3.esm", async function ()
+        it("should convert ./given/demo-test-3.cjs into ./expected/demo-test-3.esm", async function ()
             {
-                const input = "./test/assets/cjs/demo-test-3.cjs";
+                const input = "./test/assets/given/demo-test-3.cjs";
                 const options = {
                     input,
                     "output": path.join(rootDir, "/actual"),
-                    "config": path.join(__dirname, ".toesm.json"),
+                    "config": path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
                     "noheader": false,
                     "withreport": true
                 };
@@ -116,17 +118,17 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-3.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
-        it("should convert ./cjs/demo-test-4.cjs into ./expected/demo-test-4.esm", async function ()
+        it("should convert ./given/demo-test-4.cjs into ./expected/demo-test-4.esm", async function ()
             {
-                const input = "./test/assets/cjs/demo-test-4.cjs";
+                const input = "./test/assets/given/demo-test-4.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
-                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
                     "noheader"  : false,
                     "withreport": true,
                     replaceStart: [
@@ -152,16 +154,15 @@ describe("The converter tool", function ()
             }
         );
 
-        it("should parse with regex and convert ./cjs/demo-test-6.cjs into ./expected/demo-test-6.esm", async function ()
+        it("should parse with regex and convert ./given/demo-test-6.cjs into ./expected/demo-test-6.esm", async function ()
             {
-                const input = "./test/assets/cjs/demo-test-6.cjs";
+                const input = "./test/assets/given/demo-test-6.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
-                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
                     "noheader"  : false,
                     "withreport": true,
-                    "solvedep"  : true,
                     replaceStart: [
                         {
                             "search" : "/const\\s+ttt\\s*=\\s*require\\(.mama-magnimus.\\);/g",
@@ -187,11 +188,11 @@ describe("The converter tool", function ()
 
         /**
          * Testing:
-         * $> toesm --input="assets/cjs/demo-test-7.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         * $> toesm --input="assets/given/demo-test-7.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
          */
-        it("should solve node_modules paths using the toesm translation of rgb-hex-cjs to rgb-hex", async function ()
+        it("should update the link in demo-test-7.cjs", async function ()
             {
-                const input = "./test/assets/cjs/demo-test-7.cjs";
+                const input = "./test/assets/given/demo-test-7.cjs";
                 /**
                  * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
                  *     config: string}}
@@ -199,14 +200,69 @@ describe("The converter tool", function ()
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
-                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
                     "noheader"  : false,
                     "withreport": true,
                 };
 
+                // Conversion Link
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-7.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-7.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        /**
+         * Testing:
+         * $> toesm --input="assets/given/demo-test-8.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         */
+        it("should convert the rgb-hex(rgb-hex) module entry point", async function ()
+            {
+                const input = "./test/assets/given/demo-test-8.cjs";
+                /**
+                 * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
+                 *     config: string}}
+                 */
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
+                    "noheader"  : false,
+                    "withreport": true,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected/node_modules/rgb-hex-cjs/", "index.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual/node_modules/rgb-hex-cjs/", "index.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        /**
+         * Testing:
+         * $> toesm --input="assets/given/demo-test-9.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         */
+        it("should solve rgb-hex-cjs into rgb-hex when specified with a replaceModules key in the config file", async function ()
+            {
+                const input = "./test/assets/given/demo-test-9.cjs";
+                /**
+                 * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
+                 *     config: string}}
+                 */
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm.json"),
+                    "noheader"  : false,
+                    "withreport": true,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-9.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-9.mjs"), "utf8");
 
                 expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
@@ -214,17 +270,44 @@ describe("The converter tool", function ()
 
         /**
          * Testing:
-         * $> toesm --input="assets/cjs/demo-test-8.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         * $> toesm --input="assets/given/demo-test-10.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         */
+        it("should solve rgb-hex-cjs into /rgb-hex when specified on the replaceModules key in the config file", async function ()
+            {
+                const input = "./test/assets/given/demo-test-10.cjs";
+                /**
+                 * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
+                 *     config: string}}
+                 */
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm-replace-modules.json"),
+                    "noheader"  : false,
+                    "withreport": true,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-10.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-10.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        /**
+         * Testing:
+         * $> toesm --input="assets/given/demo-test-x.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
          * --html="assets/*.html
          */
         it("should generate an import maps into the parsed html files", async function ()
             {
-                const input = "./test/assets/cjs/demo-test-8.cjs";
+                const input = "./test/assets/given/demo-test-x.cjs";
                 const htmlPattern = "./test/assets/actual/*.html";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
-                    "config"    : path.join(__dirname, "assets", ".toesm.json"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm.json"),
                     "noheader"  : false,
                     "withreport": true,
                     "html": htmlPattern,
@@ -234,18 +317,17 @@ describe("The converter tool", function ()
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "index.html"), "utf8");
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "index.html"), "utf8");
-
                 expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
-        it("should fail ./cjs/demo-bad-syntax.cjs into ./expected/demo-bad-syntax.esm", async function ()
+        it("should fail ./given/demo-bad-syntax.cjs into ./expected/demo-bad-syntax.esm", async function ()
             {
-                const input = "./test/assets/cjs/demo-bad-syntax.cjs";
+                const input = "./test/assets/given/demo-bad-syntax.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
-                    "config"    : path.join(__dirname, ".toesm.json"),
+                    "config"    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
                     "noheader"  : false,
                     "withreport": false,
                 };
@@ -256,13 +338,13 @@ describe("The converter tool", function ()
             }
         );
 
-        it("should fail ./cjs/demo-test-5.cjs when a glob is passed", async function ()
+        it("should fail ./given/demo-test-5.cjs when a glob is passed", async function ()
             {
-                const input = "./test/assets/cjs/multi/**/*.cjs";
+                const input = "./test/assets/given/multi/**/*.cjs";
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual/multi"),
-                    "config"    : path.join(__dirname, ".toesm.json"),
+                    "config"    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
                     "noheader"  : false,
                     "withreport": false,
                 };

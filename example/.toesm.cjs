@@ -33,8 +33,6 @@ module.exports = {
                 replace: `/node_modules`,
                 regex: false
             }],
-
-
         }
 
 }
