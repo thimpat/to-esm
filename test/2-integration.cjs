@@ -148,7 +148,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-4.mjs"), "utf8");
 
-                expect(expectedConversion).to.equalIgnoreSpaces(converted);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -181,7 +181,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-6.mjs"), "utf8");
 
-                expect(expectedConversion).to.equalIgnoreSpaces(converted);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -208,25 +208,19 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-7.mjs"), "utf8");
 
-                expect(expectedConversion).to.equal(converted);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
         /**
          * Testing:
-         * $> toesm --input="assets/cjs/demo-test-7.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         * $> toesm --input="assets/cjs/demo-test-8.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
+         * --html="assets/*.html
          */
         it("should generate an import maps into the parsed html files", async function ()
             {
-                const input = "./test/assets/cjs/demo-test-7.cjs";
+                const input = "./test/assets/cjs/demo-test-8.cjs";
                 const htmlPattern = "./test/assets/actual/*.html";
-                /**
-                 * @example
-                 * CLI equivalent:
-                 * --html="assets/*.html"
-                 * @type {{output: string, input: string, importmaps: boolean, noheader: boolean, withreport: boolean,
-                 *     config: string}}
-                 */
                 const options = {
                     input,
                     "output"    : path.join(rootDir, "/actual"),
@@ -241,7 +235,7 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "index.html"), "utf8");
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "index.html"), "utf8");
 
-                expect(expectedConversion).to.equal(converted);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
