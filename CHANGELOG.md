@@ -1,3 +1,16 @@
+# [2.0.0](https://github.com/thimpat/to-esm/compare/v1.8.0...v2.0.0) (2022-02-15)
+
+
+* Merge pull request #7 from thimpat/fix-8 ([8754293](https://github.com/thimpat/to-esm/commit/8754293be26da03e2c51d83d1dc62f01b178cb98)), closes [#7](https://github.com/thimpat/to-esm/issues/7)
+* BREAKING CHANGE: Handle importmap ([f6cf418](https://github.com/thimpat/to-esm/commit/f6cf41846c345a8d78202763889646363524bb45))
+
+
+### BREAKING CHANGES
+
+* Handle importmap
+* 
+*
+
 # [1.8.0](https://github.com/thimpat/to-esm/compare/v1.7.1...v1.8.0) (2022-02-15)
 
 ## [1.7.1](https://github.com/thimpat/to-esm/compare/v1.7.0...v1.7.1) (2022-02-12)
