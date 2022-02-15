@@ -79,7 +79,7 @@ describe("The converter tool", function ()
             await convert(options);
             const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.mjs"), "utf8");
 
-            expect(converted).to.equal(expectedConversion);
+            expect(converted).to.equalIgnoreSpaces(expectedConversion);
         });
 
         it("should convert ./cjs/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
@@ -116,7 +116,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-3.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -235,7 +235,7 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "index.html"), "utf8");
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "index.html"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 

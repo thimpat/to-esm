@@ -241,10 +241,10 @@ describe("converter.cjs", function ()
         it("should return the location of the given path related to the targeted path", function ()
         {
             const source = "./example/cjs/demo.cjs";
-            const rootDir = "C:\\projects\\to-esm\\example\\cjs";
+            const rootDir = process.cwd();
             const outputDir = "./generated/browser/";
             const {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
-            expect(projectedPath).to.equal("./generated/browser/demo.cjs");
+            expect(projectedPath).to.equal("./generated/browser/example/cjs/demo.cjs");
         });
 
         it("should fail when the path cannot be projected", function ()
