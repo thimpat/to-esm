@@ -2,6 +2,7 @@
  * This file is to convert a Commonjs file into an ESM library
  * by just replacing module.exports to export default.
  * It's for very simple library, but will allow me to avoid using a bundler.
+ *
  */
 const packageJson = require("../package.json");
 const path = require("path");
@@ -14,9 +15,13 @@ const espree = require("espree");
 const estraverse = require("estraverse");
 
 const ESM_EXTENSION = ".mjs";
+
 const COMMENT_MASK = "❖✎🔏❉";
 
 const nativeModules = Object.keys(process.binding("natives"));
+
+// The whole list of files to convert
+const cjsList = [];
 
 /**
  * Build target directory.
@@ -69,24 +74,109 @@ const convertNonTrivial = (converted) =>
 
 };
 
+/* istanbul ignore next */
 
-const getNodeModuleProp = (moduleName) =>
+/**
+ * Retrieve module entrypoint
+ * @param modulePath
+ * @returns {ParsedPath|null}
+ */
+const findPackageEntryPoint = (modulePath) =>
+{
+    let entryPoint;
+    try
+    {
+        entryPoint = require.resolve(modulePath);
+        return path.parse(entryPoint);
+    }
+    catch (e)
+    {
+        console.info(`${packageJson.name}: (1140) Checking [${modulePath}] package.json`);
+    }
+
+    try
+    {
+        const externalPackageJsonPath = path.join(modulePath, "package.json");
+        if (!fs.existsSync(externalPackageJsonPath))
+        {
+            return null;
+        }
+
+        const externalRawPackageJson = fs.readFileSync(externalPackageJsonPath, "utf-8");
+        const externalPackageJson = JSON.parse(externalRawPackageJson);
+
+        const exports = externalPackageJson.exports;
+        if (typeof exports === "string" || exports instanceof String)
+        {
+            entryPoint = path.join(modulePath, exports);
+            entryPoint = normalisePath(entryPoint);
+            return path.parse(entryPoint);
+        }
+
+        const arr = Object.values(exports);
+        for (let i = 0; i < arr.length; ++i)
+        {
+            const entry = arr[i];
+            if (!entry.import)
+            {
+                continue;
+            }
+            const imports = entry.import;
+            entryPoint = path.join(modulePath, imports);
+            entryPoint = normalisePath(entryPoint);
+            return path.parse(entryPoint);
+        }
+    }
+    catch (e)
+    {
+
+    }
+    return null;
+};
+
+/**
+ * Returns path information related to a Node module
+ * @param moduleName
+ * @returns {*}
+ */
+const getNodeModuleProperties = (moduleName) =>
 {
     let modulePath;
 
     try
     {
-        modulePath = require.resolve(moduleName);
+        modulePath = path.join("node_modules", moduleName);
+        if (!fs.existsSync(modulePath))
+        {
+            console.info(`${packageJson.name}: (1100) Failed to locate module [${moduleName}]. Skipped.`);
+            return null;
+        }
+
+        const entryPointInfo = findPackageEntryPoint(modulePath);
+
+        if (!entryPointInfo)
+        {
+            console.info(`${packageJson.name}: (1145) Failed to locate module [${moduleName}]. Skipped.`);
+            return null;
+        }
+
+        return entryPointInfo;
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.info(`${packageJson.name}: (1002) Failed to locate module [${moduleName}]. Skipped.`);
-        return;
     }
 
-    return path.parse(modulePath);
+    return null;
 };
 
+/**
+ * Check whether the given text has a valid JavaScript syntax
+ * @param str
+ * @param syntaxType
+ * @returns {boolean}
+ */
 const validateSyntax = (str, syntaxType = "commonjs") =>
 {
     try
@@ -112,43 +202,420 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
     return false;
 };
 
-const reviewExternalImport = (text, list, fileProp) =>
+/**
+ * If source finishes with a "/", it's a folder,
+ * otherwise, it's not.
+ * @returns {boolean}
+ */
+const isConventionalFolder = (source) =>
+{
+    if (!source)
+    {
+        return false;
+    }
+    return source.charAt(source.length - 1) === "/";
+};
+
+/**
+ * Returns the path of a relative path relative to source.
+ * @param source File that contains the require or import
+ * @param requiredPath Relative path inside the require or import
+ * @todo Change function name to more appropriate name
+ */
+const concatenatePaths = (source, requiredPath) =>
+{
+    source = normalisePath(source);
+    const sourceDir = isConventionalFolder(source) ? source : path.parse(source).dir;
+    let importPath = path.join(sourceDir, requiredPath);
+    return normalisePath(importPath);
+};
+
+/**
+ * Use conventions (See file top)
+ * @todo Change function name to more appropriate name
+ * @param source
+ * @param requiredPath
+ * @returns {string}
+ */
+const calculateRelativePath = (source, requiredPath) =>
+{
+    source = normalisePath(source);
+    requiredPath = normalisePath(requiredPath);
+
+    if (!isConventionalFolder(source))
+    {
+        source = path.parse(source).dir + "/";
+    }
+
+    const relativePath = path.relative(source, requiredPath);
+    return normalisePath(relativePath);
+};
+
+/**
+ *
+ * @param moduleName
+ * @returns {string|null}
+ */
+const getModuleEntryPointPath = (moduleName) =>
+{
+    const module = getNodeModuleProperties(moduleName);
+
+    if (!module)
+    {
+        return null;
+    }
+
+    const modulePath = path.join(module.dir, module.base);
+    return normalisePath(modulePath);
+};
+
+// ---------------------------------------------------
+// NEW STUFF
+// ---------------------------------------------------
+
+/**
+ * Transform a given path following some conventions.
+ * @param somePath
+ * @param isFolder
+ * @returns {string}
+ *
+ * CONVENTIONS:
+ * - All folders must finish with a "/"
+ * - Paths must be made of forward slashes (no backward slash)
+ */
+const normalisePath = (somePath, {isFolder = false} = {}) =>
+{
+    somePath = somePath.replace(/\\/gm, "/");
+    if (isFolder)
+    {
+        if (!isConventionalFolder(somePath))
+        {
+            somePath = somePath + "/";
+        }
+    }
+
+    if (path.isAbsolute(somePath))
+    {
+        return somePath;
+    }
+
+    const firstChar = somePath.charAt(0);
+    if (!somePath)
+    {
+        somePath = "./";
+    }
+    else if (somePath === ".")
+    {
+        somePath = "./";
+    }
+    else if (!([".", "/"].includes(firstChar)))
+    {
+        somePath = "./" + somePath;
+
+    }
+    return somePath;
+};
+
+/**
+ * Convert path like:
+ * C:/a/b/c/d => /a/b/c/d
+ * So, they can be created as subdirectory
+ * @param wholePath
+ * @returns {*|string[]}
+ */
+const convertToSubRootDir = (wholePath) =>
+{
+    wholePath = normalisePath(wholePath);
+    const arr = wholePath.split("/");
+    arr.shift();
+    return arr.join("/");
+};
+
+/**
+ * Remove part of path by substracting a given directory from a whole path
+ * @param wholePath File Path
+ * @param pathToSubtract Subdirectory to remove from path
+ * @returns {*}
+ */
+const subtractPath = (wholePath, pathToSubtract) =>
+{
+    let subPath, subDir;
+
+    // Get mapped path by subtracting rootDir
+    wholePath = wholePath.replace(/\\/gm, "/");
+    pathToSubtract = pathToSubtract.replace(/\\/gm, "/");
+
+    if (wholePath.length < pathToSubtract.length)
+    {
+        console.error(`${packageJson.name}: (1123)` + "Path subtraction will not work here. " +
+            "The subtracting path is bigger than the whole path");
+        return {
+            subPath: wholePath
+        };
+    }
+
+    if (pathToSubtract === "./")
+    {
+        subPath = convertToSubRootDir(wholePath);
+        subDir = path.parse(subPath).dir;
+        subDir = normalisePath(subDir, {isFolder: true});
+
+        return {
+            subDir, subPath
+        };
+    }
+    else if (wholePath.indexOf(pathToSubtract) === -1)
+    {
+        console.error(`${packageJson.name}: (1125)` + "Path subtraction will not work here. " +
+            "The subtracting path is not part of the whole path");
+        return {
+            subPath: wholePath
+        };
+    }
+
+    if (pathToSubtract.charAt(pathToSubtract.length - 1) !== "/")
+    {
+        pathToSubtract = pathToSubtract + "/";
+    }
+
+    let subPaths = wholePath.split(pathToSubtract);
+    subPath = subPaths[1];
+    subPath = normalisePath(subPath);
+
+    subDir = path.parse(subPath).dir;
+    subDir = normalisePath(subDir);
+
+    return {
+        subDir, subPath
+    };
+};
+
+/**
+ * Look up for a path in the glob list
+ * @param requiredPath
+ * @param list
+ * @returns {{}|*}
+ */
+const getTranslatedPath = (requiredPath, list) =>
+{
+    requiredPath = normalisePath(requiredPath);
+    for (let i = 0; i < list.length; ++i)
+    {
+        const item = list[i];
+
+        const source = normalisePath(item.source);
+        if (requiredPath === source)
+        {
+            return item;
+        }
+    }
+    return {};
+};
+
+const getProjectedPathAll = ({source, rootDir, outputDir}) =>
+{
+    try
+    {
+        const sourcePath = path.resolve(source);
+        rootDir = path.resolve(rootDir);
+
+        // Get mapped path by subtracting rootDir
+        let {subPath, subDir} = subtractPath(sourcePath, rootDir);
+
+        let projectedDir = path.join(outputDir, subDir);
+        projectedDir = normalisePath(projectedDir);
+
+        let projectedPath = path.join(outputDir, subPath);
+        projectedPath = normalisePath(projectedPath);
+
+        return {
+            sourcePath,
+            subPath,
+            subDir,
+            projectedPath,
+            projectedDir
+        };
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1120)`, e.message);
+    }
+
+    return {};
+};
+
+/**
+ * Change the given path extension to .mjs
+ * @param filepath
+ * @returns {string}
+ */
+const changePathExtensionToESM = (filepath) =>
+{
+    const parsed = path.parse(filepath);
+    const renamed = path.join(parsed.dir, parsed.name + ESM_EXTENSION);
+    return normalisePath(renamed);
+};
+
+/**
+ *
+ * @param sourcePath
+ * @param requiredPath
+ * @param list
+ * @param followlinked
+ * @param outputDir
+ * @returns {string}
+ */
+const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, outputDir}) =>
+{
+    let projectedRequiredPath;
+
+    // Projected path of required path
+    const requiredPathProperties = getTranslatedPath(requiredPath, list);
+    const target = requiredPathProperties.target;
+
+    if (target)
+    {
+        // The relative path of the two projected paths above (projectedPath + target)
+        projectedRequiredPath = calculateRelativePath(sourcePath, target);
+    }
+    else
+    {
+        if (followlinked)
+        {
+            const newPath = concatenatePaths(outputDir, requiredPath);
+            projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
+            projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
+        }
+        else
+        {
+            projectedRequiredPath = calculateRelativePath(sourcePath, requiredPath);
+            projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
+        }
+    }
+
+    return projectedRequiredPath;
+};
+
+/**
+ * Parse imported libraries (the ones that don't have a relative or absolute path)
+ * @param text
+ * @param list
+ * @param fileProp
+ * @returns {*}
+ */
+const reviewEsmImports = (text, list, {
+    source,
+    rootDir,
+    outputDir,
+    importMaps,
+    nonHybridModuleMap,
+    workingDir,
+    followlinked,
+    moreOptions
+}) =>
 {
     // Locate third party
-    const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
+    // const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
+    const re = /\bfrom\s+["']([^"']+?)["'];?/gmu;
 
-    return text.replace(re, function (match, moduleName)
+    return text.replace(re, function (match, regexRequiredPath)
     {
-        if (/require\s*\(/.test(moduleName))
+        try
         {
+            if (~nativeModules.indexOf(regexRequiredPath))
+            {
+                console.info(`${packageJson.name}: (1017) ${regexRequiredPath} is a built-in NodeJs module.`);
+                return match;
+            }
+
+            // Third party libraries
+            if (!regexRequiredPath.startsWith("."))
+            {
+                let moduleName = regexRequiredPath;
+                if (nonHybridModuleMap[moduleName])
+                {
+                    moduleName = nonHybridModuleMap[moduleName];
+                }
+
+                let requiredPath = getModuleEntryPointPath(moduleName);
+
+                if (requiredPath === null)
+                {
+                    console.warn(`${packageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
+                        + "Skipping.");
+                    return match;
+                }
+
+                // Source path of projected original source (the .cjs)
+                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+
+                let projectedRequiredPath = calculateRequiredPath(
+                    {
+                        sourcePath: projectedPath, requiredPath, list,
+                        followlinked, workingDir, outputDir
+                    });
+
+                if (followlinked)
+                {
+                    addFileToConvertingList({
+                        source   : requiredPath,
+                        rootDir  : workingDir,
+                        outputDir,
+                        workingDir,
+                        followlinked,
+                        notOnDisk: moreOptions.useImportMaps
+                    });
+                }
+
+                importMaps[moduleName] = requiredPath;
+                if (moreOptions.useImportMaps)
+                {
+                    projectedRequiredPath = moduleName;
+                    if (requiredPath.indexOf("node_modules") > -1)
+                    {
+                        requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
+                    }
+                    importMaps[moduleName] = requiredPath;
+                }
+
+                return match.replace(regexRequiredPath, projectedRequiredPath);
+            }
+
+            if (regexRequiredPath.startsWith("./") || regexRequiredPath.startsWith("..") || translated)
+            {
+                // Source path of projected original source (the .cjs)
+                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+
+                // The required path from the source path above
+                let requiredPath = concatenatePaths(source, regexRequiredPath);
+
+                let projectedRequiredPath = calculateRequiredPath(
+                    {
+                        sourcePath: projectedPath, requiredPath, outputDir,
+                        list, followlinked, workingDir
+                    });
+
+                if (followlinked)
+                {
+                    addFileToConvertingList({
+                        source : requiredPath,
+                        rootDir: workingDir,
+                        outputDir,
+                        workingDir,
+                        followlinked
+                    });
+                }
+
+                return match.replace(regexRequiredPath, projectedRequiredPath);
+            }
+
             return match;
         }
-
-        if (~nativeModules.indexOf(moduleName))
+        catch (e)
         {
-            console.info(`${packageJson.name}: (1017) ${moduleName} is a built-in NodeJs module.`);
-            return match;
+            /* istanbul ignore next */
+            console.error(`${packageJson.name}: (1108)`, e.message);
         }
-
-        const module = getNodeModuleProp(moduleName);
-
-        if (!module)
-        {
-            return match;
-        }
-
-        // current file's absolute path
-        const sourcePath = path.resolve(fileProp.outputDir);
-
-        // The node_modules directory package
-        let relativeNodeModulesDir = path.relative(sourcePath, module.dir);
-
-        // We add .. to point to the node_modules parent
-        let relativePath = path.join("../..", relativeNodeModulesDir, module.base);
-
-        relativePath = relativePath.replace(/\\/g, "/");
-
-        return match.replace(moduleName, relativePath);
 
     });
 
@@ -227,7 +694,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
  * @param replace
  * @returns {*}
  */
-const applyReplace = (converted, replace) =>
+const applyReplaceFromConfig = (converted, replace) =>
 {
     replace.forEach((item) =>
     {
@@ -294,29 +761,27 @@ const convertModuleExportsToExport = (converted) =>
 };
 
 /**
- * Use regex to do the transformation into imports.
+ * Parse the given test and use regex to transform requires into imports.
  * @note This function is used with both parser (AST or Regex)
  * @param converted
  * @returns {*}
  */
-const convertRequireToImport = (converted) =>
+const convertRequiresToImport = (converted) =>
 {
     converted = stripComments(converted);
 
     // convert require with .json file to import
     converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
 
-    // convert require with .cjs extension to import with .mjs extension (esm can't parse .cjs anyway)
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+)\.cjs([^)])\)/gm, "import $1 from" +
-        ` $2${ESM_EXTENSION}$3`);
+    // convert require with .js or .cjs extension to import
+    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+\.c?js)([^)])\)/gm, "import $1" +
+        " from" +
+        " $2$3");
 
-    // convert require with .js extension to import
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.js[^)])\)/gm, "import $1 from $2");
+    // convert require without extension to import without extension
+    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
-    // convert require without extension to import .mjs extension
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, `import $1 from "$2${ESM_EXTENSION}"`);
-
-    // convert require without extension to import (Third Party libraries)
+    // convert require with non-relative path to import (Third Party libraries)
     converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
     return converted;
@@ -363,16 +828,31 @@ const removeDeclarationForAST = (converted, extracted) =>
 };
 
 /**
- * Covert require and move imports to the top
+ * Convert "requires" to imports and move them to the top of the file.
  * @param converted
  * @param extracted
  * @param list
  * @param source
  * @param outputDir
  * @param rootDir
+ * @param importMaps
+ * @param nonHybridModuleMap
+ * @param workingDir
+ * @param followlinked
+ * @param moreOptions
  * @returns {string|*}
+ * @private
  */
-const applyRequireToImportTransformationsForAST = (converted, extracted, list, {source, outputDir, rootDir}) =>
+const applyExtractedASTToImports = (converted, extracted, list, {
+    source,
+    outputDir,
+    rootDir,
+    importMaps,
+    nonHybridModuleMap,
+    workingDir,
+    followlinked,
+    moreOptions
+}) =>
 {
     try
     {
@@ -393,7 +873,7 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
                 }
 
                 let transformedLines = stripComments(prop.text);
-                transformedLines = convertRequireToImport(transformedLines);
+                transformedLines = convertRequiresToImport(transformedLines);
 
                 const valid = validateSyntax(transformedLines, "module");
                 if (!valid)
@@ -401,7 +881,11 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
                     continue;
                 }
 
-                transformedLines = reviewExternalImport(transformedLines, list, {source, outputDir, rootDir});
+                transformedLines = reviewEsmImports(transformedLines, list,
+                    {
+                        source, outputDir, rootDir, importMaps,
+                        nonHybridModuleMap, workingDir, followlinked, moreOptions
+                    });
 
                 transformedLines = transformedLines.trim();
                 if (transformedLines.charAt(transformedLines.length - 1) !== ";")
@@ -418,7 +902,7 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
         }
 
         const EOL = require("os").EOL;
-        converted = importList.join(EOL) + converted;
+        converted = importList.reverse().join(EOL) + converted;
     }
     catch (e)
     {
@@ -428,7 +912,30 @@ const applyRequireToImportTransformationsForAST = (converted, extracted, list, {
     return converted;
 };
 
-const convertRequireToImportWithAST = (converted, list, {source, outputDir, rootDir}) =>
+/**
+ * Extract information related to cjs imports and use them to de the transformation.
+ * @param converted
+ * @param list
+ * @param source
+ * @param outputDir
+ * @param rootDir
+ * @param importMaps
+ * @param nonHybridModuleMap
+ * @param workingDir
+ * @param followlinked
+ * @param moreOptions
+ * @returns {{converted, success: boolean}}
+ */
+const convertRequiresToImportsWithAST = (converted, list, {
+    source,
+    outputDir,
+    rootDir,
+    importMaps,
+    nonHybridModuleMap,
+    workingDir,
+    followlinked,
+    moreOptions
+}) =>
 {
     let success = true;
     try
@@ -452,8 +959,8 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
         }
         catch (e)
         {
-            console.warn(`${packageJson.name}: (1052) ------- CJS: Syntax issues found on [${source}]`);
-            console.info("                  ➔ ➔ ➔ ➔ ➔ ➔ ", e.message);
+            console.warn(`${packageJson.name}: (1052) WARNING: Syntax issues found on [${source}]`);
+            console.error(`${packageJson.name}: (1208) ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ `, e.message);
             return {converted, success: false};
         }
 
@@ -553,7 +1060,16 @@ const convertRequireToImportWithAST = (converted, list, {source, outputDir, root
             }
         });
 
-        converted = applyRequireToImportTransformationsForAST(converted, extracted, list, {source, outputDir, rootDir});
+        converted = applyExtractedASTToImports(converted, extracted, list, {
+            source,
+            outputDir,
+            rootDir,
+            importMaps,
+            nonHybridModuleMap,
+            workingDir,
+            followlinked,
+            moreOptions
+        });
         converted = removeDeclarationForAST(converted, extracted);
     }
     catch (e)
@@ -583,20 +1099,76 @@ const putBackComments = (str, extracted) =>
 };
 
 /**
+ * Generate an object describing a file to convert
+ * @param source
+ * @param rootDir
+ * @param outputDir
+ * @param workingDir
+ * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source:
+ *     string, subPath: *, target: string}}
+ */
+const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
+{
+    try
+    {
+        let sourceAbs = path.join(workingDir, source);
+        sourceAbs = normalisePath(sourceAbs);
+
+        let {subPath, subDir} = subtractPath(sourceAbs, rootDir);
+
+        let targetName = path.parse(subPath).name + ESM_EXTENSION;
+
+        let target = path.join(outputDir, subDir, targetName);
+        target = normalisePath(target);
+
+        let targetAbs = path.join(workingDir, target);
+
+        let extra = path.parse(source);
+        let sourceNoExt = path.join(extra.dir, extra.name);
+        sourceNoExt = normalisePath(sourceNoExt);
+
+        source = normalisePath(source);
+
+        outputDir = normalisePath(outputDir, {isFolder: true});
+
+        return {
+            source,
+            sourceAbs,
+            sourceNoExt,
+            outputDir,
+            rootDir,
+            subPath,
+            subDir,
+            target,
+            targetAbs
+        };
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1011)`, e.message);
+    }
+};
+
+
+/**
  * Convert cjs file into esm
  * @param {string[]} list File list to convert
  * @param {string} outputDir Target directory to put converted file
  * @param {boolean} noheader Whether to add extra info on top of converted file
  */
-const convertListFiles = (list, {
+const convertCjsFiles = (list, {
     replaceStart = [],
     replaceEnd = [],
-    replaceDetectedModules = [],
+    nonHybridModuleMap = {},
+    workingDir,
     noheader = false,
-    solvedep = false,
     extended = false,
     comments = false,
-    withreport = false
+    withreport = false,
+    importMaps = {},
+    followlinked = true,
+    fallback = false,
+    moreOptions = {}
 } = {}) =>
 {
     let report;
@@ -623,24 +1195,54 @@ const convertListFiles = (list, {
         }
     };
 
-    list.forEach(({source, outputDir, rootDir}) =>
+    for (let dynamicIndex = 0; dynamicIndex < list.length; ++dynamicIndex)
     {
         try
         {
+            let {source, outputDir, rootDir, notOnDisk} = list[dynamicIndex];
+            console.log(`${packageJson.name}: (1132) Processing ==========================================> ${source}`);
+
             let converted = fs.readFileSync(source, "utf-8");
 
-            converted = applyReplace(converted, replaceStart);
+            converted = applyReplaceFromConfig(converted, replaceStart);
 
-            const result = convertRequireToImportWithAST(converted, list, {source, outputDir, rootDir});
+            const result = convertRequiresToImportsWithAST(converted, list,
+                {
+                    source,
+                    outputDir,
+                    rootDir,
+                    importMaps,
+                    nonHybridModuleMap,
+                    workingDir,
+                    followlinked,
+                    moreOptions
+                });
             converted = result.converted;
-
-            converted = applyReplace(converted, replaceDetectedModules);
 
             converted = convertModuleExportsToExport(converted);
 
+            if (!fallback && !result.success)
+            {
+                // Failed even with fallback
+                console.error(`${packageJson.name}: (1173) ❌ FAULTY: ESM: PArsing failed on [${source}]`);
+            }
+
+            // Apply fallback in case of conversion error
             if (extended || !result.success || comments)
             {
-                converted = replaceWithRegex(converted, list, {source, outputDir, rootDir, solvedep, comments});
+                console.error(`${packageJson.name}: (1207) Applying fallback process to convert [${source}]. The conversion may result in errors.`);
+                converted = convertRequiresToImportsWithRegex(converted,
+                    list,
+                    {
+                        source,
+                        outputDir,
+                        rootDir,
+                        importMaps,
+                        comments,
+                        nonHybridModuleMap,
+                        workingDir,
+                        followlinked
+                    });
             }
 
             if (!noheader)
@@ -648,14 +1250,15 @@ const convertListFiles = (list, {
                 converted = `/**
  * DO NOT EDIT THIS FILE DIRECTLY.
  * This file is generated following the conversion of 
- * [${source}]
+ * [${source}]{@link ${source}}
  * 
  **/    
 ` + converted;
             }
 
-            converted = applyReplace(converted, replaceEnd);
+            converted = applyReplaceFromConfig(converted, replaceEnd);
 
+            // ******************************************
             const targetFile = path.basename(source, path.extname(source));
 
             let destinationDir;
@@ -665,7 +1268,10 @@ const convertListFiles = (list, {
                 const relativeDir = path.relative(rootDir, fileDir);
                 destinationDir = path.join(outputDir, relativeDir);
 
-                buildTargetDir(destinationDir);
+                if (!notOnDisk)
+                {
+                    buildTargetDir(destinationDir);
+                }
             }
             else
             {
@@ -674,7 +1280,7 @@ const convertListFiles = (list, {
 
             const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
 
-            let reportSuccess = result.success ? "✔ SUCCESS" : "✔ SUCCESS (with fallback)";
+            let reportSuccess = result.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
             try
             {
                 parserOtions.sourceType = "module";
@@ -683,11 +1289,10 @@ const convertListFiles = (list, {
             catch (e)
             {
                 // Failed even with fallback
-                console.error(`${packageJson.name}: (1054) FAULTY: ESM: Conversion may have failed even with fallback processing on` +
+                console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
                     ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
-                reportSuccess = "❌ FAULTY";
-                console.log(`${packageJson.name}: (1075) Note that the file is still generated to allow checking the error.`);
-                result.success = false;
+                reportSuccess = "❌ FAILED";
+                console.log(`${packageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
                 if (!withreport)
                 {
                     report = false;
@@ -695,11 +1300,18 @@ const convertListFiles = (list, {
             }
 
             console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
-            fs.writeFileSync(targetFilepath, converted, "utf-8");
+
+            if (!notOnDisk)
+            {
+                fs.writeFileSync(targetFilepath, converted, "utf-8");
+            }
+
             if (withreport)
             {
                 report[source] = converted;
             }
+
+
         }
         catch (e)
         {
@@ -709,15 +1321,153 @@ const convertListFiles = (list, {
                 report = false;
             }
         }
-    });
+
+    }
 
     return report;
 };
 
-const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep, comments} = {}) =>
+/**
+ * Insert importmaps into the passed html file
+ * @param fullHtmlPath
+ * @param importMaps
+ * @param confFileOptions
+ * @param moreOptions
+ */
+const parseHTMLFile = (htmlPath, {importMaps = {}, confFileOptions = {}, moreOptions = {}}) =>
 {
-    const workingDir = process.cwd();
+    const EOL = require("os").EOL;
 
+    fullHtmlPath = path.resolve(htmlPath);
+    /* istanbul ignore next */
+    if (!fs.existsSync(fullHtmlPath))
+    {
+        console.error(`${packageJson.name}: (1080) Could not find HTML file at [${fullHtmlPath}]`);
+        return;
+    }
+
+    let content = fs.readFileSync(fullHtmlPath, "utf-8");
+    const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
+
+    let newMaps = importMaps;
+    let existingImportMap = {};
+
+    let scriptTagExist = false;
+    let match;
+    match = regex.exec(content);
+    if (match && match.length > 1)
+    {
+        scriptTagExist = true;
+
+        do
+        {
+            let rawImportMap = match[1].trim();
+            try
+            {
+                existingImportMap = JSON.parse(rawImportMap);
+
+                if (existingImportMap.imports)
+                {
+                    if (moreOptions.overwriteim)
+                    {
+                        newMaps = Object.assign({}, existingImportMap.imports, importMaps);
+                    }
+                    else
+                    {
+                        newMaps = Object.assign({}, importMaps, existingImportMap.imports);
+                    }
+                }
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}: (1090)`, e.message);
+            }
+        } while (match = regex.exec(content));
+    }
+
+    if (confFileOptions.html && confFileOptions.html.importmap)
+    {
+        newMaps = Object.assign({}, newMaps, confFileOptions.html.importmap);
+    }
+
+    if (confFileOptions.html && confFileOptions.html.useRelativeImportMap)
+    {
+        for (let kk in newMaps)
+        {
+            try
+            {
+                const root = path.relative(htmlPath, "./");
+                const jsPath = path.join(root, newMaps[kk]);
+                newMaps[kk] = normalisePath(jsPath);
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}: (1205)`, e.message);
+            }
+        }
+    }
+
+    if (confFileOptions.html && confFileOptions.html.importmapReplace)
+    {
+        regexifySearchList(confFileOptions.html.importmapReplace);
+
+        for (let kk in newMaps)
+        {
+            try
+            {
+                newMaps[kk] = applyReplaceFromConfig(newMaps[kk], confFileOptions.html.importmapReplace);
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}: (1205)`, e.message);
+            }
+        }
+    }
+
+    newMaps = JSON.stringify({imports: newMaps}, null, 4);
+
+    if (scriptTagExist)
+    {
+        content = content.replace(/(\<script.+importmap.+\>)([\s\S]+?)(\<\/script>)/gm, `$1${newMaps}$3`);
+    }
+    else
+    {
+        const ins = `<script type="importmap">
+    ${newMaps}
+</script>
+`;
+        content = content.replace(/(\<head.*?\>)/gm, `$1${EOL}${ins}`);
+    }
+
+    fs.writeFileSync(fullHtmlPath, content, "utf-8");
+};
+
+/**
+ * Browse and update all specified html files with importmaps
+ * @param list
+ * @param importMaps
+ * @param moreOptions
+ */
+const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptions = {}}) =>
+{
+    list.forEach((html) =>
+    {
+        console.error(`${packageJson.name}: (1200) Processing [${html}] for importing maps.`);
+        parseHTMLFile(html, {importMaps, confFileOptions, moreOptions});
+    });
+};
+
+const convertRequiresToImportsWithRegex = (converted, list, {
+    source,
+    outputDir,
+    rootDir,
+    importMaps,
+    comments,
+    workingDir,
+    followlinked,
+    moreOptions
+} = {}) =>
+{
     try
     {
         const extractedComments = [];
@@ -733,12 +1483,13 @@ const replaceWithRegex = (converted, list, {source, outputDir, rootDir, solvedep
 
         converted = convertModuleExportsToExport(converted);
 
-        converted = convertRequireToImport(converted);
+        converted = convertRequiresToImport(converted);
 
-        if (solvedep)
-        {
-            converted = reviewExternalImport(converted, list, {source, outputDir, rootDir});
-        }
+        converted = reviewEsmImports(converted, list,
+            {
+                source, outputDir, rootDir,
+                importMaps, workingDir, followlinked, moreOptions
+            });
 
         converted = putBackComments(converted, extractedComments);
 
@@ -787,7 +1538,13 @@ const getOptionsConfigFile = async (configPath) =>
     return confFileOptions;
 };
 
-const parseReplace = (replace = []) =>
+/**
+ * Parse "replace" entry list given by the user.
+ * Convert all search entries into their Regex equivalent.
+ * @param replace
+ * @returns {*[]}
+ */
+const regexifySearchList = (replace = []) =>
 {
     replace.forEach((item) =>
     {
@@ -797,7 +1554,7 @@ const parseReplace = (replace = []) =>
         }
         else if (item.regex)
         {
-            item.replace = new RegExp(item.replace);
+            item.search = new RegExp(item.search);
         }
     });
 
@@ -868,31 +1625,39 @@ const installPackage =
 
         const environment = isCjs ? "CommonJs modules" : "ES Modules";
 
-        console.info(`${packageJson.name}: Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
+        console.info(`${packageJson.name}: (1142) Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
-        console.info(`${packageJson.name}: ✔ Success`);
+        console.info(`${packageJson.name}: (1144) ✔ Success`);
     };
 
 /**
- * Install two modules versions for each specified package
+ * When defined in the config file, install a specific module version for commonjs
+ * and a specific module version for ESM.
+ * We do this to be able to keep working with both CJS and ESM.
+ * The cjs working code will point to the cjs package and after applying the transformation,
+ * the converted code (ESM) will know where to point at to solve the location of
+ * a particular library.
+ * It is specially useful for the importmaps.
+ * @note Some libraries only supports ESM on their latest version.
  * @param config
- * @param packageJsonPath
- * @returns {Promise<void>}
+ * @returns {Promise<{}>}
  */
-const parseReplaceModules = async (config = [], packageJsonPath = "./package.json") =>
+const installNonHybridModules = async (config = []) =>
 {
     const replaceModules = config.replaceModules || [];
-    const replaceStart = [];
 
-    packageJsonPath = path.resolve(packageJsonPath);
+    let packageJsonPath = path.resolve("./package.json");
+    /* istanbul ignore next */
     if (!fs.existsSync(packageJsonPath))
     {
         console.error(`${packageJson.name}: (1014) Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`);
-        return;
+        return null;
     }
 
-    const packageJson = require(packageJsonPath);
+    // const packageJson = require(packageJsonPath);
     const moduleList = Object.keys(replaceModules);
+
+    const nonHybridModules = {};
 
     for (const moduleName of moduleList)
     {
@@ -904,34 +1669,64 @@ const parseReplaceModules = async (config = [], packageJsonPath = "./package.jso
             moduleItem.esm = moduleItem.esm || {};
 
             let version = moduleItem.cjs.version || "@latest";
-            let name = moduleItem.cjs.name || moduleName;
+            let cjsName = moduleItem.cjs.name || moduleName;
             let isDevDependencies = !!moduleItem.cjs.devDependencies;
 
-            installPackage({version, name, isDevDependencies, moduleName, isCjs: true, packageJson});
-
-            const addReplaceStart = {
-                search: new RegExp(`(?:const|let|var)\\s+([^=]+)\\s*=\\s*require\\(["'\`](${name})["'\`]\\)`),
-            };
+            // Install cjs package
+            installPackage({version, name: cjsName, isDevDependencies, moduleName, isCjs: true, packageJson});
 
             version = moduleItem.esm.version || "@latest";
-            name = moduleItem.esm.name || moduleName;
+            let esmName = moduleItem.esm.name || moduleName;
             isDevDependencies = !!moduleItem.esm.devDependencies;
 
-            installPackage({version, name, isDevDependencies, moduleName, isCjs: false, packageJson});
+            // Install esm package
+            installPackage({version, name: esmName, isDevDependencies, moduleName, isCjs: false, packageJson});
 
-            addReplaceStart.replace = `import $1 from "${name}"`;
-            addReplaceStart.regex = true;
-
-            replaceStart.push(addReplaceStart);
+            nonHybridModules[cjsName] = esmName;
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.error(`${packageJson.name}: (1015)`, e.message);
         }
-
-        config.replaceDetectedModules = replaceStart;
     }
 
+    return nonHybridModules;
+};
+
+/**
+ * Add a file to the list of files to parse.
+ * @param source
+ * @param rootDir
+ * @param outputDir
+ * @param workingDir
+ * @param notOnDisk
+ * @returns {boolean}
+ */
+const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnDisk}) =>
+{
+    if (!fs.existsSync(source))
+    {
+        console.error(`${packageJson.name}: (1141) Could not find the file [${source}]`);
+        return false;
+    }
+
+    const entry = formatConvertItem({source, rootDir, outputDir, workingDir});
+
+    entry.notOnDisk = !!notOnDisk;
+
+    for (let i = 0; i < cjsList.length; ++i)
+    {
+        const item = cjsList[i];
+        if (entry.source === item.source)
+        {
+            // item is already in the list
+            return true;
+        }
+    }
+
+    cjsList.push(entry);
+    return true;
 };
 
 /**
@@ -950,16 +1745,17 @@ const convert = async (rawCliOptions = {}) =>
 
     // Config Files
     let configPath = cliOptions.config;
+    let nonHybridModuleMap = {};
     if (configPath)
     {
         confFileOptions = await getOptionsConfigFile(configPath);
 
-        // Replacement
-        confFileOptions.replaceStart = parseReplace(confFileOptions.replaceStart);
-        confFileOptions.replaceEnd = parseReplace(confFileOptions.replaceEnd);
+        // Convert search replacement strings to regex
+        confFileOptions.replaceStart = regexifySearchList(confFileOptions.replaceStart);
+        confFileOptions.replaceEnd = regexifySearchList(confFileOptions.replaceEnd);
 
-        // Module Install
-        await parseReplaceModules(confFileOptions);
+        // Install special npm modules based on config
+        nonHybridModuleMap = await installNonHybridModules(confFileOptions);
     }
 
     // Input Files
@@ -972,9 +1768,8 @@ const convert = async (rawCliOptions = {}) =>
     // Output Files
     const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
 
-    const workingDir = process.cwd();
+    const workingDir = normalisePath(process.cwd(), {isFolder: true});
 
-    const newList = [];
     for (let i = 0; i < inputFileMaskArr.length; ++i)
     {
         const inputFileMask = inputFileMaskArr[i];
@@ -986,63 +1781,119 @@ const convert = async (rawCliOptions = {}) =>
         }
 
         const list = glob.sync(inputFileMask, {
-            dot: true
+            dot  : true,
+            nodir: true
         });
 
-        const rootDir = list && list.length > 1 ? commonDir(workingDir, list) : path.join(workingDir, path.dirname(list[0]));
-
-        list.forEach((item) =>
+        /* istanbul ignore next */
+        if (!list.length)
         {
-            newList.push({
-                source: item,
-                outputDir,
-                rootDir
-            });
+            console.error(`${packageJson.name}: (1151) The pattern did not match any file.`);
+            return;
+        }
+
+        let rootDir;
+        if (list && list.length > 1)
+        {
+            rootDir = commonDir(workingDir, list);
+        }
+        else
+        {
+            rootDir = path.join(workingDir, path.dirname(list[0]));
+        }
+
+        list.forEach((source) =>
+        {
+            addFileToConvertingList({source, rootDir, outputDir, workingDir});
         });
     }
 
     // No header
     const noheader = !!cliOptions.noheader;
-    const solvedep = !!cliOptions.solvedep;
     const extended = !!cliOptions.extended;
     const comments = !!cliOptions.comments;
     const withreport = !!cliOptions.withreport;
+    const fallback = !!cliOptions.fallback;
 
-    return convertListFiles(newList,
+    let followlinked = !cliOptions.ignorelinked;
+
+    const importMaps = {};
+    let html = cliOptions.html;
+    if (!html && confFileOptions.html && confFileOptions.html.pattern)
+    {
+        html = confFileOptions.html.pattern;
+    }
+
+    const moreOptions = {
+        useImportMaps: !!html,
+        overwriteim  : !!cliOptions.overwriteim
+    };
+
+    const result = convertCjsFiles(cjsList,
         {
-            replaceStart          : confFileOptions.replaceStart,
-            replaceEnd            : confFileOptions.replaceEnd,
-            replaceDetectedModules: confFileOptions.replaceDetectedModules,
+            replaceStart: confFileOptions.replaceStart,
+            replaceEnd  : confFileOptions.replaceEnd,
+            nonHybridModuleMap,
             noheader,
-            solvedep,
             extended,
             comments,
+            followlinked,
             withreport,
+            importMaps,
+            workingDir,
+            fallback,
+            moreOptions
         });
 
+    if (!html)
+    {
+        return result;
+    }
+
+    if (!Object.keys(importMaps).length)
+    {
+        console.info(`${packageJson.name}: (1202) No importmap entry found.`);
+        return result;
+    }
+
+    const htmlList = glob.sync(html,
+        {
+            root : workingDir,
+            nodir: true
+        });
+
+    updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions});
 
 };
 
 module.exports.COMMENT_MASK = COMMENT_MASK;
 module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
-module.exports.getNodeModuleProp = getNodeModuleProp;
-module.exports.reviewExternalImport = reviewExternalImport;
+module.exports.getNodeModuleProp = getNodeModuleProperties;
+module.exports.reviewExternalImport = reviewEsmImports;
 module.exports.parseImport = parseImportWithRegex;
-module.exports.applyReplace = applyReplace;
+module.exports.applyReplace = applyReplaceFromConfig;
 module.exports.stripComments = stripComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
-module.exports.convertRequireToImport = convertRequireToImport;
+module.exports.convertRequireToImport = convertRequiresToImport;
 module.exports.validateSyntax = validateSyntax;
-module.exports.applyTransformations = applyRequireToImportTransformationsForAST;
-module.exports.convertRequireToImportWithAST = convertRequireToImportWithAST;
+module.exports.convertRequireToImportWithAST = convertRequiresToImportsWithAST;
 module.exports.putBackComments = putBackComments;
-module.exports.convertListFiles = convertListFiles;
-module.exports.replaceWithRegex = replaceWithRegex;
+module.exports.convertListFiles = convertCjsFiles;
+module.exports.replaceWithRegex = convertRequiresToImportsWithRegex;
 module.exports.getOptionsConfigFile = getOptionsConfigFile;
-module.exports.parseReplace = parseReplace;
+module.exports.parseReplace = regexifySearchList;
 module.exports.getLibraryInfo = getLibraryInfo;
 module.exports.installPackage = installPackage;
-module.exports.parseReplaceModules = parseReplaceModules;
-
+module.exports.parseReplaceModules = installNonHybridModules;
+module.exports.normalisePath = normalisePath;
 module.exports.convert = convert;
+module.exports.isConventionalFolder = isConventionalFolder;
+module.exports.concatenatePaths = concatenatePaths;
+module.exports.convertToSubRootDir = convertToSubRootDir;
+module.exports.subtractPath = subtractPath;
+module.exports.getTranslatedPath = getTranslatedPath;
+module.exports.getProjectedPathAll = getProjectedPathAll;
+module.exports.calculateRequiredPath = calculateRequiredPath;
+module.exports.putBackComments = putBackComments;
+module.exports.regexifySearchList = regexifySearchList;

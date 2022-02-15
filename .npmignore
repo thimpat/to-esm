@@ -7,18 +7,13 @@
 .history/
 .idea/
 cmake-build-*/
-.idea/**/mongoSettings.xml
 *.iws
 out/
-.idea_modules/
 atlassian-ide-plugin.xml
-.idea/replstate.xml
 com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 fabric.properties
-.idea/httpRequests
-.idea/caches/build_file_checksums.ser
 logs
 *.log
 npm-debug.log*
@@ -77,4 +72,5 @@ example/esm/
 /example
 /test
 /.github
+.nyc_output/
 

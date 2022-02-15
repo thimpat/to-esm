@@ -44,7 +44,8 @@ npm install to-esm -g
 
 ```shell
 
-toesm --input=<inputFilesPattern> [--output=<outputDirectory>] [--noheader] [--solvedep] [--extended] [--comments]
+to-esm --input=<inputFilesPattern> [--output=<outputDirectory>] [--html=<htmlFilePattern>] [--noheader] [--solvedep] 
+[--extended] [--comments]
 
 ```
 
@@ -66,6 +67,8 @@ The following examples will work on a folder structure that looks like this:
 > example/cjs/dep-1.cjs
 >
 > example/cjs/dep-2.cjs
+>
+> example/index.html
 
 
 
@@ -79,23 +82,55 @@ The following examples will work on a folder structure that looks like this:
 
 # Generates => 📝 ./example/cjs/input.mjs
 
-toesm  --input=example/cjs/*.js
+to-esm  --input=example/cjs/input.js
 
 ```
-
 
 
 <br>
 
 
-
-### Convert input.js copy (all .js in this directory) to a different location
+### Automatically write an importmap within html files
 
 ```shell
 
-# Generates => 📝 ./example/esm/input.mjs
+# Generates => 📝 ./example/cjs/input.mjs
 
-toesm  --input=example/cjs/*.js --output=example/esm/
+to-esm --input="example/cjs/demo.cjs" --output=generated/browser/ --config=".toesm.cjs" --html=example/*.html
+
+```
+
+**importmap example**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="importmap">
+        {
+          "imports": {
+            "rgb-hex": "./node_modules/rgb-hex/index.js"
+          }
+        }
+    </script>
+</head>
+<body>
+<script type="module" src="actual/demo-test.mjs"></script>
+</body>
+</html>
+```
+
+<br>
+
+
+
+### Convert all .cjs and .js files into example/esm keeping folder structure
+
+Note that it is only useful to do this, when the files are not connected to each other (or some conversions failed)
+
+```shell
+
+to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
 
 ```
 
@@ -103,39 +138,11 @@ toesm  --input=example/cjs/*.js --output=example/esm/
 
 
 
-### Convert all .cjs and .js files
+### We can specify multiple directories if necessary
 
 ```shell
 
-toesm  --input="example/cjs/*.?(c)js" --output=example/esm/
-
-```
-
-
-
-<br>
-
-
-
-### In this example, we also, convert files in subdirectories (keeping folder structure)
-
-```shell
-
-toesm  --input="example/cjs/**/*.?(c)js" --output=example/esm/
-
-```
-
-
-
-<br>
-
-
-
-### When dealing with multiple folders, it's best to use this format (For better path resolution)
-
-```shell
-
-toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=outdir1/esm/ --output=outdir2/esm/
+to-esm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=outdir1/esm/ --output=outdir2/esm/
 
 ```
 
@@ -150,13 +157,16 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 ## Options (via command line)
 
 
-| **Options**  | **Description**                                   | 
-|--------------|-----------------------------------------------|
+| **Options**  | **Description**                                 | 
+|--------------|-------------------------------------------------|
+| --input      | _File list to convert_                          |
+| --output     | _Output directory_                              |
+| --html       | _html files to receive importmaps_              |
 | --noHeader   | _Options to not generate automatic header_      |
 | --withReport | _Output conversion in the console_              |
 | --comments   | _Allow converting code in comments and strings_ 
-| --extended   | _Allow solving dependency paths_    
-| --solveDep   | Allow solving dependency paths
+| --extended   | _Allow solving dependency paths_                
+| --solveDep   | Allow solving dependency paths                  
 
 
 --solvedep: See section [**External dependencies**](#external) for lengthy explanations.
@@ -174,15 +184,15 @@ toesm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=out
 To apply advanced options, create a config file and make the CLI point to it.
 
 >
-> toesm --input=... --output=... --config=.toesm.cjs
+> to-esm --input=... --output=... --config=.to-esm.cjs
 
-
+Keys within the config file are case sensitive.
 
 
 
 ### Options to replace strings before and after every conversion
 
-
+#### [replaceStart, replaceEnd]
 
 📝 .toesm.cjs ↴
 
@@ -209,17 +219,13 @@ module.exports = {
 
 ```
 
+| **Options**          | **Description**                                                       | 
+|----------------------|-----------------------------------------------------------------------|
+| replaceStart         | _will perform a replacement **_before_** doing the conversion to ESM_ |
+| replaceEnd           | _will perform a replacement **_after_** doing the conversion to ESM_  |
+| replaceStart.search  | _The regex pattern or string to replace_                              |
+| replaceStart.replace | _The replacement sentence_                                            |
 
-
-**_replaceStart_** will perform a replacement **_before_** doing the conversion to ESM
-
-
-
-**_replaceEnd_** will perform a replacement **_after_** doing the conversion to ESM
-
-
-
-**_search_** can be a plain string or a regex
 
 <br><br>
 
@@ -227,7 +233,7 @@ module.exports = {
 
 ### Options to use two different modules of the same library.
 
-
+#### [replaceModules]
 
 Sometimes, you may find libraries where only ESM is available when CJS was available on older versions.
 
@@ -272,10 +278,7 @@ module.exports = {
 ```
 
 
-
 In the .cjs file to convert, you would write:
-
-
 
 ```javascript
 
@@ -286,8 +289,6 @@ const rgbhex = require("rgb-hex-cjs");
 
 Which is going to be transformed to:
 
-
-
 ```javascript
 
 import chalk  from "chalk";
@@ -295,8 +296,77 @@ import chalk  from "chalk";
 import rgbhex  from "RGB-hex";
 ```
 
+
+| **Options**                       | **Description**                                         | 
+|-----------------------------------|---------------------------------------------------------|
+| replaceModules[\<moduleName>]     | _The module we want to use two different versions with_ |
+| replaceModules[\<moduleName>].cjs | _The module version to use with CommonJs files_         |
+| replaceModules[\<moduleName>].mjs | _The module version to use with converted files_        |
+
+
 <br><br>
 
+
+### Options to set html sources and manipulate importmaps.
+
+####[html]
+
+```html
+module.exports = {
+    html          :
+        {
+            pattern: "/index.html",
+            importmap       : {
+                "ttt": "http://somewhere"
+            },
+            importmapReplace: [{
+                search : "./node_modules",
+                replace: `/node_modules`,
+            }],
+        }
+}
+```
+
+
+| **Options**                       | **Description**                                    | 
+|-----------------------------------|----------------------------------------------------|
+| pattern                    | _HTML file pattern where importmap needs updating_ |
+| importmap                    | _value to add to html files_                       |
+| importmapReplace                             | _Apply replacements on the importmap list_         |
+
+
+<br/><br/>
+
+##### Quick description
+
+When we specify importmap in the browser,
+instead of using long paths to specify the location of a library, we can use identifiers to state their location.
+
+For instance, with this html:
+
+```html
+
+    <script type="importmap">
+        {
+          "imports": {
+            "my-project": "../node_modules/my-project/src/esm/add.mjs",
+            "lodash": "https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"  // ← Example 
+          }
+        }
+    </script>
+
+```
+
+Instead of writting:
+```javascript
+import {add} from "../node_modules/my-project/src/esm/add.mjs"
+```
+
+We can write shorter import like:
+
+```javascript
+import {add} from "my-project"
+```
 
 
 ---
@@ -309,11 +379,11 @@ import rgbhex  from "RGB-hex";
 
 
 
-### Quick Fix => Use named exports!
+### Quick Fix => Use named exports
 
 
 
-Replace things like:
+Replace structure like:
 
 ```javascript
 
@@ -333,231 +403,13 @@ with:
 module.exports.COLOR_TABLE = ["#FFA07A", "#FF7F50", "#FF6347"];
 ```
 
-
-
-or
-
-
-
-```javascript
-
-const val = {
-    COLOR_TABLE: ["#FFA07A", "#FF7F50", "#FF6347"]
-};
-
-module.exports.COLOR_TABLE = val.COLOR_TABLE;
-```
-
-
-
 <br><br>
-
-
-
-### Long Explanation (In case of struggle with the concept of Named Export)
-
-
-
-Quite often, when we export a library within the Node environment (CommonJs modules), we do something like:
-
-
-
-```javascript
-
-// => 📝 "./my-js" 
-
-module.exports = {
-    COLOR_TABLE: ["#FFA07A", "#FF7F50", "#FF6347"]
-}
-```
-
-
-
-Then when comes the time to import it, we do:
-
-```javascript
-const {COLOR_TABLE} = require("./my-js");
-```
-
-
-
-However, after the conversion to ESM, you will find that the export is not "named":
-
-
-
-Conversion to ESM of the above code
-
-```javascript
-// => 📝 "./my-js.mjs" 
-export default {
-    COLOR_TABLE: ["#FFA07A", "#FF7F50", "#FF6347"]
-}
-```
-
-
-
-```javascript
-import {COLOR_TABLE} from "./my-js.mjs"
-```
-
-
-
-In this example, the only thing exported is "default". Hence, the system cannot find COLOR_TABLE.
-
-
-
-
-
-```const {something} = ...``` is different from ≠ ```import {something}```
-
-
-
-<br>
-
-
-
-##### Destructuring assignment
-
-
-
-⇨ ```const {something} = ...``` uses the Destructuring assignment feature of JavaScript (ES6 / ES2015), which is the
-
-reason things like below is possible:
-
-```javascript
-const myObject = {something: "Great"}
-
-const {something} = myObject;          
-```
-
-
-
-<br>
-
-
-
-##### Import statement
-
-⇨ ```import {something}``` uses the import ESM feature.
-
-
-
-You can't do things like:
-
-```javascript
-
-const myObject = {something: "Great"};
-
-import {something} from myObject;       // 👀 <= myObject is not a file path
-```
-
-There is no object destructuring here. ESM is expecting a file path.
-
-If myObject were a path, ESM would look into the **table of exported named values** against
-
-the given file to do the assignment.
-
-
-
-<br>
-
-
-
-###### Named Exports (ESM)
-
-Therefore, the passed file must explicitly export the "COLOR_TABLE" key.
-
-
-
-We could do:
-
-
-
-```javascript
-
-// => Named Export
-
-export const COLOR_TABLE = ...
-```
-
-And voila, we have done a named export.
-
-
-
-<br>
-
-
-
-###### Default Exports (ESM)
-
-For default export, we would do:
-
-
-
-```javascript
-// => Default Export
-export default ...
-```
-
-
-
-<br>
-
-
-
-###### Default Exports (CJS)
-
-The tool, when parsing something like below, is assuming you want to do a default export:
-
-```javascript
-
-module.exports = {
-    COLOR_TABLE: ["#FFA07A", "#FF7F50", "#FF6347"],
-    COLOR_LINE: ["#FFA07A", "#FF7F50", "#FF6347"],
-    COLOR_ROW: ["#FFA07A", "#FF7F50", "#FF6347"],
-}
-```
-
-
-
-<br>
-
-
-
-###### Default Exports (CJS)
-
-
-
-It could do the named export for you, but things like below makes the export more complicated.
-
-Plus, a default export should still be possible.
-
-```javascript
-
-module.exports = {
-    [MY_VAR]: "Look!",
-    COLOR_TABLE: ["#FFA07A", "#FF7F50", "#FF6347"],
-    COLOR_LINE: ["#FFA07A", "#FF7F50", "#FF6347"],
-    COLOR_ROW: ["#FFA07A", "#FF7F50", "#FF6347"],
-}
-```
-
-
-
-👉 [MY_VAR] _uses the Computed property names feature of ES2015, known explicitly at runtime._
-
-
-
-Many situations lead to letting the user do the Name Export. Especially, if the translated code should resemble the
-
-original code.
 
 
 
 <br><br><br><br>
 
-----
-**_From this point, everything below is informative and can be skipped._**
+
 
 <br><br><br><br>
 ## Create a Hybrid Library
@@ -596,7 +448,7 @@ Refactor the files that use CommonJs modules to have the new .cjs extensions.
 
 
 
-### 3- Run the toesm command
+### 3- Run the to-esm command
 
 
 
@@ -606,7 +458,7 @@ Generate the ESM code into the targeted directory.
 
 ```shell
 
-toesm.cmd --input="src/cjs/**/*.?(c)js" --output=src/esm/
+to-esm.cmd --input="src/cjs/**/*.?(c)js" --output=src/esm/
 
 ```
 
@@ -640,7 +492,7 @@ toesm.cmd --input="src/cjs/**/*.?(c)js" --output=src/esm/
   "module": "src/ejs/add.mjs",           ←  
   "type": "module",                      ←   
   "scripts": {
-    "gen:esm": "toesm.cmd --input=\"src/cjs/**/*.?(c)js\" --output=src/esm/"
+    "gen:esm": "toesm.cmd --input=\"src/cjs/demo.cjs\" --output=src/esm/"
   },
   "exports": {
     ".":{
@@ -652,280 +504,4 @@ toesm.cmd --input="src/cjs/**/*.?(c)js" --output=src/esm/
   "license": "ISC"
 }
 ```
-
-
-
-### **Your module is now ready, and your user can do an install with**
-
-
-
-```shell
-
-npm install my-project
-```
-
-
-
-#### To use your library in Node:
-
-
-
-```javascript
-
-const {addSomething} = require("my-project");
-```
-
-
-
-#### In the Browser:
-
-
-
-```javascript
-
-import {addSomething} from "my-project";
-```
-
-
-
-But, this is not enough. Import with ES6 is not as slick as a simple "require()" in NodeJs. It does not have a
-
-dedicated node_modules/ folder along with a package.json.
-
-
-
-It has no idea where to find "my-project". ESM is expecting a relative path.
-
-
-
-👉 _Note that this code will work when using a bundler as they know where to find that node_modules/ folder.
-
-However, you're handling generated new code._
-
-
-
-Users must reference the full path to your ESM entry point to use your ESM code.
-
-
-
-```javascript
-
-import addSomething from "../node_modules/my-project/src/esm/add.mjs"
-```
-
-
-
-**This is expected.** 👈
-
-
-
-<br/><br/>
-
-
-
-### External dependencies <a name="external"></a>
-
-
-
-We can raise another issue:
-
-
-
-In the browser environment, if your package uses external libraries, the browser may not be able to find them.
-
-
-
-Let's use an example where you have a call to an external library called **"external-lib"**.
-
-
-```javascript
-// ...
-const externalLb = require("external-lib");
-// ...
-```
-
-When translated to ESM, the code will be like this:
-
-
-```javascript
-// ...
-import externalLib from "external-lib";
-// ...
-```
-
-
-We know that ESM in the browser is expecting a relative or absolute path.
-
-So, it's very likely that you'll see this message:
-
-
-
-😓  Uncaught TypeError: Failed to resolve module specifier "RGB-hex". Relative references must start with either "/", ".
-
-/", or "../".
-
-
-
-![img_1.png](https://github.com/thimpat/to-esm/blob/main/docs/images/img_1.png)
-
-
-
-You will have to set the path to the **node_modules/** folder, and therefore have something like this:
-
-```javascript
-// ...
-import externalLib from "./../node_modules/external-lib/index.js";
-// ...
-```
-
-
-
-But this is not enough. You are referencing the path to your **node_modules/**. When your package is installed, your
-
-**node_modules/** directory will disappear.
-
-
-
-![img_2.png](https://github.com/thimpat/to-esm/blob/main/docs/images/img_2.png)
-
-
-
-As you see in this example, there is no **node_modules/** in the deployed package. npm removes it automatically and
-
-flattened it later.
-
-
-
-Here is a likely resulting structure of an install:
-
-
-
-```
-User's project
-
-   |_ node_modules       ← You want to point here
-
-         |_ external-lib
-
-              |_ index.js
-
-              |_ package.json
-
-              |_ your non-existing ~~node_modules~~      ← You're pointing here
-
-```              
-
-
-
-**You must reference the root directory.**
-
-
-
-In this case, you will have to go two folders above. Giving us something like this:
-
-
-
-```javascript
-// ...
-import externalLib from "../../../node_modules/external-lib/index.js";
-// ...
-```
-
-
-
-But, this is not enough 😐
-
-
-
-The entry point may not be index.js (and very likely will not be). You have to parse the package.json file.
-
-
-
-To solve the dependency paths, use the option:
-
-
->
-> --solvedep
-
-
-
-The options --solvedep is not the default because the generated esm will point to a non-existing directory (The code
-
-will not be bundler-bundable as some paths will be broken).
-
-
-
-👉 **Ideally, your package would not use any external dependencies, and you'll avoid the trouble. However, in many cases, to circumvent,
-
-you would
-
-bundle your third parties and make them accessible within your package in a location different from node_modules/. Or
-
-you would force npm to make your node_modules/ directory available.**
-
-
-
-#### Using absolute path:
-
-
-
-```javascript
-// ...
-import externalLib from "/node_modules/external-lib/index.js";
-// ...
-```
-
-
-
-If you use the file protocol of Electron, /node_modules will point to the root directory on a Linux system or C:/
-
-(ROOT_DRIVE_LETTER:/ ) or Windows. It's a protected path.
-
-
-If you use this on a server, it will be the server root but, you have no guarantee that the node_modules/ is located there.
-
-
-
-### Adding an importmap
-
-
-
-To be able to write things like ```import {addSomething} from "my-project";```
-
-on the browser side, you can define an import map.
-
-
-
-In the targeted HTML file, set the path to your entry point:
-
-
-
-```html
-
-    <script type="importmap">
-        {
-          "imports": {
-            "my-project": "../node_modules/my-project/src/esm/add.mjs",
-            "lodash": "https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"  // ← Example 
-          }
-        }
-    </script>
-
-
-
-```
-
-
-
-Now, imports like
-
-
-
-```javascript
-
-import {addSomething} from "my-project";
-
-```
-
-are valid without bundler (or transpiler)
 
