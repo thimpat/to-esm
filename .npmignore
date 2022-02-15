@@ -73,4 +73,8 @@ example/esm/
 /test
 /.github
 .nyc_output/
-
+.nycrc
+.releaserc
+bump.js
+.babelrc
+.eslintrc.cjs
