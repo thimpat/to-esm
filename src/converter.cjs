@@ -1389,13 +1389,13 @@ const combineImportMaps = (newMaps, importMaps) =>
 
 const rewriteImportMapPaths = (newMaps, htmlPath) =>
 {
-    for (let kk in newMaps)
+    for (let kk in newMaps.imports)
     {
         try
         {
             const root = path.relative(htmlPath, "./");
-            const jsPath = path.join(root, newMaps[kk]);
-            newMaps[kk] = normalisePath(jsPath);
+            const jsPath = path.join(root, newMaps.imports[kk]);
+            newMaps.imports[kk] = normalisePath(jsPath);
         }
         catch (e)
         {
@@ -1415,11 +1415,11 @@ const applyReplaceToImportMap = (newMaps, htmlOptions) =>
 
     regexifySearchList(htmlOptions.importmapReplace);
 
-    for (let kk in newMaps)
+    for (let kk in newMaps.imports)
     {
         try
         {
-            newMaps[kk] = applyReplaceFromConfig(newMaps[kk], htmlOptions.importmapReplace);
+            newMaps.imports[kk] = applyReplaceFromConfig(newMaps[kk], htmlOptions.importmapReplace);
         }
         catch (e)
         {
@@ -1433,7 +1433,7 @@ const applyReplaceToImportMap = (newMaps, htmlOptions) =>
 const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
 {
     let content = fs.readFileSync(fullHtmlPath, "utf-8");
-    const scriptMap = JSON.stringify({imports: newMaps}, null, 4);
+    const scriptMap = JSON.stringify(newMaps, null, 4);
 
     if (hasImportmap(content))
     {
@@ -1919,7 +1919,7 @@ module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
 module.exports.getNodeModuleProp = getNodeModuleProperties;
 module.exports.reviewEsmImports = reviewEsmImports;
-module.exports.parseImport = parseImportWithRegex;
+module.exports.parseImportWithRegex = parseImportWithRegex;
 module.exports.applyReplace = applyReplaceFromConfig;
 module.exports.stripComments = stripComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
