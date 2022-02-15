@@ -329,10 +329,6 @@ const normalisePath = (somePath, {isFolder = false} = {}) =>
  */
 const convertToSubRootDir = (wholePath) =>
 {
-    // if (wholePath.indexOf(workingDir) > -1)
-    // {
-    //     substractPath(wholePath, workingDir);
-    // }
     const arr = wholePath.split("/");
     arr.shift();
     return arr.join("/");
@@ -347,6 +343,7 @@ const convertToSubRootDir = (wholePath) =>
 const substractPath = (wholePath, pathToSubstract) =>
 {
     let subPath, subDir;
+
     // Get mapped path by substracting rootDir
     wholePath = wholePath.replace(/\\/gm, "/");
     pathToSubstract = pathToSubstract.replace(/\\/gm, "/");
@@ -450,7 +447,12 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
 
 };
 
-const changeExtensionToESM = (filepath) =>
+/**
+ * Change the given path extension to .mjs
+ * @param filepath
+ * @returns {string}
+ */
+const changePathExtensionToESM = (filepath) =>
 {
     const parsed = path.parse(filepath);
     const renamed = path.join(parsed.dir, parsed.name + ESM_EXTENSION);
@@ -486,16 +488,9 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, wo
         {
             if (followlinked)
             {
-                addFileToConvertingList({
-                    source : requiredPath,
-                    rootDir: workingDir,
-                    outputDir,
-                    workingDir,
-                    followlinked
-                });
                 const newPath = concatenatePaths(outputDir, requiredPath);
                 projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
-                projectedRequiredPath = changeExtensionToESM(projectedRequiredPath);
+                projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
             }
             else
             {
@@ -570,6 +565,18 @@ const reviewEsmImports = (text, list, {
                         followlinked, workingDir, outputDir
                     });
 
+                if (followlinked)
+                {
+                    addFileToConvertingList({
+                        source : requiredPath,
+                        rootDir: workingDir,
+                        outputDir,
+                        workingDir,
+                        followlinked,
+                        notOnDisk: moreOptions.useImportMaps
+                    });
+                }
+
                 importMaps[moduleName] = requiredPath;
                 if (moreOptions.useImportMaps)
                 {
@@ -597,6 +604,17 @@ const reviewEsmImports = (text, list, {
                         sourcePath: projectedPath, requiredPath, outputDir,
                         list, followlinked, workingDir
                     });
+
+                if (followlinked)
+                {
+                    addFileToConvertingList({
+                        source : requiredPath,
+                        rootDir: workingDir,
+                        outputDir,
+                        workingDir,
+                        followlinked
+                    });
+                }
 
                 return match.replace(regexRequiredPath, projectedRequiredPath);
             }
@@ -952,7 +970,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         catch (e)
         {
             console.warn(`${packageJson.name}: (1052) WARNING: Syntax issues found on [${source}]`);
-            console.error("                  ➔ ➔ ➔ ➔ ➔ ➔ ", e.message);
+            console.error(`${packageJson.name}: (1208) ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ `, e.message);
             return {converted, success: false};
         }
 
@@ -1090,6 +1108,14 @@ const putBackComments = (str, extracted) =>
     return str;
 };
 
+/**
+ * Generate an object describing a file to convert
+ * @param source
+ * @param rootDir
+ * @param outputDir
+ * @param workingDir
+ * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source: string, subPath: *, target: string}}
+ */
 const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 {
     try
@@ -1182,7 +1208,7 @@ const convertCjsFiles = (list, {
     {
         try
         {
-            let {source, outputDir, rootDir} = list[dynamicIndex];
+            let {source, outputDir, rootDir, notOnDisk} = list[dynamicIndex];
             console.log(`${packageJson.name}: (1132) Processing ==========================================> ${source}`);
 
             let converted = fs.readFileSync(source, "utf-8");
@@ -1207,12 +1233,13 @@ const convertCjsFiles = (list, {
             if (!fallback && !result.success)
             {
                 // Failed even with fallback
-                console.error(`${packageJson.name}: (1173) ❌ FAILED: ESM: Conversion failed for ${source}`);
+                console.error(`${packageJson.name}: (1173) ❌ FAULTY: ESM: PArsing failed on [${source}]`);
             }
 
             // Apply fallback in case of conversion error
             if (extended || !result.success || comments)
             {
+                console.error(`${packageJson.name}: (1207) Applying fallback process to convert [${source}]. The conversion may result in errors.`);
                 converted = convertRequiresToImportsWithRegex(converted,
                     list,
                     {
@@ -1250,7 +1277,10 @@ const convertCjsFiles = (list, {
                 const relativeDir = path.relative(rootDir, fileDir);
                 destinationDir = path.join(outputDir, relativeDir);
 
-                buildTargetDir(destinationDir);
+                if (!notOnDisk)
+                {
+                    buildTargetDir(destinationDir);
+                }
             }
             else
             {
@@ -1279,7 +1309,12 @@ const convertCjsFiles = (list, {
             }
 
             console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
-            fs.writeFileSync(targetFilepath, converted, "utf-8");
+
+            if (!notOnDisk)
+            {
+                fs.writeFileSync(targetFilepath, converted, "utf-8");
+            }
+
             if (withreport)
             {
                 report[source] = converted;
@@ -1303,7 +1338,7 @@ const convertCjsFiles = (list, {
 
 /**
  * Insert importmaps into the passed html file
- * @param htmlPath
+ * @param fullHtmlPath
  * @param importMaps
  * @param confFileOptions
  * @param moreOptions
@@ -1312,15 +1347,15 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, confFileOptions = {}, moreOpt
 {
     const EOL = require("os").EOL;
 
-    htmlPath = path.resolve(htmlPath);
+    fullHtmlPath = path.resolve(htmlPath);
     /* istanbul ignore next */
-    if (!fs.existsSync(htmlPath))
+    if (!fs.existsSync(fullHtmlPath))
     {
-        console.error(`${packageJson.name}: (1080) Could not find HTML file at [${htmlPath}]`);
+        console.error(`${packageJson.name}: (1080) Could not find HTML file at [${fullHtmlPath}]`);
         return;
     }
 
-    let content = fs.readFileSync(htmlPath, "utf-8");
+    let content = fs.readFileSync(fullHtmlPath, "utf-8");
     const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
 
     let newMaps = importMaps;
@@ -1364,6 +1399,23 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, confFileOptions = {}, moreOpt
         newMaps = Object.assign({}, newMaps, confFileOptions.html.importmap);
     }
 
+    if (confFileOptions.html && confFileOptions.html.useRelativeImportMap)
+    {
+        for (let kk in newMaps)
+        {
+            try
+            {
+                const root = path.relative(htmlPath, "./");
+                const jsPath = path.join(root, newMaps[kk]);
+                newMaps[kk] = normalisePath(jsPath);
+            }
+            catch (e)
+            {
+                console.error(`${packageJson.name}: (1205)`, e.message);
+            }
+        }
+    }
+
     if (confFileOptions.html && confFileOptions.html.importmapReplace)
     {
         regexifySearchList(confFileOptions.html.importmapReplace);
@@ -1396,7 +1448,7 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, confFileOptions = {}, moreOpt
         content = content.replace(/(\<head.*?\>)/gm, `$1${EOL}${ins}`);
     }
 
-    fs.writeFileSync(htmlPath, content, "utf-8");
+    fs.writeFileSync(fullHtmlPath, content, "utf-8");
 };
 
 /**
@@ -1409,7 +1461,7 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
 {
     list.forEach((html) =>
     {
-        console.error(`${packageJson.name}: (1200) Processing [${html}] for import maps updates.`);
+        console.error(`${packageJson.name}: (1200) Processing [${html}] for importing maps.`);
         parseHTMLFile(html, {importMaps, confFileOptions, moreOptions});
     });
 };
@@ -1649,7 +1701,16 @@ const installNonHybridModules = async (config = []) =>
     return nonHybridModules;
 };
 
-const addFileToConvertingList = ({source, rootDir, outputDir, workingDir}) =>
+/**
+ * Add a file to the list of files to parse.
+ * @param source
+ * @param rootDir
+ * @param outputDir
+ * @param workingDir
+ * @param notOnDisk
+ * @returns {boolean}
+ */
+const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnDisk}) =>
 {
     try
     {
@@ -1660,6 +1721,8 @@ const addFileToConvertingList = ({source, rootDir, outputDir, workingDir}) =>
         }
 
         const entry = formatConvertItem({source, rootDir, outputDir, workingDir});
+
+        entry.notOnDisk = !!notOnDisk;
 
         for (let i = 0; i < cjsList.length; ++i)
         {
@@ -1733,7 +1796,8 @@ const convert = async (rawCliOptions = {}) =>
         }
 
         const list = glob.sync(inputFileMask, {
-            dot: true
+            dot   : true,
+            nodir: true
         });
 
         /* istanbul ignore next */
@@ -1807,7 +1871,11 @@ const convert = async (rawCliOptions = {}) =>
         return result;
     }
 
-    const htmlList = glob.sync(html);
+    const htmlList = glob.sync(html,
+        {
+            root  : workingDir,
+            nodir: true
+        });
 
     updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions});
 
