@@ -1,0 +1,23 @@
+{
+    "replaceStart": [
+        {
+            "search" : "/const\\s+ttt\\s*=\\s*require\\(.mama-magnimus.\\);/g",
+            "replace": "// ***"
+        }
+    ],
+    "replaceEnd"  : [
+        {
+            "search" : "// ***",
+            "replace": "// --------- mama-magnimus was replaced ----------------"
+        }
+    ],
+    "html"          :
+    {
+        "importmapReplace": [{
+            "search" : "./anywhere",
+            "replace": "/foundwhere",
+            "regex": false
+        }]
+    }
+
+}

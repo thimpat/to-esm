@@ -21,7 +21,7 @@ const COMMENT_MASK = "❖✎🔏❉";
 const nativeModules = Object.keys(process.binding("natives"));
 
 // The whole list of files to convert
-const cjsList = [];
+let cjsList = [];
 
 /**
  * Build target directory.
@@ -1779,6 +1779,8 @@ const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnD
  */
 const convert = async (rawCliOptions = {}) =>
 {
+    resetFileList();
+
     const cliOptions = {};
     Object.keys(rawCliOptions).forEach((key) =>
     {
@@ -1914,6 +1916,11 @@ const convert = async (rawCliOptions = {}) =>
 
 };
 
+const resetFileList = () =>
+{
+    cjsList = [];
+};
+
 module.exports.COMMENT_MASK = COMMENT_MASK;
 module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
@@ -1945,3 +1952,5 @@ module.exports.getProjectedPathAll = getProjectedPathAll;
 module.exports.calculateRequiredPath = calculateRequiredPath;
 module.exports.putBackComments = putBackComments;
 module.exports.regexifySearchList = regexifySearchList;
+module.exports.getImportMapFromPage = getImportMapFromPage;
+module.exports.resetFileList = resetFileList;

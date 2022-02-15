@@ -11,7 +11,7 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {buildTargetDir, convert} = require("../src/converter.cjs");
+const {buildTargetDir, convert, resetFileList} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
@@ -42,6 +42,21 @@ describe("The converter tool", function ()
         {
             fs.rmSync(path.join(rootDir, "esm3"), {recursive: true});
         }
+    });
+
+    beforeEach(function ()
+    {
+        const index1 = path.join(rootDir, "actual", "index.html");
+        const index2 = path.join(rootDir, "actual", "index-2.html");
+        const index3 = path.join(rootDir, "actual", "other.html");
+
+        fs.rmSync(index1);
+        fs.rmSync(index2);
+        fs.rmSync(index3);
+
+        fs.copyFileSync(path.join(rootDir, "index.html"), index1);
+        fs.copyFileSync(path.join(rootDir, "index-2.html"), index2);
+        fs.copyFileSync(path.join(rootDir, "other.html"), index3);
     });
 
     describe("from the file system", function ()
@@ -81,7 +96,7 @@ describe("The converter tool", function ()
             await convert(options);
             const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.mjs"), "utf8");
 
-            expect(converted).to.equal(expectedConversion);
+            expect(converted).to.equalIgnoreSpaces(expectedConversion);
         });
 
         it("should convert ./given/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
@@ -99,7 +114,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-2.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -118,7 +133,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-3.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -210,7 +225,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-7.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -237,7 +252,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual/node_modules/rgb-hex-cjs/", "index.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -291,7 +306,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-10.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
@@ -318,6 +333,27 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "index.html"), "utf8");
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "index.html"), "utf8");
                 expect(converted).to.equalIgnoreSpaces(expectedConversion);
+            }
+        );
+
+        it("should handle weird conditions", async function ()
+            {
+                const input = "./test/assets/given/demo-test-11.cjs";
+                const htmlPattern = "./test/assets/actual/index-2.html";
+                const options = {
+                    input,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "assets/given/.toesm-invalid.json"),
+                    "noheader"  : false,
+                    "withreport": true,
+                    "html": htmlPattern,
+                };
+
+                await convert(options);
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "index-2.html"), "utf8");
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "index-2.html"), "utf8");
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -361,8 +397,6 @@ describe("The converter tool", function ()
                 chai.expect(result).to.be.false;
             }
         );
-
-        // Test for --solvedep
 
 
     });
