@@ -26,7 +26,7 @@ A tool to convert Commonjs files into ESM
 
 ```shell
 
-npm install to-esm -g
+npm install to-esm
 
 ```
 
