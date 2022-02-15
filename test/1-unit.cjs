@@ -9,14 +9,31 @@
 const chai = require("chai");
 const expect = chai.expect;
 
-const {convertRequireToImport, stripComments, validateSyntax} = require("../src/converter.cjs");
+const {
+    convertRequireToImport,
+    stripComments,
+    validateSyntax,
+    isConventionalFolder,
+    concatenatePaths,
+    normalisePath,
+    convertToSubRootDir,
+    subtractPath,
+    getTranslatedPath,
+    getProjectedPathAll,
+    calculateRequiredPath,
+    putBackComments,
+    regexifySearchList,
+} = require("../src/converter.cjs");
 
 describe("converter.cjs", function ()
 {
 
+    /**
+     * @link stripComments
+     */
     describe("#stripComments()", function ()
     {
- 
+
         it("should strip comments from strings", function ()
         {
 
@@ -44,8 +61,13 @@ describe("converter.cjs", function ()
         });
     });
 
-    describe("#validateSyntax()", function() {
-        it("should return true when the input is js compatible", function() {
+    /**
+     * @link validateSyntax
+     */
+    describe("#validateSyntax()", function ()
+    {
+        it("should return true when the input is js compatible", function ()
+        {
 
             // Arrange
             const input = "import a from \"my.file\"";
@@ -56,7 +78,11 @@ describe("converter.cjs", function ()
             expect(result).to.be.true;
         });
 
-        it("should return false when the input is not js compatible", function() {
+        /**
+         * @link validateSyntax
+         */
+        it("should return false when the input is not js compatible", function ()
+        {
 
             // Arrange
             const input = "import this.log;";
@@ -80,5 +106,281 @@ describe("converter.cjs", function ()
             expect(result).to.contain("import INFO1  from \"./dep-1.cjs\";");
         });
     });
+
+    /**
+     * @link isConventionalFolder
+     */
+    describe("#isConventionalFolder()", function ()
+    {
+        it("should check that a given path is a directory by checking that it ends with a forward slash", function ()
+        {
+            const input = "my-folder/";
+            const result = isConventionalFolder(input);
+            expect(result).to.be.true;
+        });
+
+        it("should return false when no directory is passed", function ()
+        {
+            const input = "";
+
+            const result = isConventionalFolder(input);
+
+            expect(result).to.be.false;
+        });
+    });
+
+    /**
+     * @link concatenatePaths
+     */
+    describe("#concatenatePaths()", function ()
+    {
+        it("should combine two paths", function ()
+        {
+            const sourcePath = "./generated/browser/";
+            const requiredPath = "./src/cjs/ana-logger.cjs";
+            const result = concatenatePaths(sourcePath, requiredPath);
+            expect(result).to.equal("./generated/browser/src/cjs/ana-logger.cjs");
+        });
+    });
+
+    /**
+     * @link normalisePath
+     */
+    describe("#normalisePath()", function ()
+    {
+        it("should transform path following conventions", function ()
+        {
+            const sourcePath = "./generated/browser\\src/cjs/ana-logger.cjs";
+            const result = normalisePath(sourcePath);
+            expect(result).to.equal("./generated/browser/src/cjs/ana-logger.cjs");
+        });
+
+        it("should transform folders following conventions", function ()
+        {
+            const sourcePath = "./generated/browser\\src/cjs";
+            const result = normalisePath(sourcePath, {isFolder: true});
+            expect(result).to.equal("./generated/browser/src/cjs/");
+        });
+
+        it("should return ./ when given path is empty", function ()
+        {
+            const sourcePath = "";
+            const result = normalisePath(sourcePath);
+            expect(result).to.equal("./");
+        });
+    });
+
+    /**
+     * @link convertToSubRootDir
+     */
+    describe("#convertToSubRootDir()", function ()
+    {
+        it("should combine two paths", function ()
+        {
+            const sourcePath = "C:\\projects/fake1/fake2";
+            const result = convertToSubRootDir(sourcePath);
+            expect(result).to.equal("projects/fake1/fake2");
+        });
+    });
+    /**
+     * @link subtractPath
+     */
+    describe("#subtractPath()", function ()
+    {
+        it("should subtract one path from another", function ()
+        {
+            const wholePath = "C:\\projects/analogger/example/cjs/demo.cjs";
+            const pathToSubstract = "C:/projects\\analogger\\example";
+            const result = subtractPath(wholePath, pathToSubstract);
+            expect(result).to.deep.equal({
+                "subDir" : "./cjs",
+                "subPath": "./cjs/demo.cjs"
+            });
+        });
+
+        it("should fail subtracting one path from another when the path to subtract is the longer one", function ()
+        {
+            const wholePath = "C:/projects\\analogger\\example/demo.cjs";
+            const pathToSubstract = "C:\\projects/analogger/example/cjs/demo.cjs";
+            const result = subtractPath(wholePath, pathToSubstract);
+            expect(result).to.deep.equal({
+                "subPath": "C:/projects/analogger/example/demo.cjs"
+            });
+        });
+
+        it("should subtract and return paths following conventions", function ()
+        {
+            const wholePath = "C:/projects\\analogger\\example/demo.cjs";
+            const pathToSubstract = "./";
+            const result = subtractPath(wholePath, pathToSubstract);
+            expect(result).to.deep.equal({
+                "subDir" : "./projects/analogger/example/",
+                "subPath": "projects/analogger/example/demo.cjs"
+            });
+        });
+
+        it("should return the whole path" +
+            " when the path to subtract is not part of the whole path", function ()
+        {
+            const wholePath = "C:/projects\\analogger\\example/demo.cjs";
+            const pathToSubstract = "./unrelated";
+            const result = subtractPath(wholePath, pathToSubstract);
+            expect(result).to.deep.equal({
+                "subPath": "C:/projects/analogger/example/demo.cjs"
+            });
+        });
+
+
+    });
+
+    /**
+     * @link getProjectedPathAll
+     */
+    describe("#getProjectedPathAll()", function ()
+    {
+        it("should return the location of the given path related to the targeted path", function ()
+        {
+            const source = "./example/cjs/demo.cjs";
+            const rootDir = "C:\\projects\\to-esm\\example\\cjs";
+            const outputDir = "./generated/browser/";
+            const {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+            expect(projectedPath).to.equal("./generated/browser/demo.cjs");
+        });
+
+        it("should fail when the path cannot be projected", function ()
+        {
+            const source = "./example/cjs/demo.cjs";
+            const rootDir = "C:\\projects\\unrelated\\example\\cjs";
+            const outputDir = "./generated/browser/";
+            const {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+            expect(projectedPath).to.be.undefined;
+        });
+    });
+
+    /**
+     * @link convertToSubRootDir
+     */
+    describe("#getTranslatedPath()", function ()
+    {
+        it("should find the corresponding object of a given path", function ()
+        {
+            const sourcePath = "./example/cjs/demo.cjs";
+            const list = [{
+                "source": "./example/cjs/demo.cjs",
+                "sourceAbs": "C:/projects/analogger/example/cjs/demo.cjs",
+                "sourceNoExt": "./example/cjs/demo",
+            }];
+            const result = getTranslatedPath(sourcePath, list);
+            expect(result).to.deep.equal({
+                "source": "./example/cjs/demo.cjs",
+                "sourceAbs": "C:/projects/analogger/example/cjs/demo.cjs",
+                "sourceNoExt": "./example/cjs/demo"
+            });
+        });
+
+        it("should return an empty object when path is not in the list", function ()
+        {
+            const sourcePath = "./example/cjs/some.cjs";
+            const list = [{
+                "source": "./example/cjs/demo.cjs",
+                "sourceAbs": "C:/projects/analogger/example/cjs/demo.cjs",
+                "sourceNoExt": "./example/cjs/demo",
+            }];
+            const result = getTranslatedPath(sourcePath, list);
+            expect(result).to.deep.equal({});
+        });
+    });
+
+    /**
+     * @link convertToSubRootDir
+     */
+    describe("#calculateRequiredPath()", function ()
+    {
+        it("should return the path of an imported path related to the source", function ()
+        {
+            const sourcePath = "./generated/browser/demo.cjs";
+            const requiredPath = "./src/cjs/ana-logger.cjs";
+            const list = [];
+            const followlinked = true;
+            const outputDir = "./generated/browser/";
+
+            const result = calculateRequiredPath({sourcePath, requiredPath, list, followlinked, outputDir});
+            expect(result).to.equal("./src/cjs/ana-logger.mjs");
+        });
+
+        it("should return the path of an imported path related to the project root directory", function ()
+        {
+            const sourcePath = "./generated/browser/demo.cjs";
+            const requiredPath = "./unrelated/deep1/deep2/t7-cjs.cjs";
+            const list = [];
+            const followlinked = true;
+            const outputDir = "./generated/browser/";
+
+            const result = calculateRequiredPath({sourcePath, requiredPath, list, followlinked, outputDir});
+            expect(result).to.equal("./unrelated/deep1/deep2/t7-cjs.mjs");
+        });
+
+        it("should return the path of an imported path related to the source", function ()
+        {
+            const sourcePath = "./generated/browser/demo.cjs";
+            const requiredPath = "./unrelated/deep1/deep2/t7-cjs.cjs";
+            const list = [];
+            const followlinked = false;
+            const outputDir = "./generated/browser/";
+
+            const result = calculateRequiredPath({sourcePath, requiredPath, list, followlinked, outputDir});
+            expect(result).to.equal("../../unrelated/deep1/deep2/t7-cjs.mjs");
+        });
+
+
+    });
+
+    /**
+     * @link putBackComments
+     */
+    describe("#putBackComments()", function ()
+    {
+        it("should insert temporary removed comments to source", function ()
+        {
+            const src = "export default function rgbHex(red, green, blue, alpha) {\n" +
+                "\t❖✎🔏❉1❖✎🔏❉\n" +
+                "\t❖✎🔏❉0❖✎🔏❉\n" +
+                "}\n";
+            const comments = [
+                "// eslint-disable-next-line no-mixed-operators",
+                "// TODO: Remove this ignore comment.",
+            ];
+            const result = putBackComments(src, comments);
+            expect(result).to.equal("export default function rgbHex(red, green, blue, alpha) {\n" +
+                "\t// TODO: Remove this ignore comment.\n" +
+                "\t// eslint-disable-next-line no-mixed-operators\n" +
+                "}\n");
+        });
+    });
+
+    /**
+     * @link regexifySearchList
+     */
+    describe("#regexifySearchList()", function ()
+    {
+        it("should convert string into regex when necessary", function ()
+        {
+            const replace = [
+                {
+                    search: /abc/,
+                    replace: "const colorConvert = null;"
+                },
+                {
+                    search: "abc",
+                    replace: "const colorConvert = null;",
+                    regex: true
+                }
+            ];
+
+            const result = regexifySearchList(replace);
+            expect(result[1].search).to.be.an.instanceOf(RegExp);
+        });
+    });
+
 
 });

@@ -3,8 +3,6 @@
  * by just replacing module.exports to export default.
  * It's for very simple library, but will allow me to avoid using a bundler.
  *
- * CONVENTION: All folders must finish with a "/"
- *
  */
 const packageJson = require("../package.json");
 const path = require("path");
@@ -207,7 +205,7 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
 /**
  * If source finishes with a "/", it's a folder,
  * otherwise, it's not.
- * @param source
+ * @returns {boolean}
  */
 const isConventionalFolder = (source) =>
 {
@@ -226,17 +224,10 @@ const isConventionalFolder = (source) =>
  */
 const concatenatePaths = (source, requiredPath) =>
 {
-    try
-    {
-        source = normalisePath(source);
-        const sourceDir = isConventionalFolder(source) ? source : path.parse(source).dir;
-        let importPath = path.join(sourceDir, requiredPath);
-        return normalisePath(importPath);
-    }
-    catch (e)
-    {
-        console.error(`${packageJson.name}: (1125)`, e.message);
-    }
+    source = normalisePath(source);
+    const sourceDir = isConventionalFolder(source) ? source : path.parse(source).dir;
+    let importPath = path.join(sourceDir, requiredPath);
+    return normalisePath(importPath);
 };
 
 /**
@@ -283,9 +274,14 @@ const getModuleEntryPointPath = (moduleName) =>
 // ---------------------------------------------------
 
 /**
- *
+ * Transform a given path following some conventions.
  * @param somePath
+ * @param isFolder
  * @returns {string}
+ *
+ * CONVENTIONS:
+ * - All folders must finish with a "/"
+ * - Paths must be made of forward slashes (no backward slash)
  */
 const normalisePath = (somePath, {isFolder = false} = {}) =>
 {
@@ -329,6 +325,7 @@ const normalisePath = (somePath, {isFolder = false} = {}) =>
  */
 const convertToSubRootDir = (wholePath) =>
 {
+    wholePath = normalisePath(wholePath);
     const arr = wholePath.split("/");
     arr.shift();
     return arr.join("/");
@@ -337,27 +334,27 @@ const convertToSubRootDir = (wholePath) =>
 /**
  * Remove part of path by substracting a given directory from a whole path
  * @param wholePath File Path
- * @param pathToSubstract Subdirectory to remove from path
+ * @param pathToSubtract Subdirectory to remove from path
  * @returns {*}
  */
-const substractPath = (wholePath, pathToSubstract) =>
+const subtractPath = (wholePath, pathToSubtract) =>
 {
     let subPath, subDir;
 
-    // Get mapped path by substracting rootDir
+    // Get mapped path by subtracting rootDir
     wholePath = wholePath.replace(/\\/gm, "/");
-    pathToSubstract = pathToSubstract.replace(/\\/gm, "/");
+    pathToSubtract = pathToSubtract.replace(/\\/gm, "/");
 
-    if (wholePath.length < pathToSubstract.length)
+    if (wholePath.length < pathToSubtract.length)
     {
-        console.error(`${packageJson.name}: (1123)` + "Path substraction will not work here. " +
-            "The substracting path is bigger than the whole path");
+        console.error(`${packageJson.name}: (1123)` + "Path subtraction will not work here. " +
+            "The subtracting path is bigger than the whole path");
         return {
             subPath: wholePath
         };
     }
 
-    if (pathToSubstract === "./")
+    if (pathToSubtract === "./")
     {
         subPath = convertToSubRootDir(wholePath);
         subDir = path.parse(subPath).dir;
@@ -367,21 +364,21 @@ const substractPath = (wholePath, pathToSubstract) =>
             subDir, subPath
         };
     }
-    else if (wholePath.indexOf(pathToSubstract) === -1)
+    else if (wholePath.indexOf(pathToSubtract) === -1)
     {
-        console.error(`${packageJson.name}: (1125)` + "Path substraction will not work here. " +
-            "The substracting path is not part of the whole path");
+        console.error(`${packageJson.name}: (1125)` + "Path subtraction will not work here. " +
+            "The subtracting path is not part of the whole path");
         return {
             subPath: wholePath
         };
     }
 
-    if (pathToSubstract.charAt(pathToSubstract.length - 1) !== "/")
+    if (pathToSubtract.charAt(pathToSubtract.length - 1) !== "/")
     {
-        pathToSubstract = pathToSubstract + "/";
+        pathToSubtract = pathToSubtract + "/";
     }
 
-    let subPaths = wholePath.split(pathToSubstract);
+    let subPaths = wholePath.split(pathToSubtract);
     subPath = subPaths[1];
     subPath = normalisePath(subPath);
 
@@ -393,25 +390,24 @@ const substractPath = (wholePath, pathToSubstract) =>
     };
 };
 
+/**
+ * Look up for a path in the glob list
+ * @param requiredPath
+ * @param list
+ * @returns {{}|*}
+ */
 const getTranslatedPath = (requiredPath, list) =>
 {
-    try
+    requiredPath = normalisePath(requiredPath);
+    for (let i = 0; i < list.length; ++i)
     {
-        requiredPath = normalisePath(requiredPath);
-        for (let i = 0; i < list.length; ++i)
-        {
-            const item = list[i];
+        const item = list[i];
 
-            const source = normalisePath(item.source);
-            if (requiredPath === source)
-            {
-                return item;
-            }
+        const source = normalisePath(item.source);
+        if (requiredPath === source)
+        {
+            return item;
         }
-    }
-    catch (e)
-    {
-        console.error(`${packageJson.name}: (1127)`, e.message);
     }
     return {};
 };
@@ -423,8 +419,8 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
         const sourcePath = path.resolve(source);
         rootDir = path.resolve(rootDir);
 
-        // Get mapped path by substracting rootDir
-        let {subPath, subDir} = substractPath(sourcePath, rootDir);
+        // Get mapped path by subtracting rootDir
+        let {subPath, subDir} = subtractPath(sourcePath, rootDir);
 
         let projectedDir = path.join(outputDir, subDir);
         projectedDir = normalisePath(projectedDir);
@@ -445,6 +441,7 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
         console.error(`${packageJson.name}: (1120)`, e.message);
     }
 
+    return {};
 };
 
 /**
@@ -465,45 +462,38 @@ const changePathExtensionToESM = (filepath) =>
  * @param requiredPath
  * @param list
  * @param followlinked
- * @param workingDir
  * @param outputDir
  * @returns {string}
  */
-const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, workingDir, outputDir}) =>
+const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, outputDir}) =>
 {
-    try
+    let projectedRequiredPath;
+
+    // Projected path of required path
+    const requiredPathProperties = getTranslatedPath(requiredPath, list);
+    const target = requiredPathProperties.target;
+
+    if (target)
     {
-        let projectedRequiredPath;
-
-        // Projected path of required path
-        const requiredPathProperties = getTranslatedPath(requiredPath, list);
-        const target = requiredPathProperties.target;
-
-        if (target)
+        // The relative path of the two projected paths above (projectedPath + target)
+        projectedRequiredPath = calculateRelativePath(sourcePath, target);
+    }
+    else
+    {
+        if (followlinked)
         {
-            // The relative path of the two projected paths above (projectedPath + target)
-            projectedRequiredPath = calculateRelativePath(sourcePath, target);
+            const newPath = concatenatePaths(outputDir, requiredPath);
+            projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
+            projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
         }
         else
         {
-            if (followlinked)
-            {
-                const newPath = concatenatePaths(outputDir, requiredPath);
-                projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
-                projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
-            }
-            else
-            {
-                projectedRequiredPath = calculateRelativePath(sourcePath, requiredPath);
-            }
+            projectedRequiredPath = calculateRelativePath(sourcePath, requiredPath);
+            projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
         }
+    }
 
-        return projectedRequiredPath;
-    }
-    catch (e)
-    {
-        console.error(`${packageJson.name}: (1151)`, e.message);
-    }
+    return projectedRequiredPath;
 };
 
 /**
@@ -568,8 +558,8 @@ const reviewEsmImports = (text, list, {
                 if (followlinked)
                 {
                     addFileToConvertingList({
-                        source : requiredPath,
-                        rootDir: workingDir,
+                        source   : requiredPath,
+                        rootDir  : workingDir,
                         outputDir,
                         workingDir,
                         followlinked,
@@ -1114,7 +1104,8 @@ const putBackComments = (str, extracted) =>
  * @param rootDir
  * @param outputDir
  * @param workingDir
- * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source: string, subPath: *, target: string}}
+ * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source:
+ *     string, subPath: *, target: string}}
  */
 const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 {
@@ -1123,7 +1114,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
         let sourceAbs = path.join(workingDir, source);
         sourceAbs = normalisePath(sourceAbs);
 
-        let {subPath, subDir} = substractPath(sourceAbs, rootDir);
+        let {subPath, subDir} = subtractPath(sourceAbs, rootDir);
 
         let targetName = path.parse(subPath).name + ESM_EXTENSION;
 
@@ -1563,7 +1554,7 @@ const regexifySearchList = (replace = []) =>
         }
         else if (item.regex)
         {
-            item.replace = new RegExp(item.replace);
+            item.search = new RegExp(item.search);
         }
     });
 
@@ -1656,6 +1647,7 @@ const installNonHybridModules = async (config = []) =>
     const replaceModules = config.replaceModules || [];
 
     let packageJsonPath = path.resolve("./package.json");
+    /* istanbul ignore next */
     if (!fs.existsSync(packageJsonPath))
     {
         console.error(`${packageJson.name}: (1014) Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`);
@@ -1694,6 +1686,7 @@ const installNonHybridModules = async (config = []) =>
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.error(`${packageJson.name}: (1015)`, e.message);
         }
     }
@@ -1712,36 +1705,28 @@ const installNonHybridModules = async (config = []) =>
  */
 const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnDisk}) =>
 {
-    try
+    if (!fs.existsSync(source))
     {
-        if (!fs.existsSync(source))
-        {
-            console.error(`${packageJson.name}: (1141) Could not find the file [${source}]`);
-            return false;
-        }
-
-        const entry = formatConvertItem({source, rootDir, outputDir, workingDir});
-
-        entry.notOnDisk = !!notOnDisk;
-
-        for (let i = 0; i < cjsList.length; ++i)
-        {
-            const item = cjsList[i];
-            if (entry.source === item.source)
-            {
-                // item is already in the list
-                return true;
-            }
-        }
-
-        cjsList.push(entry);
-        return true;
+        console.error(`${packageJson.name}: (1141) Could not find the file [${source}]`);
+        return false;
     }
-    catch (e)
+
+    const entry = formatConvertItem({source, rootDir, outputDir, workingDir});
+
+    entry.notOnDisk = !!notOnDisk;
+
+    for (let i = 0; i < cjsList.length; ++i)
     {
-        console.error(`${packageJson.name}: (1138)`, e.message);
+        const item = cjsList[i];
+        if (entry.source === item.source)
+        {
+            // item is already in the list
+            return true;
+        }
     }
-    return false;
+
+    cjsList.push(entry);
+    return true;
 };
 
 /**
@@ -1796,7 +1781,7 @@ const convert = async (rawCliOptions = {}) =>
         }
 
         const list = glob.sync(inputFileMask, {
-            dot   : true,
+            dot  : true,
             nodir: true
         });
 
@@ -1873,7 +1858,7 @@ const convert = async (rawCliOptions = {}) =>
 
     const htmlList = glob.sync(html,
         {
-            root  : workingDir,
+            root : workingDir,
             nodir: true
         });
 
@@ -1903,3 +1888,12 @@ module.exports.installPackage = installPackage;
 module.exports.parseReplaceModules = installNonHybridModules;
 module.exports.normalisePath = normalisePath;
 module.exports.convert = convert;
+module.exports.isConventionalFolder = isConventionalFolder;
+module.exports.concatenatePaths = concatenatePaths;
+module.exports.convertToSubRootDir = convertToSubRootDir;
+module.exports.subtractPath = subtractPath;
+module.exports.getTranslatedPath = getTranslatedPath;
+module.exports.getProjectedPathAll = getProjectedPathAll;
+module.exports.calculateRequiredPath = calculateRequiredPath;
+module.exports.putBackComments = putBackComments;
+module.exports.regexifySearchList = regexifySearchList;
