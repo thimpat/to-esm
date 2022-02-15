@@ -105,6 +105,7 @@ const findPackageEntryPoint = (modulePath) =>
         const externalRawPackageJson = fs.readFileSync(externalPackageJsonPath, "utf-8");
         const externalPackageJson = JSON.parse(externalRawPackageJson);
 
+        // Look for entry point in the package.json exports key
         const exports = externalPackageJson.exports;
         if (typeof exports === "string" || exports instanceof String)
         {
@@ -113,19 +114,31 @@ const findPackageEntryPoint = (modulePath) =>
             return path.parse(entryPoint);
         }
 
-        const arr = Object.values(exports);
-        for (let i = 0; i < arr.length; ++i)
+        // Look for entry point in the package.json exports sub key
+        if (exports)
         {
-            const entry = arr[i];
-            if (!entry.import)
+            const arr = Object.values(exports);
+            for (let i = 0; i < arr.length; ++i)
             {
-                continue;
+                const entry = arr[i];
+                if (!entry.import)
+                {
+                    continue;
+                }
+                const imports = entry.import;
+                entryPoint = path.join(modulePath, imports);
+                entryPoint = normalisePath(entryPoint);
+                return path.parse(entryPoint);
             }
-            const imports = entry.import;
-            entryPoint = path.join(modulePath, imports);
-            entryPoint = normalisePath(entryPoint);
+        }
+
+        const indexJsPath = path.join(modulePath, "index.js");
+        if (fs.existsSync(indexJsPath))
+        {
+            entryPoint = normalisePath(indexJsPath);
             return path.parse(entryPoint);
         }
+
     }
     catch (e)
     {
@@ -1327,18 +1340,128 @@ const convertCjsFiles = (list, {
     return report;
 };
 
+const hasImportmap = (content) =>
+{
+    const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
+    let match;
+    match = regex.exec(content);
+    return match && match.length;
+};
+
+const getImportMapFromPage = (fullHtmlPath) =>
+{
+    let content = fs.readFileSync(fullHtmlPath, "utf-8");
+
+    const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
+
+    let match;
+    match = regex.exec(content);
+    if (!match || !match.length)
+    {
+        return {};
+    }
+
+    let rawImportMap = match[1].trim();
+
+    try
+    {
+        return JSON.parse(rawImportMap);
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1231)`, e.message);
+    }
+
+    return {};
+};
+
+/**
+ * Merge importmap from html page, importmap from parsing and importmap from configfile
+ * @param newMaps
+ * @param importMaps
+ * @returns {{imports: any}}
+ */
+const combineImportMaps = (newMaps, importMaps) =>
+{
+    let result = Object.assign({}, newMaps.imports, importMaps);
+    return {imports: result};
+};
+
+const rewriteImportMapPaths = (newMaps, htmlPath) =>
+{
+    for (let kk in newMaps)
+    {
+        try
+        {
+            const root = path.relative(htmlPath, "./");
+            const jsPath = path.join(root, newMaps[kk]);
+            newMaps[kk] = normalisePath(jsPath);
+        }
+        catch (e)
+        {
+            console.error(`${packageJson.name}: (1205)`, e.message);
+        }
+    }
+
+    return newMaps;
+};
+
+const applyReplaceToImportMap = (newMaps, htmlOptions) =>
+{
+    if (!htmlOptions.importmapReplace || !htmlOptions.importmapReplace.length)
+    {
+        return newMaps;
+    }
+
+    regexifySearchList(htmlOptions.importmapReplace);
+
+    for (let kk in newMaps)
+    {
+        try
+        {
+            newMaps[kk] = applyReplaceFromConfig(newMaps[kk], htmlOptions.importmapReplace);
+        }
+        catch (e)
+        {
+            console.error(`${packageJson.name}: (1205)`, e.message);
+        }
+    }
+
+    return newMaps;
+};
+
+const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
+{
+    let content = fs.readFileSync(fullHtmlPath, "utf-8");
+    const scriptMap = JSON.stringify({imports: newMaps}, null, 4);
+
+    if (hasImportmap(content))
+    {
+        content = content.replace(/(\<script.+importmap.+\>)([\s\S]+?)(\<\/script>)/gm, `$1${scriptMap}$3`);
+    }
+    else
+    {
+        const ins = `<script type="importmap">
+    ${scriptMap}
+</script>
+`;
+        const EOL = require("os").EOL;
+        content = content.replace(/(\<head.*?\>)/gm, `$1${EOL}${ins}`);
+    }
+
+    fs.writeFileSync(fullHtmlPath, content, "utf-8");
+    return newMaps;
+};
+
 /**
  * Insert importmaps into the passed html file
  * @param fullHtmlPath
+ * @param htmlPath
  * @param importMaps
- * @param confFileOptions
- * @param moreOptions
  */
-const parseHTMLFile = (htmlPath, {importMaps = {}, confFileOptions = {}, moreOptions = {}}) =>
+const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
 {
-    const EOL = require("os").EOL;
-
-    fullHtmlPath = path.resolve(htmlPath);
+    let fullHtmlPath = path.resolve(htmlPath);
     /* istanbul ignore next */
     if (!fs.existsSync(fullHtmlPath))
     {
@@ -1346,114 +1469,35 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, confFileOptions = {}, moreOpt
         return;
     }
 
-    let content = fs.readFileSync(fullHtmlPath, "utf-8");
-    const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
+    // Get merged version of importmap from html page and importmap from parsing
+    let newMaps = getImportMapFromPage(fullHtmlPath);
 
-    let newMaps = importMaps;
-    let existingImportMap = {};
+    newMaps = combineImportMaps(newMaps, importMaps);
 
-    let scriptTagExist = false;
-    let match;
-    match = regex.exec(content);
-    if (match && match.length > 1)
-    {
-        scriptTagExist = true;
+    newMaps = rewriteImportMapPaths(newMaps, htmlPath);
 
-        do
-        {
-            let rawImportMap = match[1].trim();
-            try
-            {
-                existingImportMap = JSON.parse(rawImportMap);
+    newMaps = applyReplaceToImportMap(newMaps, htmlOptions);
 
-                if (existingImportMap.imports)
-                {
-                    if (moreOptions.overwriteim)
-                    {
-                        newMaps = Object.assign({}, existingImportMap.imports, importMaps);
-                    }
-                    else
-                    {
-                        newMaps = Object.assign({}, importMaps, existingImportMap.imports);
-                    }
-                }
-            }
-            catch (e)
-            {
-                console.error(`${packageJson.name}: (1090)`, e.message);
-            }
-        } while (match = regex.exec(content));
-    }
+    newMaps = combineImportMaps(newMaps, htmlOptions.importmap);
 
-    if (confFileOptions.html && confFileOptions.html.importmap)
-    {
-        newMaps = Object.assign({}, newMaps, confFileOptions.html.importmap);
-    }
+    writeImportMapToHTML(newMaps, fullHtmlPath);
 
-    if (confFileOptions.html && confFileOptions.html.useRelativeImportMap)
-    {
-        for (let kk in newMaps)
-        {
-            try
-            {
-                const root = path.relative(htmlPath, "./");
-                const jsPath = path.join(root, newMaps[kk]);
-                newMaps[kk] = normalisePath(jsPath);
-            }
-            catch (e)
-            {
-                console.error(`${packageJson.name}: (1205)`, e.message);
-            }
-        }
-    }
-
-    if (confFileOptions.html && confFileOptions.html.importmapReplace)
-    {
-        regexifySearchList(confFileOptions.html.importmapReplace);
-
-        for (let kk in newMaps)
-        {
-            try
-            {
-                newMaps[kk] = applyReplaceFromConfig(newMaps[kk], confFileOptions.html.importmapReplace);
-            }
-            catch (e)
-            {
-                console.error(`${packageJson.name}: (1205)`, e.message);
-            }
-        }
-    }
-
-    newMaps = JSON.stringify({imports: newMaps}, null, 4);
-
-    if (scriptTagExist)
-    {
-        content = content.replace(/(\<script.+importmap.+\>)([\s\S]+?)(\<\/script>)/gm, `$1${newMaps}$3`);
-    }
-    else
-    {
-        const ins = `<script type="importmap">
-    ${newMaps}
-</script>
-`;
-        content = content.replace(/(\<head.*?\>)/gm, `$1${EOL}${ins}`);
-    }
-
-    fs.writeFileSync(fullHtmlPath, content, "utf-8");
 };
 
 /**
  * Browse and update all specified html files with importmaps
  * @param list
  * @param importMaps
+ * @param confFileOptions
  * @param moreOptions
+ * @param htmlOptions
  */
-const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptions = {}}) =>
+const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptions = {}, htmlOptions = {}}) =>
 {
     list.forEach((html) =>
     {
         console.error(`${packageJson.name}: (1200) Processing [${html}] for importing maps.`);
-        parseHTMLFile(html, {importMaps, confFileOptions, moreOptions});
+        parseHTMLFile(html, {importMaps, confFileOptions, moreOptions, htmlOptions});
     });
 };
 
@@ -1818,16 +1862,20 @@ const convert = async (rawCliOptions = {}) =>
     let followlinked = !cliOptions.ignorelinked;
 
     const importMaps = {};
+
+    let htmlOptions = confFileOptions.html || {};
+
     let html = cliOptions.html;
-    if (!html && confFileOptions.html && confFileOptions.html.pattern)
+    if (html)
     {
-        html = confFileOptions.html.pattern;
+        htmlOptions.pattern = html;
+
     }
 
     const moreOptions = {
-        useImportMaps: !!html,
-        overwriteim  : !!cliOptions.overwriteim
+        useImportMaps: !!htmlOptions.pattern,
     };
+
 
     const result = convertCjsFiles(cjsList,
         {
@@ -1845,7 +1893,7 @@ const convert = async (rawCliOptions = {}) =>
             moreOptions
         });
 
-    if (!html)
+    if (!htmlOptions.pattern)
     {
         return result;
     }
@@ -1856,13 +1904,13 @@ const convert = async (rawCliOptions = {}) =>
         return result;
     }
 
-    const htmlList = glob.sync(html,
+    const htmlList = glob.sync(htmlOptions.pattern,
         {
             root : workingDir,
             nodir: true
         });
 
-    updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions});
+    updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions, htmlOptions});
 
 };
 
@@ -1870,7 +1918,7 @@ module.exports.COMMENT_MASK = COMMENT_MASK;
 module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
 module.exports.getNodeModuleProp = getNodeModuleProperties;
-module.exports.reviewExternalImport = reviewEsmImports;
+module.exports.reviewEsmImports = reviewEsmImports;
 module.exports.parseImport = parseImportWithRegex;
 module.exports.applyReplace = applyReplaceFromConfig;
 module.exports.stripComments = stripComments;
