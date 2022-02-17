@@ -55,6 +55,34 @@ const buildTargetDir = (targetDir) =>
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
+ * @param detectedExported
+ * @returns {*}
+ */
+const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
+{
+    let converted0, subst;
+
+    for (let i = 0; i < detectedExported.length; ++i)
+    {
+        const item = detectedExported[i];
+
+        const regexSentence = `(class|function|const|var|let)\\s*${item.funcname}([\\S\\s]*?)(?:module\\.)?exports\\.${item.namedExport}\\s*=\\s*${item.funcname}`;
+
+        const regexp =
+            new RegExp(regexSentence, "gm");
+
+        subst = `export $1 ${item.namedExport} $2`;
+
+        converted0 = converted;
+        converted = converted0.replace(regexp, subst);
+    }
+
+    return converted;
+};
+
+/**
+ * Execute some non-trivial transformations that require multiple passes
+ * @param {string} converted String to perform transformations onto
  * @returns {*}
  */
 const convertNonTrivial = (converted) =>
@@ -702,28 +730,6 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 };
 
 /**
- * Apply replacements from user config file or modules parsing
- * @param converted
- * @param replace
- * @returns {*}
- */
-const applyReplaceFromConfig = (converted, replace) =>
-{
-    replace.forEach((item) =>
-    {
-        if (item.regex)
-        {
-            converted = converted.replace(item.search, item.replace);
-        }
-        else
-        {
-            converted = converted.split(item.search).join(item.replace);
-        }
-    });
-    return converted;
-};
-
-/**
  * Remove comments from code
  * @param code
  * @param {[]} extracted If not null, comments are replaced instead of removed.
@@ -951,6 +957,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
 }) =>
 {
     let success = true;
+    const detectedExported = [];
+
     try
     {
         const extracted = [];
@@ -978,6 +986,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         }
 
         let text, start, end, requirePath, identifier;
+
         const previouses = [];
 
         estraverse.traverse(ast, {
@@ -1026,6 +1035,32 @@ const convertRequiresToImportsWithAST = (converted, list, {
                             }
 
                         }
+
+                    }
+
+                    // // parent.expression.left.object.property.name
+                    // if (parent && parent.expression && parent.expression.left)
+                    //     (parent.expression.left.type === "MemberExpression" &&
+                    //         parent.expression.left.object.property.name === "exports" &&
+                    //         parent.expression.left.object.object.name === "module" &&
+                    //         parent.expression.left.property.type = "Identifier" &&
+                    //         parent.expression.left.property.name === "fromRgb" &&
+                    //         parent.expression.right.type === "Identifier" &&
+                    //             parent.expression.right.name === "getAnsiFromRgb"
+                    //     )
+
+                    if (parent && parent.expression && parent.expression.left && parent.expression.left.type === "MemberExpression")
+                    {
+                        if (parent.expression.left.object && parent.expression.left.object.property && parent.expression.left.object.property.name === "exports")
+                        {
+                            const namedExport = parent.expression.left.property.name;
+                            const funcname = parent.expression.right.name;
+
+                            detectedExported.push({
+                                namedExport, funcname
+                            });
+                        }
+
                     }
 
                     previouses.push({
@@ -1089,11 +1124,9 @@ const convertRequiresToImportsWithAST = (converted, list, {
     {
         success = false;
         console.error(`${packageJson.name}: (1009) [${source}] ->`, e.message);
-        console.info(`${packageJson.name}: (1056) The parsing failed on [${source}]. ` +
-            "Conversion mode falling back to --extended.");
     }
 
-    return {converted, success};
+    return {converted, success, detectedExported};
 };
 
 const putBackComments = (str, extracted) =>
@@ -1162,184 +1195,6 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
     }
 };
 
-
-/**
- * Convert cjs file into esm
- * @param {string[]} list File list to convert
- * @param {string} outputDir Target directory to put converted file
- * @param {boolean} noheader Whether to add extra info on top of converted file
- */
-const convertCjsFiles = (list, {
-    replaceStart = [],
-    replaceEnd = [],
-    nonHybridModuleMap = {},
-    workingDir,
-    noheader = false,
-    extended = false,
-    comments = false,
-    withreport = false,
-    importMaps = {},
-    followlinked = true,
-    fallback = false,
-    moreOptions = {}
-} = {}) =>
-{
-    let report;
-    report = withreport ? {} : true;
-
-    if (!list || !list.length)
-    {
-        console.info(`${packageJson.name} (1010): No file to convert.`);
-        return false;
-    }
-
-    const parserOtions = {
-        range        : false,
-        loc          : false,
-        comment      : false,
-        tokens       : false,
-        ecmaVersion  : "latest",
-        allowReserved: false,
-        sourceType   : "commonjs",
-        ecmaFeatures : {
-            jsx          : false,
-            globalReturn : false,
-            impliedStrict: false
-        }
-    };
-
-    for (let dynamicIndex = 0; dynamicIndex < list.length; ++dynamicIndex)
-    {
-        try
-        {
-            let {source, outputDir, rootDir, notOnDisk} = list[dynamicIndex];
-            console.log(`${packageJson.name}: (1132) Processing ==========================================> ${source}`);
-
-            let converted = fs.readFileSync(source, "utf-8");
-
-            converted = applyReplaceFromConfig(converted, replaceStart);
-
-            const result = convertRequiresToImportsWithAST(converted, list,
-                {
-                    source,
-                    outputDir,
-                    rootDir,
-                    importMaps,
-                    nonHybridModuleMap,
-                    workingDir,
-                    followlinked,
-                    moreOptions
-                });
-            converted = result.converted;
-
-            converted = convertModuleExportsToExport(converted);
-
-            if (!fallback && !result.success)
-            {
-                // Failed even with fallback
-                console.error(`${packageJson.name}: (1173) ❌ FAULTY: ESM: PArsing failed on [${source}]`);
-            }
-
-            // Apply fallback in case of conversion error
-            if (extended || !result.success || comments)
-            {
-                console.error(`${packageJson.name}: (1207) Applying fallback process to convert [${source}]. The conversion may result in errors.`);
-                converted = convertRequiresToImportsWithRegex(converted,
-                    list,
-                    {
-                        source,
-                        outputDir,
-                        rootDir,
-                        importMaps,
-                        comments,
-                        nonHybridModuleMap,
-                        workingDir,
-                        followlinked
-                    });
-            }
-
-            if (!noheader)
-            {
-                converted = `/**
- * DO NOT EDIT THIS FILE DIRECTLY.
- * This file is generated following the conversion of 
- * [${source}]{@link ${source}}
- * 
- **/    
-` + converted;
-            }
-
-            converted = applyReplaceFromConfig(converted, replaceEnd);
-
-            // ******************************************
-            const targetFile = path.basename(source, path.extname(source));
-
-            let destinationDir;
-            if (outputDir)
-            {
-                const fileDir = path.join(path.dirname(source));
-                const relativeDir = path.relative(rootDir, fileDir);
-                destinationDir = path.join(outputDir, relativeDir);
-
-                if (!notOnDisk)
-                {
-                    buildTargetDir(destinationDir);
-                }
-            }
-            else
-            {
-                destinationDir = path.join(path.dirname(source));
-            }
-
-            const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
-
-            let reportSuccess = result.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
-            try
-            {
-                parserOtions.sourceType = "module";
-                espree.parse(converted, parserOtions);
-            }
-            catch (e)
-            {
-                // Failed even with fallback
-                console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
-                    ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
-                reportSuccess = "❌ FAILED";
-                console.log(`${packageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
-                if (!withreport)
-                {
-                    report = false;
-                }
-            }
-
-            console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
-
-            if (!notOnDisk)
-            {
-                fs.writeFileSync(targetFilepath, converted, "utf-8");
-            }
-
-            if (withreport)
-            {
-                report[source] = converted;
-            }
-
-
-        }
-        catch (e)
-        {
-            console.error(`${packageJson.name}: (1011)`, e.message);
-            if (!withreport)
-            {
-                report = false;
-            }
-        }
-
-    }
-
-    return report;
-};
-
 const hasImportmap = (content) =>
 {
     const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
@@ -1347,6 +1202,7 @@ const hasImportmap = (content) =>
     match = regex.exec(content);
     return match && match.length;
 };
+
 
 const getImportMapFromPage = (fullHtmlPath) =>
 {
@@ -1501,7 +1357,21 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
     });
 };
 
-const convertRequiresToImportsWithRegex = (converted, list, {
+/**
+ * Fallback conversion when parsing fails.
+ * @param converted
+ * @param list
+ * @param source
+ * @param outputDir
+ * @param rootDir
+ * @param importMaps
+ * @param comments
+ * @param workingDir
+ * @param followlinked
+ * @param moreOptions
+ * @returns {*}
+ */
+const convertToESMWithRegex = (converted, list, {
     source,
     outputDir,
     rootDir,
@@ -1632,6 +1502,7 @@ const getLibraryInfo = (modulePackname) =>
 };
 
 /* istanbul ignore next */
+
 /**
  * Install npm packages on the users project.
  * Ignore for the tests as it requires some End to End testing.
@@ -1737,7 +1608,6 @@ const installNonHybridModules = async (config = []) =>
 
     return nonHybridModules;
 };
-
 /**
  * Add a file to the list of files to parse.
  * @param source
@@ -1771,6 +1641,241 @@ const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnD
 
     cjsList.push(entry);
     return true;
+};
+
+const resetFileList = () =>
+{
+    cjsList = [];
+};
+
+/**
+ * Apply replacements from user config file or modules parsing
+ * @param converted
+ * @param replace
+ * @returns {*}
+ */
+const applyReplaceFromConfig = (converted, replace) =>
+{
+    replace.forEach((item) =>
+    {
+        if (item.regex)
+        {
+            converted = converted.replace(item.search, item.replace);
+        }
+        else
+        {
+            converted = converted.split(item.search).join(item.replace);
+        }
+    });
+    return converted;
+};
+
+/**
+ * Apply command found in source code comments
+ * @param converted
+ * @param target
+ */
+const applyCommentCommand = (converted, {target}) =>
+{
+    if (target !== "browser")
+    {
+        return converted;
+    }
+
+    // Remove => to-esm-browser: remove
+    converted = converted.replace(/\/\*\*\s*to-esm-browser\s*:\s*remove\s*\*\*\/[\s\S]*?\/\*\*\s*to-esm-browser\s*:\s*end-remove\s*\*\*\//gm, "");
+
+    // Insert => to-esm-browser: add
+    converted = converted.replace(/\/\*\*\s*to-esm-browser\s*:\s*add\s*$([\s\S]*?)^.*\*\*\//gm, "$1");
+
+    return converted;
+};
+
+/**
+ * Convert cjs file into esm
+ * @param {string[]} list File list to convert
+ * @param {string} outputDir Target directory to put converted file
+ * @param {boolean} noheader Whether to add extra info on top of converted file
+ */
+const convertCjsFiles = (list, {
+    replaceStart = [],
+    replaceEnd = [],
+    nonHybridModuleMap = {},
+    workingDir,
+    noheader = false,
+    extended = false,
+    comments = false,
+    withreport = false,
+    importMaps = {},
+    followlinked = true,
+    fallback = false,
+    moreOptions = {}
+} = {}) =>
+{
+    let report;
+    report = withreport ? {} : true;
+
+    if (!list || !list.length)
+    {
+        console.info(`${packageJson.name} (1010): No file to convert.`);
+        return false;
+    }
+
+    const parserOtions = {
+        range        : false,
+        loc          : false,
+        comment      : false,
+        tokens       : false,
+        ecmaVersion  : "latest",
+        allowReserved: false,
+        sourceType   : "commonjs",
+        ecmaFeatures : {
+            jsx          : false,
+            globalReturn : false,
+            impliedStrict: false
+        }
+    };
+
+    for (let dynamicIndex = 0; dynamicIndex < list.length; ++dynamicIndex)
+    {
+        try
+        {
+            let {source, outputDir, rootDir, notOnDisk} = list[dynamicIndex];
+            console.log(`${packageJson.name}: (1132) Processing ==========================================> ${source}`);
+
+            let converted = fs.readFileSync(source, "utf-8");
+
+            converted = applyCommentCommand(converted, moreOptions);
+
+            converted = applyReplaceFromConfig(converted, replaceStart);
+
+            const result = convertRequiresToImportsWithAST(converted, list,
+                {
+                    source,
+                    outputDir,
+                    rootDir,
+                    importMaps,
+                    nonHybridModuleMap,
+                    workingDir,
+                    followlinked,
+                    moreOptions
+                });
+
+            converted = convertNonTrivialExportsWithAST(result.converted, result.detectedExported);
+
+            let copyConverted = converted;
+            converted = convertModuleExportsToExport(converted);
+
+            let success = true;
+            try
+            {
+                parserOtions.sourceType = "module";
+                espree.parse(converted, parserOtions);
+            }
+            catch (e)
+            {
+                success = false;
+                console.error(`${packageJson.name}: (1173) ❌ FAULTY: ESM: Parsing failed on [${source}]`, e.message);
+            }
+
+            // Apply fallback in case of conversion error
+            if (!success || extended || !result.success || comments)
+            {
+                console.error(`${packageJson.name}: (1207) Applying fallback process to convert [${source}]. The conversion may result in errors.`);
+                converted = convertToESMWithRegex(copyConverted,
+                    list,
+                    {
+                        source,
+                        outputDir,
+                        rootDir,
+                        importMaps,
+                        comments,
+                        nonHybridModuleMap,
+                        workingDir,
+                        followlinked
+                    });
+            }
+
+            if (!noheader)
+            {
+                converted = `/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of 
+ * [${source}]{@link ${source}}
+ * 
+ **/    
+` + converted;
+            }
+
+            converted = applyReplaceFromConfig(converted, replaceEnd);
+
+            // ******************************************
+            const targetFile = path.basename(source, path.extname(source));
+
+            let destinationDir;
+            if (outputDir)
+            {
+                const fileDir = path.join(path.dirname(source));
+                const relativeDir = path.relative(rootDir, fileDir);
+                destinationDir = path.join(outputDir, relativeDir);
+
+                if (!notOnDisk)
+                {
+                    buildTargetDir(destinationDir);
+                }
+            }
+            else
+            {
+                destinationDir = path.join(path.dirname(source));
+            }
+
+            const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
+
+            let reportSuccess = result.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
+            try
+            {
+                parserOtions.sourceType = "module";
+                espree.parse(converted, parserOtions);
+            }
+            catch (e)
+            {
+                // Failed even with fallback
+                console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
+                    ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
+                reportSuccess = "❌ FAILED";
+                console.log(`${packageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
+                if (!withreport)
+                {
+                    report = false;
+                }
+            }
+
+            console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
+
+            if (!notOnDisk)
+            {
+                fs.writeFileSync(targetFilepath, converted, "utf-8");
+            }
+
+            if (withreport)
+            {
+                report[source] = converted;
+            }
+
+
+        }
+        catch (e)
+        {
+            console.error(`${packageJson.name}: (1011)`, e.message);
+            if (!withreport)
+            {
+                report = false;
+            }
+        }
+
+    }
+
+    return report;
 };
 
 /**
@@ -1812,6 +1917,7 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     // Output Files
+    cliOptions.output = cliOptions.output || "./";
     const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
 
     const workingDir = normalisePath(process.cwd(), {isFolder: true});
@@ -1876,6 +1982,7 @@ const convert = async (rawCliOptions = {}) =>
 
     const moreOptions = {
         useImportMaps: !!htmlOptions.pattern,
+        target       : cliOptions.target
     };
 
 
@@ -1916,11 +2023,6 @@ const convert = async (rawCliOptions = {}) =>
 
 };
 
-const resetFileList = () =>
-{
-    cjsList = [];
-};
-
 module.exports.COMMENT_MASK = COMMENT_MASK;
 module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
@@ -1935,7 +2037,7 @@ module.exports.validateSyntax = validateSyntax;
 module.exports.convertRequireToImportWithAST = convertRequiresToImportsWithAST;
 module.exports.putBackComments = putBackComments;
 module.exports.convertListFiles = convertCjsFiles;
-module.exports.replaceWithRegex = convertRequiresToImportsWithRegex;
+module.exports.convertToESMWithRegex = convertToESMWithRegex;
 module.exports.getOptionsConfigFile = getOptionsConfigFile;
 module.exports.parseReplace = regexifySearchList;
 module.exports.getLibraryInfo = getLibraryInfo;
