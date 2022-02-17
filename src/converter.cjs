@@ -55,6 +55,34 @@ const buildTargetDir = (targetDir) =>
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
+ * @param detectedExported
+ * @returns {*}
+ */
+const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
+{
+    let converted0, subst;
+
+    for (let i = 0; i < detectedExported.length; ++i)
+    {
+        const item = detectedExported[i];
+
+        const regexSentence = `(class|function|const|var|let)\\s*${item.funcname}([\\S\\s]*?)(?:module\\.)?exports\\.${item.namedExport}\\s*=\\s*${item.funcname}`;
+
+        const regexp =
+            new RegExp(regexSentence, "gm");
+
+        subst = `export $1 ${item.namedExport} $2`;
+
+        converted0 = converted;
+        converted = converted0.replace(regexp, subst);
+    }
+
+    return converted;
+};
+
+/**
+ * Execute some non-trivial transformations that require multiple passes
+ * @param {string} converted String to perform transformations onto
  * @returns {*}
  */
 const convertNonTrivial = (converted) =>
@@ -929,6 +957,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
 }) =>
 {
     let success = true;
+    const detectedExported = [];
+
     try
     {
         const extracted = [];
@@ -956,6 +986,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         }
 
         let text, start, end, requirePath, identifier;
+
         const previouses = [];
 
         estraverse.traverse(ast, {
@@ -1004,6 +1035,32 @@ const convertRequiresToImportsWithAST = (converted, list, {
                             }
 
                         }
+
+                    }
+
+                    // // parent.expression.left.object.property.name
+                    // if (parent && parent.expression && parent.expression.left)
+                    //     (parent.expression.left.type === "MemberExpression" &&
+                    //         parent.expression.left.object.property.name === "exports" &&
+                    //         parent.expression.left.object.object.name === "module" &&
+                    //         parent.expression.left.property.type = "Identifier" &&
+                    //         parent.expression.left.property.name === "fromRgb" &&
+                    //         parent.expression.right.type === "Identifier" &&
+                    //             parent.expression.right.name === "getAnsiFromRgb"
+                    //     )
+
+                    if (parent && parent.expression && parent.expression.left && parent.expression.left.type === "MemberExpression")
+                    {
+                        if (parent.expression.left.object && parent.expression.left.object.property && parent.expression.left.object.property.name === "exports")
+                        {
+                            const namedExport = parent.expression.left.property.name;
+                            const funcname = parent.expression.right.name;
+
+                            detectedExported.push({
+                                namedExport, funcname
+                            });
+                        }
+
                     }
 
                     previouses.push({
@@ -1067,11 +1124,9 @@ const convertRequiresToImportsWithAST = (converted, list, {
     {
         success = false;
         console.error(`${packageJson.name}: (1009) [${source}] ->`, e.message);
-        console.info(`${packageJson.name}: (1056) The parsing failed on [${source}]. ` +
-            "Conversion mode falling back to --extended.");
     }
 
-    return {converted, success};
+    return {converted, success, detectedExported};
 };
 
 const putBackComments = (str, extracted) =>
@@ -1302,7 +1357,21 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
     });
 };
 
-const convertRequiresToImportsWithRegex = (converted, list, {
+/**
+ * Fallback conversion when parsing fails.
+ * @param converted
+ * @param list
+ * @param source
+ * @param outputDir
+ * @param rootDir
+ * @param importMaps
+ * @param comments
+ * @param workingDir
+ * @param followlinked
+ * @param moreOptions
+ * @returns {*}
+ */
+const convertToESMWithRegex = (converted, list, {
     source,
     outputDir,
     rootDir,
@@ -1691,21 +1760,29 @@ const convertCjsFiles = (list, {
                     followlinked,
                     moreOptions
                 });
-            converted = result.converted;
 
+            converted = convertNonTrivialExportsWithAST(result.converted, result.detectedExported);
+
+            let copyConverted = converted;
             converted = convertModuleExportsToExport(converted);
 
-            if (!fallback && !result.success)
+            let success = true;
+            try
             {
-                // Failed even with fallback
-                console.error(`${packageJson.name}: (1173) ❌ FAULTY: ESM: PArsing failed on [${source}]`);
+                parserOtions.sourceType = "module";
+                espree.parse(converted, parserOtions);
+            }
+            catch (e)
+            {
+                success = false;
+                console.error(`${packageJson.name}: (1173) ❌ FAULTY: ESM: Parsing failed on [${source}]`, e.message);
             }
 
             // Apply fallback in case of conversion error
-            if (extended || !result.success || comments)
+            if (!success || extended || !result.success || comments)
             {
                 console.error(`${packageJson.name}: (1207) Applying fallback process to convert [${source}]. The conversion may result in errors.`);
-                converted = convertRequiresToImportsWithRegex(converted,
+                converted = convertToESMWithRegex(copyConverted,
                     list,
                     {
                         source,
@@ -1905,7 +1982,7 @@ const convert = async (rawCliOptions = {}) =>
 
     const moreOptions = {
         useImportMaps: !!htmlOptions.pattern,
-        target: cliOptions.target
+        target       : cliOptions.target
     };
 
 
@@ -1960,7 +2037,7 @@ module.exports.validateSyntax = validateSyntax;
 module.exports.convertRequireToImportWithAST = convertRequiresToImportsWithAST;
 module.exports.putBackComments = putBackComments;
 module.exports.convertListFiles = convertCjsFiles;
-module.exports.replaceWithRegex = convertRequiresToImportsWithRegex;
+module.exports.convertToESMWithRegex = convertToESMWithRegex;
 module.exports.getOptionsConfigFile = getOptionsConfigFile;
 module.exports.parseReplace = regexifySearchList;
 module.exports.getLibraryInfo = getLibraryInfo;
