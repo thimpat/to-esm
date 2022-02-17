@@ -160,11 +160,16 @@ const findPackageEntryPoint = (modulePath) =>
             }
         }
 
-        const indexJsPath = path.join(modulePath, "index.js");
-        if (fs.existsSync(indexJsPath))
+        const entries = ["index.js", "index.json", "index.node"];
+        for (let i = 0; i < entries.length; ++i)
         {
-            entryPoint = normalisePath(indexJsPath);
-            return path.parse(entryPoint);
+            const entry = entries[i];
+            const indexJsPath = path.join(modulePath, entry);
+            if (fs.existsSync(indexJsPath))
+            {
+                entryPoint = normalisePath(indexJsPath);
+                return path.parse(entryPoint);
+            }
         }
 
     }
