@@ -45,7 +45,7 @@ npm install to-esm
 ```shell
 
 to-esm --input=<inputFilesPattern> [--output=<outputDirectory>] [--html=<htmlFilePattern>] [--noheader] [--solvedep] 
-[--extended] [--comments]
+[--extended] [--comments] [--target=<browser|terminal>]
 
 ```
 
@@ -78,11 +78,14 @@ The following examples will work on a folder structure that looks like this:
 
 ### Create a copy of input.js and convert it to ESM (input.mjs)
 
+The example below will convert ./example/cjs/input.cjs to ./input.mjs in the working directory.
+Note that to-esm will also follow the linked files.
+
 ```shell
 
-# Generates => 📝 ./example/cjs/input.mjs
+# Generates => 📝 ./input.mjs
 
-to-esm  --input=example/cjs/input.js
+to-esm  --input=example/cjs/input.cjs
 
 ```
 
@@ -92,16 +95,18 @@ to-esm  --input=example/cjs/input.js
 
 ### Automatically write an importmap within html files
 
-```shell
+An import map will allow writing named imports like ```import rgbhex from "rgb-hex"``` rather than specifying a 
+whole path ```import rgbhex from "../../../path/to/rgb-hex.mjs"``.
 
+```shell
 # Generates => 📝 ./example/cjs/input.mjs
 
 to-esm --input="example/cjs/demo.cjs" --output=generated/browser/ --config=".toesm.cjs" --html=example/*.html
-
 ```
 
-**importmap example**
+###### See below to see how to structure .toesm.cjs
 
+📝 index.html ↴
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -126,7 +131,7 @@ to-esm --input="example/cjs/demo.cjs" --output=generated/browser/ --config=".toe
 
 ### Convert all .cjs and .js files into example/esm keeping folder structure
 
-Note that it is only useful to do this, when the files are not connected to each other (or some conversions failed)
+Note that it is only helpful to do this when the files are not connected to each other (or some conversions failed)
 
 ```shell
 
@@ -165,8 +170,6 @@ to-esm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=ou
 | --noHeader   | _Options to not generate automatic header_      |
 | --withReport | _Output conversion in the console_              |
 | --comments   | _Allow converting code in comments and strings_ 
-| --extended   | _Allow solving dependency paths_                
-| --solveDep   | Allow solving dependency paths                  
 
 
 --solvedep: See section [**External dependencies**](#external) for lengthy explanations.
@@ -231,6 +234,45 @@ module.exports = {
 
 
 
+### Command to replace code directly from the source.
+
+You can, if you want, also use some to-esm directives within the code.
+For instance, the code below will not appear when the target is a browser.
+
+```javascript
+/** to-esm-browser: remove **/
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
+/** to-esm-browser: end-remove **/
+```
+
+
+
+<br><br>
+
+### Command to add code directly from the source.
+
+It is also possible to add code.
+
+📝 code.cjs ↴
+```javascript
+/** to-esm-browser: add
+    this.realConsoleLog("LogToFile is not supported in this environment. ")
+* **/
+```
+
+In this example, after conversion, thee above code will become this:
+
+📝 code.mjs (with target browser) ↴
+```javascript
+this.realConsoleLog("LogToFile is not supported in this environment. ")
+```
+
+<br><br>
+
+
+
 ### Options to use two different modules of the same library.
 
 #### [replaceModules]
@@ -250,49 +292,33 @@ You can setup toesm to use the appropriate version depending on your config file
 📝 .toesm.cjs ↴
 
 ```javascript
-
 module.exports = {
     replaceModules:
         {
-            chalk: {
-                cjs: {
-                    name   : "chalk-cjs",
-                    version: "@^4.1.2"
-                },
-                esm: {
-                    version: "latest"
+            "rgb-hex":
+                {
+                    cjs: {
+                        name   : "rgb-hex-cjs",
+                        version: "@^3.0.0"
+                    },
+                    esm: {
+                        version: "@latest"
+                    }
                 }
-            }
         },
-    "rgb-hex"     :
-        {
-            cjs: {
-                name   : "rgb-hex-cjs",
-                version: "@^3.0.0"
-            },
-            esm: {
-                version: "@latest"
-            }
-        }
-}        
+    }        
 ```
 
 
 In the .cjs file to convert, you would write:
 
 ```javascript
-
-const chalk = require("chalk-cjs");
-
 const rgbhex = require("rgb-hex-cjs");
 ```
 
 Which is going to be transformed to:
 
 ```javascript
-
-import chalk  from "chalk";
-
 import rgbhex  from "RGB-hex";
 ```
 
@@ -339,8 +365,8 @@ module.exports = {
 
 ##### Quick description
 
-When we specify importmap in the browser,
-instead of using long paths to specify the location of a library, we can use identifiers to state their location.
+When we specify "importmap" in the browser,
+instead of using long paths to identify the location of a library, we can use identifiers to state their place.
 
 For instance, with this html:
 
@@ -357,12 +383,12 @@ For instance, with this html:
 
 ```
 
-Instead of writting:
+Instead of writing:
 ```javascript
 import {add} from "../node_modules/my-project/src/esm/add.mjs"
 ```
 
-We can write shorter import like:
+We can write this:
 
 ```javascript
 import {add} from "my-project"
@@ -392,11 +418,7 @@ module.exports = {
 }
 ```
 
-
-
 with:
-
-
 
 ```javascript
 
