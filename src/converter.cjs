@@ -1812,6 +1812,7 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     // Output Files
+    cliOptions.output = cliOptions.output || "./";
     const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
 
     const workingDir = normalisePath(process.cwd(), {isFolder: true});
