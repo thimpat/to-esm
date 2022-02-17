@@ -1708,7 +1708,6 @@ const convertCjsFiles = (list, {
     withreport = false,
     importMaps = {},
     followlinked = true,
-    fallback = false,
     moreOptions = {}
 } = {}) =>
 {
