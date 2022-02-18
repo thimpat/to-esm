@@ -162,17 +162,15 @@ to-esm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=ou
 ## Options (via command line)
 
 
-| **Options**  | **Description**                                 | 
-|--------------|-------------------------------------------------|
-| --input      | _File list to convert_                          |
+| **Options**  | **Description**                                 |                     |
+|--------------|-------------------------------------------------|---------------------
+| --input      | _File list to convert_                          | **Only required option**
 | --output     | _Output directory_                              |
 | --html       | _html files to receive importmaps_              |
 | --noHeader   | _Options to not generate automatic header_      |
 | --withReport | _Output conversion in the console_              |
-| --comments   | _Allow converting code in comments and strings_ 
-
-
---solvedep: See section [**External dependencies**](#external) for lengthy explanations.
+| --comments   | _Allow converting code in comments and strings_ |
+| --target     | _Setting the targeted environment_              | all / esm / browser |  
 
 
 
@@ -232,44 +230,6 @@ module.exports = {
 
 <br><br>
 
-
-
-### Command to replace code directly from the source.
-
-You can, if you want, also use some to-esm directives within the code.
-For instance, the code below will not appear when the target is a browser.
-
-```javascript
-/** to-esm-browser: remove **/
-const path = require("path");
-const fs = require("fs");
-const os = require("os");
-/** to-esm-browser: end-remove **/
-```
-
-
-
-<br><br>
-
-### Command to add code directly from the source.
-
-It is also possible to add code.
-
-📝 code.cjs ↴
-```javascript
-/** to-esm-browser: add
-    this.realConsoleLog("LogToFile is not supported in this environment. ")
-* **/
-```
-
-In this example, after conversion, thee above code will become this:
-
-📝 code.mjs (with target browser) ↴
-```javascript
-this.realConsoleLog("LogToFile is not supported in this environment. ")
-```
-
-<br><br>
 
 
 
@@ -394,6 +354,59 @@ We can write this:
 import {add} from "my-project"
 ```
 
+
+---
+
+## Directives
+
+### Directives to replace code directly from the source.
+
+You can, if you want, also use some to-esm directives within the code.
+For instance, the code below will not appear when the target is a browser.
+
+```javascript
+/** to-esm-browser: remove **/
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
+/** to-esm-browser: end-remove **/
+```
+
+
+
+<br><br>
+
+### Directives to add code to the source.
+
+It is also possible to add code.
+
+📝 code.cjs ↴
+```javascript
+/** to-esm-browser: add
+    this.realConsoleLog("LogToFile is not supported in this environment. ")
+* **/
+```
+
+In this example, after conversion, the above code will become this:
+
+📝 code.mjs (with target browser) ↴
+```javascript
+this.realConsoleLog("LogToFile is not supported in this environment. ")
+```
+
+<br><br>
+
+---
+
+### Directives to ignore code during the parsing, so it won't be converted by mistake.
+
+```javascript
+/** to-esm-all: skip **/
+console.log("Skip this");
+/** to-esm-all: end-skip **/
+```
+
+<br><br>
 
 ---
 
