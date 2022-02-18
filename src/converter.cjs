@@ -9,6 +9,7 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
+const {hideText, restoreText} = require("before-replace");
 
 const extractComments = require("extract-comments");
 const espree = require("espree");
@@ -1173,7 +1174,7 @@ const applyCommentCommand = (converted, {target = "all"} = {}) =>
 
     // Hide/skip => to-esm-browser: skip
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
-    converted = hideText(regexp, converted).text;
+    converted = hideText(regexp, converted);
 
     // Remove => to-esm-browser: remove
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
@@ -1182,8 +1183,6 @@ const applyCommentCommand = (converted, {target = "all"} = {}) =>
     // Insert => to-esm-browser: add
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*$([\\s\\S]*?)^.*\\*\\*\\/`, "gm");
     converted = converted.replace(regexp, "$1");
-
-    // Skip
 
     return converted;
 };
@@ -1817,6 +1816,8 @@ const convertCjsFiles = (list, {
                         followlinked
                     });
             }
+
+            converted = restoreText(converted);
 
             if (!noheader)
             {
