@@ -9,10 +9,11 @@
     "to-esm": "./index.js"
   },
   "scripts": {
-    "demo1": "to-esm.cmd  --input=\"example/cjs/*.cjs\" --output=example/esm/",
-    "demo2": "to-esm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "to-esm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
-    "demo4": "to-esm.cmd  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
+    "demo1": "to-esm  --input=\"example/cjs/*.cjs\" --output=example/esm/",
+    "demo2": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
+    "demo3": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
+    "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
+    "demo5": "to-esm  --input=\"example/cjs/demo-directives.cjs\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo": "npm run demo3 && npm run demo4",
     "lint": "eslint.cmd \"src/**/*.{cjs,js}\"",
     "test": "nyc mocha --sort"
@@ -30,6 +31,7 @@
     "url": "https://github.com/thimpat/to-esm.git"
   },
   "dependencies": {
+    "before-replace": "^1.0.1",
     "commondir": "^1.0.1",
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",

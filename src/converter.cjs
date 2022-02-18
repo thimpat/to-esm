@@ -9,6 +9,7 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
+const {hideText, restoreText} = require("before-replace");
 
 const extractComments = require("extract-comments");
 const espree = require("espree");
@@ -66,7 +67,7 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
     {
         const item = detectedExported[i];
 
-        const regexSentence = `(class|function|const|var|let)\\s*${item.funcname}([\\S\\s]*?)(?:module\\.)?exports\\.${item.namedExport}\\s*=\\s*${item.funcname}`;
+        const regexSentence = `(class|function|const|var|let)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
@@ -160,11 +161,16 @@ const findPackageEntryPoint = (modulePath) =>
             }
         }
 
-        const indexJsPath = path.join(modulePath, "index.js");
-        if (fs.existsSync(indexJsPath))
+        const entries = ["index.js", "index.json", "index.node"];
+        for (let i = 0; i < entries.length; ++i)
         {
-            entryPoint = normalisePath(indexJsPath);
-            return path.parse(entryPoint);
+            const entry = entries[i];
+            const indexJsPath = path.join(modulePath, entry);
+            if (fs.existsSync(indexJsPath))
+            {
+                entryPoint = normalisePath(indexJsPath);
+                return path.parse(entryPoint);
+            }
         }
 
     }
@@ -729,45 +735,6 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
     });
 };
 
-/**
- * Remove comments from code
- * @param code
- * @param {[]} extracted If not null, comments are replaced instead of removed.
- * @returns {*}
- */
-const stripComments = (code, extracted = null) =>
-{
-    const commentProps = extractComments(code, {}, null);
-
-    if (!commentProps.length)
-    {
-        return code;
-    }
-
-    let commentIndexer = 0;
-    for (let i = commentProps.length - 1; i >= 0; --i)
-    {
-        const commentProp = commentProps[i];
-        const indexCommentStart = commentProp.range[0];
-        const indexCommentEnd = commentProp.range[1];
-        if (!extracted)
-        {
-            code = code.substring(0, indexCommentStart) + code.substring(indexCommentEnd);
-            continue;
-        }
-
-        extracted[commentIndexer] = code.substring(indexCommentStart, indexCommentEnd);
-        code =
-            code.substring(0, indexCommentStart) +
-            COMMENT_MASK + commentIndexer + COMMENT_MASK +
-            code.substring(indexCommentEnd);
-
-        ++commentIndexer;
-    }
-
-    return code;
-};
-
 const convertModuleExportsToExport = (converted) =>
 {
     // Convert module.exports to export default
@@ -1129,6 +1096,45 @@ const convertRequiresToImportsWithAST = (converted, list, {
     return {converted, success, detectedExported};
 };
 
+/**
+ * Remove comments from code
+ * @param code
+ * @param {[]} extracted If not null, comments are replaced instead of removed.
+ * @returns {*}
+ */
+const stripComments = (code, extracted = null) =>
+{
+    const commentProps = extractComments(code, {}, null);
+
+    if (!commentProps.length)
+    {
+        return code;
+    }
+
+    let commentIndexer = 0;
+    for (let i = commentProps.length - 1; i >= 0; --i)
+    {
+        const commentProp = commentProps[i];
+        const indexCommentStart = commentProp.range[0];
+        const indexCommentEnd = commentProp.range[1];
+        if (!extracted)
+        {
+            code = code.substring(0, indexCommentStart) + code.substring(indexCommentEnd);
+            continue;
+        }
+
+        extracted[commentIndexer] = code.substring(indexCommentStart, indexCommentEnd);
+        code =
+            code.substring(0, indexCommentStart) +
+            COMMENT_MASK + commentIndexer + COMMENT_MASK +
+            code.substring(indexCommentEnd);
+
+        ++commentIndexer;
+    }
+
+    return code;
+};
+
 const putBackComments = (str, extracted) =>
 {
     if (!extracted.length)
@@ -1142,6 +1148,31 @@ const putBackComments = (str, extracted) =>
     }
 
     return str;
+};
+
+/**
+ * Apply command found in source code comments
+ * @param converted
+ * @param target
+ * @param saved
+ */
+const applyCommentCommand = (converted, {target = "all"} = {}) =>
+{
+    let regexp;
+
+    // Hide/skip => to-esm-browser: skip
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
+    converted = hideText(regexp, converted);
+
+    // Remove => to-esm-browser: remove
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+    converted = converted.replace(regexp, "");
+
+    // Insert => to-esm-browser: add
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*$([\\s\\S]*?)^.*\\*\\*\\/`, "gm");
+    converted = converted.replace(regexp, "$1");
+
+    return converted;
 };
 
 /**
@@ -1195,6 +1226,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
     }
 };
 
+
 const hasImportmap = (content) =>
 {
     const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
@@ -1202,7 +1234,6 @@ const hasImportmap = (content) =>
     match = regex.exec(content);
     return match && match.length;
 };
-
 
 const getImportMapFromPage = (fullHtmlPath) =>
 {
@@ -1544,7 +1575,6 @@ const installPackage =
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
         console.info(`${packageJson.name}: (1144) ✔ Success`);
     };
-
 /**
  * When defined in the config file, install a specific module version for commonjs
  * and a specific module version for ESM.
@@ -1608,6 +1638,7 @@ const installNonHybridModules = async (config = []) =>
 
     return nonHybridModules;
 };
+
 /**
  * Add a file to the list of files to parse.
  * @param source
@@ -1667,27 +1698,6 @@ const applyReplaceFromConfig = (converted, replace) =>
             converted = converted.split(item.search).join(item.replace);
         }
     });
-    return converted;
-};
-
-/**
- * Apply command found in source code comments
- * @param converted
- * @param target
- */
-const applyCommentCommand = (converted, {target}) =>
-{
-    if (target !== "browser")
-    {
-        return converted;
-    }
-
-    // Remove => to-esm-browser: remove
-    converted = converted.replace(/\/\*\*\s*to-esm-browser\s*:\s*remove\s*\*\*\/[\s\S]*?\/\*\*\s*to-esm-browser\s*:\s*end-remove\s*\*\*\//gm, "");
-
-    // Insert => to-esm-browser: add
-    converted = converted.replace(/\/\*\*\s*to-esm-browser\s*:\s*add\s*$([\s\S]*?)^.*\*\*\//gm, "$1");
-
     return converted;
 };
 
@@ -1794,6 +1804,8 @@ const convertCjsFiles = (list, {
                         followlinked
                     });
             }
+
+            converted = restoreText(converted);
 
             if (!noheader)
             {

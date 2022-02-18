@@ -11,7 +11,7 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {buildTargetDir, convert, resetFileList} = require("../src/converter.cjs");
+const {buildTargetDir, convert} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
@@ -287,7 +287,8 @@ describe("The converter tool", function ()
          * Testing:
          * $> toesm --input="assets/given/demo-test-10.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
          */
-        it("should solve rgb-hex-cjs into /rgb-hex when specified on the replaceModules key in the config file", async function ()
+        it("should solve rgb-hex-cjs into /rgb-hex when specified on the replaceModules key in the config file",
+            async function ()
             {
                 const input = "./test/assets/given/demo-test-10.cjs";
                 /**
@@ -305,6 +306,42 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-10.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-10.mjs"), "utf8");
+
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+            }
+        );
+
+        it("should apply directives correctly when the target is the browser", async function ()
+            {
+                const input = "./test/assets/given/demo-test-12.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "browser"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-12.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-12.mjs"), "utf8");
+
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+            }
+        );
+
+        it("should apply directives correctly when the target is all", async function ()
+            {
+                const input = "./test/assets/given/demo-test-13.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "all"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-13.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-13.mjs"), "utf8");
 
                 expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
