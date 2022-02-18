@@ -1150,18 +1150,6 @@ const putBackComments = (str, extracted) =>
     return str;
 };
 
-const extractSkipped = (converted, skipped) =>
-{
-    const regexp = /(?:^|\s)format_(.*?)(?:\s|$)/g;
-    const matches = converted.matchAll(regexp);
-
-    for (const match of matches)
-    {
-        console.log(match);
-        console.log(match.index);
-    }
-};
-
 /**
  * Apply command found in source code comments
  * @param converted
