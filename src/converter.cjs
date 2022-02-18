@@ -1149,14 +1149,31 @@ const putBackComments = (str, extracted) =>
     return str;
 };
 
+const extractSkipped = (converted, skipped) =>
+{
+    const regexp = /(?:^|\s)format_(.*?)(?:\s|$)/g;
+    const matches = converted.matchAll(regexp);
+
+    for (const match of matches)
+    {
+        console.log(match);
+        console.log(match.index);
+    }
+};
+
 /**
  * Apply command found in source code comments
  * @param converted
  * @param target
+ * @param saved
  */
-const applyCommentCommand = (converted, {target = "all"}) =>
+const applyCommentCommand = (converted, {target = "all"} = {}) =>
 {
     let regexp;
+
+    // Hide/skip => to-esm-browser: skip
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
+    converted = hideText(regexp, converted).text;
 
     // Remove => to-esm-browser: remove
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
