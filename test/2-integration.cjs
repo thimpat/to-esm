@@ -11,7 +11,7 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {buildTargetDir, convert, resetFileList} = require("../src/converter.cjs");
+const {buildTargetDir, convert} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
