@@ -66,7 +66,7 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
     {
         const item = detectedExported[i];
 
-        const regexSentence = `(class|function|const|var|let)\\s*${item.funcname}([\\S\\s]*?)(?:module\\.)?exports\\.${item.namedExport}\\s*=\\s*${item.funcname}`;
+        const regexSentence = `(class|function|const|var|let)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
