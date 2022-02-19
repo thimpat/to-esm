@@ -1698,15 +1698,14 @@ const getIndent = async (str) =>
 {
     try
     {
-        const {default: detectIndent} = await import("detect-indent");
-        const indent = detectIndent(str).indent || "  ";
-        return indent;
+        const match = str.match(/([\t ]+)"name"/);
+        return match[1];
     }
     catch (e)
     {
         console.error(`${toEsmPackageJson.name}: (1301)`, e.message);
     }
-
+    return 2;
 };
 
 /**
@@ -1932,14 +1931,14 @@ const convertCjsFiles = (list, {
  * @param bundlePath
  * @returns {boolean}
  */
-const updatePackageJson = async ({entryPoint} = {}) =>
+const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
 {
-    const packageJsonLocation = "./package.json";
+    const packageJsonLocation = path.join(workingDir, "./package.json");
 
     /* istanbul ignore next */
-    if (!fs.existsSync("./package.json"))
+    if (!fs.existsSync(packageJsonLocation))
     {
-        console.error(`${toEsmPackageJson.name}: (1281) package.json not in working directory.`);
+        console.error(`${toEsmPackageJson.name}: (1281) package.json not in [${packageJsonLocation}].`);
         return false;
     }
 
@@ -2190,7 +2189,7 @@ const convert = async (rawCliOptions = {}) =>
 
     if (cliOptions["update-all"])
     {
-        updatePackageJson({entryPoint, bundlePath: cliOptions.bundle});
+        updatePackageJson({entryPoint, bundlePath: cliOptions.bundle, workingDir});
     }
 
     if (!htmlOptions.pattern)
