@@ -3,7 +3,7 @@
  * This file is generated following the conversion of 
  * [./test/assets/given/demo-test-4.cjs]{@link ./test/assets/given/demo-test-4.cjs}
  * 
- **/    
+ **/
 /**
  */
 const SPECIAL_CONSTANTS = {
