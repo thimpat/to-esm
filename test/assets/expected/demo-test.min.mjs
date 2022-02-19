@@ -1,0 +1,3 @@
+import"path";import"fs";import"os";import o from"./test/assets/given/demo-test-15.mjs";console.log(o.example.start()),console.log("Skip this 1");const s=`
+`;console.log("Skip this 2");class t{constructor(){console.log("Hello you!")}}export default new t;var e=new t;const s=`
+`;console.log("Skip this 3");class l{constructor(){console.log("Hello you!")}start(){console.log("I'm ready")}}export default new l;var r=new l;export{e as example2,r as example};

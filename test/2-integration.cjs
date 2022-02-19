@@ -435,6 +435,46 @@ describe("The converter tool", function ()
             }
         );
 
+        it("should modify entry points in the package.json", async function ()
+            {
+                process.chdir("./test/assets");
+                const input = "./given/demo-test-14.cjs";
+                const options = {
+                    input,
+                    "output"  :  "./actual",
+                    "noheader": false,
+                    "target"  : "all",
+                    "update-all": true
+                };
+
+                process.chdir("../..");
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package.json"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "package.json"), "utf8");
+                expect(expectedConversion).to.equal(converted);
+            }
+        );
+
+        it("should bundle input files", async function ()
+            {
+                const input = "./test/assets/given/demo-test-14.cjs";
+                const options = {
+                    input,
+                    "output"  :  "./actual",
+                    "noheader": false,
+                    "target"  : "all",
+                    "update-all": true,
+                    bundle: "./test/assets/actual/demo-test.min.mjs"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test.min.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.min.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
 
     });
 
