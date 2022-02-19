@@ -1,7 +1,6 @@
 /**
  * This file is to convert a Commonjs file into an ESM one.
  */
-const packageJson = require("../package.json");
 const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
@@ -14,6 +13,8 @@ const espree = require("espree");
 const estraverse = require("estraverse");
 
 const UglifyJS = require("uglify-js");
+
+const toEsmPackageJson = require("../package.json");
 
 const TARGET = {
     BROWSER: "browser",
@@ -51,7 +52,7 @@ const buildTargetDir = (targetDir) =>
     catch (e)
     {
         /* istanbul ignore next */
-        console.error(`${packageJson.name}: (1001)`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1001)`, e.message);
     }
 
     /* istanbul ignore next */
@@ -125,7 +126,7 @@ const findPackageEntryPoint = (modulePath) =>
     }
     catch (e)
     {
-        console.info(`${packageJson.name}: (1140) Checking [${modulePath}] package.json`);
+        console.info(`${toEsmPackageJson.name}: (1140) Checking [${modulePath}] package.json`);
     }
 
     try
@@ -200,7 +201,7 @@ const getNodeModuleProperties = (moduleName) =>
         modulePath = path.join("node_modules", moduleName);
         if (!fs.existsSync(modulePath))
         {
-            console.info(`${packageJson.name}: (1100) Failed to locate module [${moduleName}]. Skipped.`);
+            console.info(`${toEsmPackageJson.name}: (1100) Failed to locate module [${moduleName}]. Skipped.`);
             return null;
         }
 
@@ -208,7 +209,7 @@ const getNodeModuleProperties = (moduleName) =>
 
         if (!entryPointInfo)
         {
-            console.info(`${packageJson.name}: (1145) Failed to locate module [${moduleName}]. Skipped.`);
+            console.info(`${toEsmPackageJson.name}: (1145) Failed to locate module [${moduleName}]. Skipped.`);
             return null;
         }
 
@@ -217,7 +218,7 @@ const getNodeModuleProperties = (moduleName) =>
     catch (e)
     {
         /* istanbul ignore next */
-        console.info(`${packageJson.name}: (1002) Failed to locate module [${moduleName}]. Skipped.`);
+        console.info(`${toEsmPackageJson.name}: (1002) Failed to locate module [${moduleName}]. Skipped.`);
     }
 
     return null;
@@ -399,7 +400,7 @@ const subtractPath = (wholePath, pathToSubtract) =>
 
     if (wholePath.length < pathToSubtract.length)
     {
-        console.error(`${packageJson.name}: (1123)` + "Path subtraction will not work here. " +
+        console.error(`${toEsmPackageJson.name}: (1123)` + "Path subtraction will not work here. " +
             "The subtracting path is bigger than the whole path");
         return {
             subPath: wholePath
@@ -418,7 +419,7 @@ const subtractPath = (wholePath, pathToSubtract) =>
     }
     else if (wholePath.indexOf(pathToSubtract) === -1)
     {
-        console.error(`${packageJson.name}: (1125)` + "Path subtraction will not work here. " +
+        console.error(`${toEsmPackageJson.name}: (1125)` + "Path subtraction will not work here. " +
             "The subtracting path is not part of the whole path");
         return {
             subPath: wholePath
@@ -490,7 +491,7 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
     }
     catch (e)
     {
-        console.error(`${packageJson.name}: (1120)`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1120)`, e.message);
     }
 
     return {};
@@ -576,7 +577,7 @@ const reviewEsmImports = (text, list, {
         {
             if (~nativeModules.indexOf(regexRequiredPath))
             {
-                console.info(`${packageJson.name}: (1017) ${regexRequiredPath} is a built-in NodeJs module.`);
+                console.info(`${toEsmPackageJson.name}: (1017) ${regexRequiredPath} is a built-in NodeJs module.`);
                 return match;
             }
 
@@ -593,7 +594,7 @@ const reviewEsmImports = (text, list, {
 
                 if (requiredPath === null)
                 {
-                    console.warn(`${packageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
+                    console.warn(`${toEsmPackageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
                         + "Skipping.");
                     return match;
                 }
@@ -666,7 +667,7 @@ const reviewEsmImports = (text, list, {
         catch (e)
         {
             /* istanbul ignore next */
-            console.error(`${packageJson.name}: (1108)`, e.message);
+            console.error(`${toEsmPackageJson.name}: (1108)`, e.message);
         }
 
     });
@@ -888,7 +889,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             }
             catch (e)
             {
-                console.error(`${packageJson.name}: (1006)`, e.message);
+                console.error(`${toEsmPackageJson.name}: (1006)`, e.message);
             }
         }
 
@@ -897,7 +898,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     }
     catch (e)
     {
-        console.error(`${packageJson.name}: (1007)`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1007)`, e.message);
     }
 
     return converted;
@@ -952,8 +953,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
         }
         catch (e)
         {
-            console.warn(`${packageJson.name}: (1052) WARNING: Syntax issues found on [${source}]`);
-            console.error(`${packageJson.name}: (1208) ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ `, e.message);
+            console.warn(`${toEsmPackageJson.name}: (1052) WARNING: Syntax issues found on [${source}]`);
+            console.error(`${toEsmPackageJson.name}: (1208) ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ `, e.message);
             return {converted, success: false};
         }
 
@@ -1042,7 +1043,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
                 }
                 catch (e)
                 {
-                    console.error(`${packageJson.name}: (1008)`, e.message);
+                    console.error(`${toEsmPackageJson.name}: (1008)`, e.message);
                 }
             },
             leave: function (node, parent)
@@ -1075,7 +1076,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
                 }
                 catch (e)
                 {
-                    console.error(`${packageJson.name}: (1057)`, e.message);
+                    console.error(`${toEsmPackageJson.name}: (1057)`, e.message);
                 }
             }
         });
@@ -1095,7 +1096,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
     catch (e)
     {
         success = false;
-        console.error(`${packageJson.name}: (1009) [${source}] ->`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1009) [${source}] ->`, e.message);
     }
 
     return {converted, success, detectedExported};
@@ -1228,7 +1229,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
     }
     catch (e)
     {
-        console.error(`${packageJson.name}: (1011)`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1011)`, e.message);
     }
 };
 
@@ -1262,7 +1263,7 @@ const getImportMapFromPage = (fullHtmlPath) =>
     }
     catch (e)
     {
-        console.error(`${packageJson.name}: (1231)`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1231)`, e.message);
     }
 
     return {};
@@ -1292,7 +1293,7 @@ const rewriteImportMapPaths = (newMaps, htmlPath) =>
         }
         catch (e)
         {
-            console.error(`${packageJson.name}: (1205)`, e.message);
+            console.error(`${toEsmPackageJson.name}: (1205)`, e.message);
         }
     }
 
@@ -1316,7 +1317,7 @@ const applyReplaceToImportMap = (newMaps, htmlOptions) =>
         }
         catch (e)
         {
-            console.error(`${packageJson.name}: (1205)`, e.message);
+            console.error(`${toEsmPackageJson.name}: (1205)`, e.message);
         }
     }
 
@@ -1358,7 +1359,7 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
     /* istanbul ignore next */
     if (!fs.existsSync(fullHtmlPath))
     {
-        console.error(`${packageJson.name}: (1080) Could not find HTML file at [${fullHtmlPath}]`);
+        console.error(`${toEsmPackageJson.name}: (1080) Could not find HTML file at [${fullHtmlPath}]`);
         return;
     }
 
@@ -1389,7 +1390,7 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
 {
     list.forEach((html) =>
     {
-        console.error(`${packageJson.name}: (1200) Processing [${html}] for importing maps.`);
+        console.error(`${toEsmPackageJson.name}: (1200) Processing [${html}] for importing maps.`);
         parseHTMLFile(html, {importMaps, confFileOptions, moreOptions, htmlOptions});
     });
 };
@@ -1448,7 +1449,7 @@ const convertToESMWithRegex = (converted, list, {
     }
     catch (e)
     {
-        console.error(`${packageJson.name}: (1012)`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1012)`, e.message);
     }
     return converted;
 };
@@ -1480,7 +1481,7 @@ const getOptionsConfigFile = async (configPath) =>
             }
             catch (e)
             {
-                console.error(`${packageJson.name}: (1013)`, e.message);
+                console.error(`${toEsmPackageJson.name}: (1013)`, e.message);
                 console.info("Skipping config file options");
             }
         }
@@ -1601,11 +1602,11 @@ const installNonHybridModules = async (config = []) =>
     /* istanbul ignore next */
     if (!fs.existsSync(packageJsonPath))
     {
-        console.error(`${packageJson.name}: (1014) Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`);
+        console.error(`${toEsmPackageJson.name}: (1014) Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.`);
         return null;
     }
 
-    // const packageJson = require(packageJsonPath);
+    // const toEsmPackageJson = require(packageJsonPath);
     const moduleList = Object.keys(replaceModules);
 
     const nonHybridModules = {};
@@ -1624,21 +1625,21 @@ const installNonHybridModules = async (config = []) =>
             let isDevDependencies = !!moduleItem.cjs.devDependencies;
 
             // Install cjs package
-            installPackage({version, name: cjsName, isDevDependencies, moduleName, isCjs: true, packageJson});
+            installPackage({version, name: cjsName, isDevDependencies, moduleName, isCjs: true, packageJson: toEsmPackageJson});
 
             version = moduleItem.esm.version || "@latest";
             let esmName = moduleItem.esm.name || moduleName;
             isDevDependencies = !!moduleItem.esm.devDependencies;
 
             // Install esm package
-            installPackage({version, name: esmName, isDevDependencies, moduleName, isCjs: false, packageJson});
+            installPackage({version, name: esmName, isDevDependencies, moduleName, isCjs: false, packageJson: toEsmPackageJson});
 
             nonHybridModules[cjsName] = esmName;
         }
         catch (e)
         {
             /* istanbul ignore next */
-            console.error(`${packageJson.name}: (1015)`, e.message);
+            console.error(`${toEsmPackageJson.name}: (1015)`, e.message);
         }
     }
 
@@ -1658,7 +1659,7 @@ const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnD
 {
     if (!fs.existsSync(source))
     {
-        console.error(`${packageJson.name}: (1141) Could not find the file [${source}]`);
+        console.error(`${toEsmPackageJson.name}: (1141) Could not find the file [${source}]`);
         return false;
     }
 
@@ -1695,7 +1696,7 @@ const getIndent = async (str) =>
     }
     catch (e)
     {
-        console.error(`${packageJson.name}: (1301)`, e.message);
+        console.error(`${toEsmPackageJson.name}: (1301)`, e.message);
     }
 
 };
@@ -1747,7 +1748,7 @@ const convertCjsFiles = (list, {
 
     if (!list || !list.length)
     {
-        console.info(`${packageJson.name} (1010): No file to convert.`);
+        console.info(`${toEsmPackageJson.name} (1010): No file to convert.`);
         return false;
     }
 
@@ -1771,9 +1772,9 @@ const convertCjsFiles = (list, {
         try
         {
             let {source, outputDir, rootDir, notOnDisk} = list[dynamicIndex];
-            console.log(`${packageJson.name}: (1130) ================================================================`);
-            console.log(`${packageJson.name}: (1132) Processing: ${source}`);
-            console.log(`${packageJson.name}: (1134) ----------------------------------------------------------------`);
+            console.log(`${toEsmPackageJson.name}: (1130) ================================================================`);
+            console.log(`${toEsmPackageJson.name}: (1132) Processing: ${source}`);
+            console.log(`${toEsmPackageJson.name}: (1134) ----------------------------------------------------------------`);
 
             let converted = fs.readFileSync(source, "utf-8");
 
@@ -1807,13 +1808,13 @@ const convertCjsFiles = (list, {
             catch (e)
             {
                 success = false;
-                console.error(`${packageJson.name}: (1173) ❌ FAULTY: ESM: Parsing failed on [${source}]`, e.message);
+                console.error(`${toEsmPackageJson.name}: (1173) ❌ FAULTY: ESM: Parsing failed on [${source}]`, e.message);
             }
 
             // Apply fallback in case of conversion error
             if (!success || extended || !result.success || comments)
             {
-                console.error(`${packageJson.name}: (1207) Applying fallback process to convert [${source}]. The conversion may result in errors.`);
+                console.error(`${toEsmPackageJson.name}: (1207) Applying fallback process to convert [${source}]. The conversion may result in errors.`);
                 converted = convertToESMWithRegex(copyConverted,
                     list,
                     {
@@ -1874,17 +1875,17 @@ const convertCjsFiles = (list, {
             catch (e)
             {
                 // Failed even with fallback
-                console.error(`${packageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
+                console.error(`${toEsmPackageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
                     ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
                 reportSuccess = "❌ FAILED";
-                console.log(`${packageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
+                console.log(`${toEsmPackageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
                 if (!withreport)
                 {
                     report = false;
                 }
             }
 
-            console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
+            console.log(`${toEsmPackageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
 
             list[dynamicIndex].converted = converted;
 
@@ -1898,12 +1899,12 @@ const convertCjsFiles = (list, {
                 report[source] = converted;
             }
 
-            console.log(`${packageJson.name}: (1150) `);
+            console.log(`${toEsmPackageJson.name}: (1150) `);
 
         }
         catch (e)
         {
-            console.error(`${packageJson.name}: (1011)`, e.message);
+            console.error(`${toEsmPackageJson.name}: (1011)`, e.message);
             if (!withreport)
             {
                 report = false;
@@ -1923,14 +1924,14 @@ const convertCjsFiles = (list, {
  * @param bundlePath
  * @returns {boolean}
  */
-const updatePackageJson = async ({entryPoint, bundlePath} = {}) =>
+const updatePackageJson = async ({entryPoint} = {}) =>
 {
     const packageJsonLocation = "./package.json";
 
     /* istanbul ignore next */
     if (!fs.existsSync("./package.json"))
     {
-        console.error(`${packageJson.name}: (1281) package.json not in working directory.`);
+        console.error(`${toEsmPackageJson.name}: (1281) package.json not in working directory.`);
         return false;
     }
 
@@ -1942,7 +1943,7 @@ const updatePackageJson = async ({entryPoint, bundlePath} = {}) =>
         /* istanbul ignore next */
         if (!content.trim())
         {
-            console.error(`${packageJson.name}: (1283) package.json is empty or invalid.`);
+            console.error(`${toEsmPackageJson.name}: (1283) package.json is empty or invalid.`);
             return false;
         }
         json = JSON.parse(content);
@@ -1985,7 +1986,7 @@ const updatePackageJson = async ({entryPoint, bundlePath} = {}) =>
         }
         catch (e)
         {
-            console.info(`${packageJson.name}: (1289) `, e.message);
+            console.info(`${toEsmPackageJson.name}: (1289) `, e.message);
         }
 
         const str = JSON.stringify(json, null, indent);
@@ -1994,7 +1995,7 @@ const updatePackageJson = async ({entryPoint, bundlePath} = {}) =>
     catch (e)
     {
         /* istanbul ignore next */
-        console.error(`${packageJson.name}: (1285) Could not update package.json.`);
+        console.error(`${toEsmPackageJson.name}: (1285) Could not update package.json.`);
     }
 };
 
@@ -2023,15 +2024,15 @@ const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 
             fs.writeFileSync(bundlePath, result.code, "utf-8");
 
-            console.log(`${packageJson.name}: (1312) `);
-            console.log(`${packageJson.name}: (1314) ================================================================`);
-            console.log(`${packageJson.name}: (1316) Bundle generated`);
-            console.log(`${packageJson.name}: (1318) ----------------------------------------------------------------`);
-            console.log(`${packageJson.name}: (1320) The bundle has been generated. Use`);
-            console.log(`${packageJson.name}: (1322) require("./node_modules/${bundlePath}")`);
-            console.log(`${packageJson.name}: (1324) or`);
-            console.log(`${packageJson.name}: (1326) <script type="module" src="./node_modules/${bundlePath}"></script>`);
-            console.log(`${packageJson.name}: (1328) from your html code to load it in the browser.`);
+            console.log(`${toEsmPackageJson.name}: (1312) `);
+            console.log(`${toEsmPackageJson.name}: (1314) ================================================================`);
+            console.log(`${toEsmPackageJson.name}: (1316) Bundle generated`);
+            console.log(`${toEsmPackageJson.name}: (1318) ----------------------------------------------------------------`);
+            console.log(`${toEsmPackageJson.name}: (1320) The bundle has been generated. Use`);
+            console.log(`${toEsmPackageJson.name}: (1322) require("./node_modules/${bundlePath}")`);
+            console.log(`${toEsmPackageJson.name}: (1324) or`);
+            console.log(`${toEsmPackageJson.name}: (1326) <script type="module" src="./node_modules/${bundlePath}"></script>`);
+            console.log(`${toEsmPackageJson.name}: (1328) from your html code to load it in the browser.`);
     }
 
 };
@@ -2042,6 +2043,10 @@ const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
  */
 const convert = async (rawCliOptions = {}) =>
 {
+    const workingDir = normalisePath(process.cwd(), {isFolder: true});
+
+    console.log(`${toEsmPackageJson.name}: (1400) Current working directory: ${workingDir}`);
+
     resetFileList();
 
     const cliOptions = {};
@@ -2080,9 +2085,6 @@ const convert = async (rawCliOptions = {}) =>
 
     const firstOutputDir = outputDirArr[0];
 
-    const workingDir = normalisePath(process.cwd(), {isFolder: true});
-
-
     for (let i = 0; i < inputFileMaskArr.length; ++i)
     {
         const inputFileMask = inputFileMaskArr[i];
@@ -2101,7 +2103,7 @@ const convert = async (rawCliOptions = {}) =>
         /* istanbul ignore next */
         if (!list.length)
         {
-            console.error(`${packageJson.name}: (1151) The pattern did not match any file.`);
+            console.error(`${toEsmPackageJson.name}: (1151) The pattern did not match any file.`);
             return;
         }
 
@@ -2124,9 +2126,9 @@ const convert = async (rawCliOptions = {}) =>
 
     // Note: The multi directory options may complicate things. Consider making it obsolete.
     let entryPoint;
-    const entrypointPath = normalisePath(cliOptions.entrypoint);
-    if (entrypointPath)
+    if (cliOptions.entrypoint)
     {
+        const entrypointPath = normalisePath(cliOptions.entrypoint);
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
         entryPoint = addFileToConvertingList({source: entrypointPath, rootDir, outputDir: firstOutputDir, workingDir});
@@ -2190,7 +2192,7 @@ const convert = async (rawCliOptions = {}) =>
 
     if (!Object.keys(importMaps).length)
     {
-        console.info(`${packageJson.name}: (1202) No importmap entry found.`);
+        console.info(`${toEsmPackageJson.name}: (1202) No importmap entry found.`);
         return result;
     }
 
