@@ -471,7 +471,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.min.mjs"), "utf8");
 
-                expect(converted).to.equal(expectedConversion);
+                expect(converted).to.equalIgnoreSpaces(expectedConversion);
             }
         );
 
