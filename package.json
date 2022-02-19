@@ -2,11 +2,11 @@
   "name": "to-esm",
   "version": "2.2.0",
   "description": "Tool to convert Commonjs files into ESM",
-  "main": "./test/assets/given/demo-test-14.cjs",
-  "type": "module",
+  "main": "src/converter.cjs",
+  "type": "commonjs",
   "bin": {
-    "toesm": "./index.js",
-    "to-esm": "./index.js"
+    "toesm": "index.js",
+    "to-esm": "index.js"
   },
   "scripts": {
     "demo1": "to-esm  --input=\"example/cjs/*.cjs\" --output=example/esm/",
@@ -60,12 +60,5 @@
     "nyc": "^15.1.0",
     "semantic-release": "^19.0.2",
     "sinon": "^13.0.1"
-  },
-  "module": "./actual/demo-test-14.mjs",
-  "exports": {
-    ".": {
-      "require": "./test/assets/given/demo-test-14.cjs",
-      "import": "./actual/demo-test-14.mjs"
-    }
   }
 }
