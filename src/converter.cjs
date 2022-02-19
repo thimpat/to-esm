@@ -1756,7 +1756,9 @@ const convertCjsFiles = (list, {
         try
         {
             let {source, outputDir, rootDir, notOnDisk} = list[dynamicIndex];
-            console.log(`${packageJson.name}: (1132) Processing ==========================================> ${source}`);
+            console.log(`${packageJson.name}: (1130) ================================================================`);
+            console.log(`${packageJson.name}: (1132) Processing: ${source}`);
+            console.log(`${packageJson.name}: (1134) ----------------------------------------------------------------`);
 
             let converted = fs.readFileSync(source, "utf-8");
 
@@ -1881,6 +1883,7 @@ const convertCjsFiles = (list, {
                 report[source] = converted;
             }
 
+            console.log(`${packageJson.name}: (1150) `);
 
         }
         catch (e)
