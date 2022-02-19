@@ -1933,6 +1933,12 @@ const convertCjsFiles = (list, {
  */
 const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
 {
+    if (!entryPoint)
+    {
+        console.error(`${toEsmPackageJson.name}: (1401) Can not update package.json. The option --entrypoint was not set.`);
+        return false;
+    }
+
     const packageJsonLocation = path.join(workingDir, "./package.json");
 
     /* istanbul ignore next */
@@ -2004,6 +2010,8 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
         /* istanbul ignore next */
         console.error(`${toEsmPackageJson.name}: (1285) Could not update package.json.`);
     }
+
+    return true;
 };
 
 /**
