@@ -2,8 +2,8 @@
   "name": "to-esm",
   "version": "2.2.0",
   "description": "Tool to convert Commonjs files into ESM",
-  "main": "src/converter.cjs",
-  "type": "commonjs",
+  "main": "./test/assets/given/demo-test-14.cjs",
+  "type": "module",
   "bin": {
     "toesm": "./index.js",
     "to-esm": "./index.js"
@@ -33,13 +33,15 @@
   "dependencies": {
     "before-replace": "^1.0.1",
     "commondir": "^1.0.1",
+    "detect-indent": "^7.0.0",
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",
     "extract-comments": "^1.1.0",
     "glob": "^7.2.0",
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
-    "rgb-hex-cjs": "npm:rgb-hex@^3.0.0"
+    "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
+    "uglify-js": "^3.15.1"
   },
   "devDependencies": {
     "@babel/core": "^7.17.2",
@@ -58,5 +60,12 @@
     "nyc": "^15.1.0",
     "semantic-release": "^19.0.2",
     "sinon": "^13.0.1"
+  },
+  "module": "./actual/demo-test-14.mjs",
+  "exports": {
+    ".": {
+      "require": "./test/assets/given/demo-test-14.cjs",
+      "import": "./actual/demo-test-14.mjs"
+    }
   }
 }

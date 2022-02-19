@@ -1,8 +1,5 @@
 /**
- * This file is to convert a Commonjs file into an ESM library
- * by just replacing module.exports to export default.
- * It's for very simple library, but will allow me to avoid using a bundler.
- *
+ * This file is to convert a Commonjs file into an ESM one.
  */
 const packageJson = require("../package.json");
 const path = require("path");
@@ -12,11 +9,19 @@ const commonDir = require("commondir");
 const {hideText, restoreText} = require("before-replace");
 
 const extractComments = require("extract-comments");
+
 const espree = require("espree");
 const estraverse = require("estraverse");
 
-const ESM_EXTENSION = ".mjs";
+const UglifyJS = require("uglify-js");
 
+const TARGET = {
+    BROWSER: "browser",
+    ESM    : "esm",
+    CJS    : "cjs",
+    ALL    : "all"
+};
+const ESM_EXTENSION = ".mjs";
 const COMMENT_MASK = "❖✎🔏❉";
 
 const nativeModules = Object.keys(process.binding("natives"));
@@ -1191,6 +1196,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
         let sourceAbs = path.join(workingDir, source);
         sourceAbs = normalisePath(sourceAbs);
 
+        rootDir = normalisePath(rootDir);
         let {subPath, subDir} = subtractPath(sourceAbs, rootDir);
 
         let targetName = path.parse(subPath).name + ESM_EXTENSION;
@@ -1715,7 +1721,7 @@ const convertCjsFiles = (list, {
     noheader = false,
     extended = false,
     comments = false,
-    withreport = false,
+    withreport = true,
     importMaps = {},
     followlinked = true,
     moreOptions = {}
@@ -1863,6 +1869,8 @@ const convertCjsFiles = (list, {
 
             console.log(`${packageJson.name}: (1060) ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
 
+            list[dynamicIndex].converted = converted;
+
             if (!notOnDisk)
             {
                 fs.writeFileSync(targetFilepath, converted, "utf-8");
@@ -1887,6 +1895,133 @@ const convertCjsFiles = (list, {
     }
 
     return report;
+};
+
+const getIndent = async (str) =>
+{
+    try
+    {
+        const {default: detectIndent} = await import("detect-indent");
+        const indent = detectIndent(str).indent || "  ";
+        return indent;
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1301)`, e.message);
+    }
+
+};
+
+/**
+ *
+ * @note Event though we already loaded package.json, things might have happened,
+ * so, we load a fresh version than we rewrite immediately.
+ * @param entryPoint
+ * @param bundlePath
+ * @returns {boolean}
+ */
+const updatePackageJson = async ({entryPoint, bundlePath} = {}) =>
+{
+    const packageJsonLocation = "./package.json";
+
+    /* istanbul ignore next */
+    if (!fs.existsSync("./package.json"))
+    {
+        console.error(`${packageJson.name}: (1281) package.json not in working directory.`);
+        return false;
+    }
+
+    let json;
+
+    try
+    {
+        let content = fs.readFileSync(packageJsonLocation, "utf-8") || "";
+        /* istanbul ignore next */
+        if (!content.trim())
+        {
+            console.error(`${packageJson.name}: (1283) package.json is empty or invalid.`);
+            return false;
+        }
+        json = JSON.parse(content);
+
+        const entry = {
+            "require": entryPoint.source,
+            "import" : entryPoint.target
+        };
+
+        json.main = entryPoint.source;
+        json.module = entryPoint.target;
+        json.type = "module";
+
+        if (!json.exports)
+        {
+            /* istanbul ignore next */
+            json.exports = {
+                ".": {...entry}
+            };
+        }
+        else if (!json.exports["."])
+        {
+            /* istanbul ignore next */
+            json.exports["."] = entry;
+        }
+        else if (typeof json.exports["."] === "object" && !Array.isArray(json.exports["."]))
+        {
+            json.exports["."] = Object.assign({}, json.exports["."], entry);
+        }
+        else
+        {
+            /* istanbul ignore next */
+            json.exports["."] = entry;
+        }
+
+        let indent = 2;
+        try
+        {
+            indent = await getIndent(content);
+        }
+        catch (e)
+        {
+
+        }
+
+        const str = JSON.stringify(json, null, indent);
+        fs.writeFileSync(packageJsonLocation, str, "utf-8");
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error(`${packageJson.name}: (1285) Could not update package.json.`);
+    }
+};
+
+/**
+ * Bundle generated ESM code into o minified bundle
+ * @param cjsList
+ * @param target
+ * @param bundlePath
+ */
+const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
+{
+    const code = {};
+
+    if (target === TARGET.BROWSER || target === TARGET.ALL)
+    {
+        cjsList.forEach(function (entry)
+        {
+            code[entry.target] = entry.converted;
+        });
+
+        const options = {toplevel: true};
+        const result = UglifyJS.minify(code, options);
+
+        const minifyDir = path.parse(bundlePath).dir;
+        buildTargetDir(minifyDir);
+        console.log(result.code);
+
+        fs.writeFileSync(bundlePath, result.code, "utf-8");
+    }
+
 };
 
 /**
@@ -1933,6 +2068,8 @@ const convert = async (rawCliOptions = {}) =>
 
     const workingDir = normalisePath(process.cwd(), {isFolder: true});
 
+    let entryPoint;
+
     for (let i = 0; i < inputFileMaskArr.length; ++i)
     {
         const inputFileMask = inputFileMaskArr[i];
@@ -1969,6 +2106,11 @@ const convert = async (rawCliOptions = {}) =>
         {
             addFileToConvertingList({source, rootDir, outputDir, workingDir});
         });
+
+        if (cjsList.length === 1)
+        {
+            entryPoint = cjsList[0];
+        }
     }
 
     // No header
@@ -1996,7 +2138,6 @@ const convert = async (rawCliOptions = {}) =>
         target       : cliOptions.target
     };
 
-
     const result = convertCjsFiles(cjsList,
         {
             replaceStart: confFileOptions.replaceStart,
@@ -2012,6 +2153,16 @@ const convert = async (rawCliOptions = {}) =>
             fallback,
             moreOptions
         });
+
+    if (cliOptions.bundle)
+    {
+        bundleResult(cjsList, {target: cliOptions.target, bundlePath: cliOptions.bundle});
+    }
+
+    if (cliOptions["update-all"])
+    {
+        updatePackageJson({entryPoint, bundlePath: cliOptions.bundle});
+    }
 
     if (!htmlOptions.pattern)
     {
