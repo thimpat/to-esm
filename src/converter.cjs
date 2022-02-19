@@ -30,6 +30,14 @@ const nativeModules = Object.keys(process.binding("natives"));
 // The whole list of files to convert
 let cjsList = [];
 
+const EOL = require("os").EOL;
+
+const normaliseString = (content) =>
+{
+    content = content.replace(/\r\n/gm, "\n").replace(/\n/gm, EOL);
+    return content;
+};
+
 /**
  * Build target directory.
  * Ignore, if the directory already exist
@@ -1327,7 +1335,7 @@ const applyReplaceToImportMap = (newMaps, htmlOptions) =>
 const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
 {
     let content = fs.readFileSync(fullHtmlPath, "utf-8");
-    const scriptMap = JSON.stringify(newMaps, null, 4);
+    const scriptMap = normaliseString(JSON.stringify(newMaps, null, 4));
 
     if (hasImportmap(content))
     {
@@ -1838,11 +1846,11 @@ const convertCjsFiles = (list, {
  * This file is generated following the conversion of 
  * [${source}]{@link ${source}}
  * 
- **/    
-` + converted;
+ **/${EOL}` + converted;
             }
 
             converted = applyReplaceFromConfig(converted, replaceEnd);
+            converted = normaliseString(converted);
 
             // ******************************************
             const targetFile = path.basename(source, path.extname(source));
@@ -1989,8 +1997,8 @@ const updatePackageJson = async ({entryPoint} = {}) =>
             console.info(`${toEsmPackageJson.name}: (1289) `, e.message);
         }
 
-        const str = JSON.stringify(json, null, indent);
-        fs.writeFileSync(packageJsonLocation, str, "utf-8");
+        let str = normaliseString(JSON.stringify(json, null, indent));
+        fs.writeFileSync(packageJsonLocation, str, "utf8");
     }
     catch (e)
     {
