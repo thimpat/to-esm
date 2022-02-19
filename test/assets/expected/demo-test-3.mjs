@@ -3,7 +3,7 @@
  * This file is generated following the conversion of 
  * [./test/assets/given/demo-test-3.cjs]{@link ./test/assets/given/demo-test-3.cjs}
  * 
- **/    
+ **/
 import chalk000  from "chalk-cjs";
 import colorConvert  from "color-convert-cjs";
 import magnimus  from "mama-magnimus";
