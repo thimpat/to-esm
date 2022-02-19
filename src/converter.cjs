@@ -1672,17 +1672,32 @@ const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnD
         if (entry.source === item.source)
         {
             // item is already in the list
-            return true;
+            return entry;
         }
     }
 
     cjsList.push(entry);
-    return true;
+    return entry;
 };
 
 const resetFileList = () =>
 {
     cjsList = [];
+};
+
+const getIndent = async (str) =>
+{
+    try
+    {
+        const {default: detectIndent} = await import("detect-indent");
+        const indent = detectIndent(str).indent || "  ";
+        return indent;
+    }
+    catch (e)
+    {
+        console.error(`${packageJson.name}: (1301)`, e.message);
+    }
+
 };
 
 /**
@@ -1900,21 +1915,6 @@ const convertCjsFiles = (list, {
     return report;
 };
 
-const getIndent = async (str) =>
-{
-    try
-    {
-        const {default: detectIndent} = await import("detect-indent");
-        const indent = detectIndent(str).indent || "  ";
-        return indent;
-    }
-    catch (e)
-    {
-        console.error(`${packageJson.name}: (1301)`, e.message);
-    }
-
-};
-
 /**
  *
  * @note Event though we already loaded package.json, things might have happened,
@@ -1985,7 +1985,7 @@ const updatePackageJson = async ({entryPoint, bundlePath} = {}) =>
         }
         catch (e)
         {
-
+            console.info(`${packageJson.name}: (1289) `, e.message);
         }
 
         const str = JSON.stringify(json, null, indent);
@@ -2010,19 +2010,28 @@ const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 
     if (target === TARGET.BROWSER || target === TARGET.ALL)
     {
-        cjsList.forEach(function (entry)
-        {
-            code[entry.target] = entry.converted;
-        });
+            cjsList.forEach(function (entry)
+            {
+                code[entry.target] = entry.converted;
+            });
 
-        const options = {toplevel: true};
-        const result = UglifyJS.minify(code, options);
+            const options = {toplevel: true};
+            const result = UglifyJS.minify(code, options);
 
-        const minifyDir = path.parse(bundlePath).dir;
-        buildTargetDir(minifyDir);
-        console.log(result.code);
+            const minifyDir = path.parse(bundlePath).dir;
+            buildTargetDir(minifyDir);
 
-        fs.writeFileSync(bundlePath, result.code, "utf-8");
+            fs.writeFileSync(bundlePath, result.code, "utf-8");
+
+            console.log(`${packageJson.name}: (1312) `);
+            console.log(`${packageJson.name}: (1314) ================================================================`);
+            console.log(`${packageJson.name}: (1316) Bundle generated`);
+            console.log(`${packageJson.name}: (1318) ----------------------------------------------------------------`);
+            console.log(`${packageJson.name}: (1320) The bundle has been generated. Use`);
+            console.log(`${packageJson.name}: (1322) require("./node_modules/${bundlePath}")`);
+            console.log(`${packageJson.name}: (1324) or`);
+            console.log(`${packageJson.name}: (1326) <script type="module" src="./node_modules/${bundlePath}"></script>`);
+            console.log(`${packageJson.name}: (1328) from your html code to load it in the browser.`);
     }
 
 };
@@ -2069,9 +2078,10 @@ const convert = async (rawCliOptions = {}) =>
     cliOptions.output = cliOptions.output || "./";
     const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
 
+    const firstOutputDir = outputDirArr[0];
+
     const workingDir = normalisePath(process.cwd(), {isFolder: true});
 
-    let entryPoint;
 
     for (let i = 0; i < inputFileMaskArr.length; ++i)
     {
@@ -2110,10 +2120,16 @@ const convert = async (rawCliOptions = {}) =>
             addFileToConvertingList({source, rootDir, outputDir, workingDir});
         });
 
-        if (cjsList.length === 1)
-        {
-            entryPoint = cjsList[0];
-        }
+    }
+
+    // Note: The multi directory options may complicate things. Consider making it obsolete.
+    let entryPoint;
+    const entrypointPath = normalisePath(cliOptions.entrypoint);
+    if (entrypointPath)
+    {
+        let rootDir = path.parse(entrypointPath).dir;
+        rootDir = path.resolve(rootDir);
+        entryPoint = addFileToConvertingList({source: entrypointPath, rootDir, outputDir: firstOutputDir, workingDir});
     }
 
     // No header
