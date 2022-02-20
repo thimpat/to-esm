@@ -914,7 +914,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
 };
 
 /**
- * Extract information related to cjs imports and use them to de the transformation.
+ * Extract information related to cjs imports and use them to do the transformation.
  * @param converted
  * @param list
  * @param source
@@ -1171,7 +1171,7 @@ const putBackComments = (str, extracted) =>
  * @param target
  * @param saved
  */
-const applyCommentCommand = (converted, {target = "all"} = {}) =>
+const applyDirectives = (converted, {target = "all"} = {}) =>
 {
     let regexp;
 
@@ -1412,7 +1412,6 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
  * @param outputDir
  * @param rootDir
  * @param importMaps
- * @param comments
  * @param workingDir
  * @param followlinked
  * @param moreOptions
@@ -1423,7 +1422,6 @@ const convertToESMWithRegex = (converted, list, {
     outputDir,
     rootDir,
     importMaps,
-    comments,
     workingDir,
     followlinked,
     moreOptions
@@ -1433,10 +1431,7 @@ const convertToESMWithRegex = (converted, list, {
     {
         const extractedComments = [];
 
-        if (!comments)
-        {
-            converted = stripCodeComments(converted, extractedComments);
-        }
+        converted = stripCodeComments(converted, extractedComments);
 
         converted = parseImportWithRegex(converted, list, {source, outputDir, rootDir}, workingDir);
 
@@ -2182,8 +2177,6 @@ const convert = async (rawCliOptions = {}) =>
 
     // No header
     const noheader = !!cliOptions.noheader;
-    const extended = !!cliOptions.extended;
-    const comments = !!cliOptions.comments;
     const withreport = !!cliOptions.withreport;
     const fallback = !!cliOptions.fallback;
 
@@ -2211,8 +2204,6 @@ const convert = async (rawCliOptions = {}) =>
             replaceEnd  : confFileOptions.replaceEnd,
             nonHybridModuleMap,
             noheader,
-            extended,
-            comments,
             followlinked,
             withreport,
             importMaps,
