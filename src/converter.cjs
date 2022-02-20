@@ -118,121 +118,6 @@ const convertNonTrivial = (converted) =>
 
 };
 
-/* istanbul ignore next */
-
-/**
- * Retrieve module entrypoint
- * @param modulePath
- * @returns {ParsedPath|null}
- */
-const findPackageEntryPoint = (modulePath) =>
-{
-    let entryPoint;
-    try
-    {
-        entryPoint = require.resolve(modulePath);
-        return path.parse(entryPoint);
-    }
-    catch (e)
-    {
-        console.info(`${toEsmPackageJson.name}: (1140) Checking [${modulePath}] package.json`);
-    }
-
-    try
-    {
-        const externalPackageJsonPath = path.join(modulePath, "package.json");
-        if (!fs.existsSync(externalPackageJsonPath))
-        {
-            return null;
-        }
-
-        const externalRawPackageJson = fs.readFileSync(externalPackageJsonPath, "utf-8");
-        const externalPackageJson = JSON.parse(externalRawPackageJson);
-
-        // Look for entry point in the package.json exports key
-        const exports = externalPackageJson.exports;
-        if (typeof exports === "string" || exports instanceof String)
-        {
-            entryPoint = path.join(modulePath, exports);
-            entryPoint = normalisePath(entryPoint);
-            return path.parse(entryPoint);
-        }
-
-        // Look for entry point in the package.json exports sub key
-        if (exports)
-        {
-            const arr = Object.values(exports);
-            for (let i = 0; i < arr.length; ++i)
-            {
-                const entry = arr[i];
-                if (!entry.import)
-                {
-                    continue;
-                }
-                const imports = entry.import;
-                entryPoint = path.join(modulePath, imports);
-                entryPoint = normalisePath(entryPoint);
-                return path.parse(entryPoint);
-            }
-        }
-
-        const entries = ["index.js", "index.json", "index.node"];
-        for (let i = 0; i < entries.length; ++i)
-        {
-            const entry = entries[i];
-            const indexJsPath = path.join(modulePath, entry);
-            if (fs.existsSync(indexJsPath))
-            {
-                entryPoint = normalisePath(indexJsPath);
-                return path.parse(entryPoint);
-            }
-        }
-
-    }
-    catch (e)
-    {
-
-    }
-    return null;
-};
-
-/**
- * Returns path information related to a Node module
- * @param moduleName
- * @returns {*}
- */
-const getNodeModuleProperties = (moduleName) =>
-{
-    let modulePath;
-
-    try
-    {
-        modulePath = path.join("node_modules", moduleName);
-        if (!fs.existsSync(modulePath))
-        {
-            console.info(`${toEsmPackageJson.name}: (1100) Failed to locate module [${moduleName}]. Skipped.`);
-            return null;
-        }
-
-        const entryPointInfo = findPackageEntryPoint(modulePath);
-
-        if (!entryPointInfo)
-        {
-            console.info(`${toEsmPackageJson.name}: (1145) Failed to locate module [${moduleName}]. Skipped.`);
-            return null;
-        }
-
-        return entryPointInfo;
-    }
-    catch (e)
-    {
-        /* istanbul ignore next */
-        console.info(`${toEsmPackageJson.name}: (1002) Failed to locate module [${moduleName}]. Skipped.`);
-    }
-
-    return null;
-};
-
 /**
  * Check whether the given text has a valid JavaScript syntax
  * @param str
@@ -314,21 +199,33 @@ const calculateRelativePath = (source, requiredPath) =>
 };
 
 /**
- *
+ * Third Party Module path starting with ./node_modules/ + relative path to the entry point
  * @param moduleName
  * @returns {string|null}
  */
 const getModuleEntryPointPath = (moduleName) =>
 {
-    const module = getNodeModuleProperties(moduleName);
-
-    if (!module)
+    try
     {
-        return null;
+        let entryPoint = require.resolve(moduleName);
+        if (!entryPoint)
+        {
+            return null;
+        }
+
+        entryPoint = normalisePath(entryPoint);
+
+        const nodeModulesPos = entryPoint.indexOf("node_modules");
+        entryPoint = "./" + entryPoint.substring(nodeModulesPos);
+
+        return entryPoint;
+    }
+    catch (e)
+    {
+        console.info(`${toEsmPackageJson.name}: (1140) Checking [${moduleName}] package.json`);
     }
 
-    const modulePath = path.join(module.dir, module.base);
-    return normalisePath(modulePath);
+    return null;
 };
 
 // ---------------------------------------------------
@@ -601,7 +498,7 @@ const reviewEsmImports = (text, list, {
 
                 let requiredPath = getModuleEntryPointPath(moduleName);
 
-                if (requiredPath === null)
+                if (!requiredPath)
                 {
                     console.warn(`${toEsmPackageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
                         + "Skipping.");
@@ -2311,7 +2208,6 @@ const convert = async (rawCliOptions = {}) =>
 module.exports.COMMENT_MASK = COMMENT_MASK;
 module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
-module.exports.getNodeModuleProp = getNodeModuleProperties;
 module.exports.reviewEsmImports = reviewEsmImports;
 module.exports.parseImportWithRegex = parseImportWithRegex;
 module.exports.applyReplace = applyReplaceFromConfig;
