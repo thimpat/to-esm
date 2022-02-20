@@ -3,7 +3,7 @@
  * This file is generated following the conversion of 
  * [./test/assets/given/demo-test-2.cjs]{@link ./test/assets/given/demo-test-2.cjs}
  * 
- **/    
+ **/
 import chalk  from "chalk-cjs";
 import colorConvert  from "color-convert-cjs";
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";

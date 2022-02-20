@@ -10,8 +10,7 @@
 
 
 
-A tool to convert Commonjs files into ESM
-
+A tool to convert Commonjs files into ESM.
 
 
 <br>
@@ -44,8 +43,8 @@ npm install to-esm
 
 ```shell
 
-to-esm --input=<inputFilesPattern> [--output=<outputDirectory>] [--html=<htmlFilePattern>] [--noheader] [--solvedep] 
-[--extended] [--comments] [--target=<browser|terminal>]
+to-esm --input=<inputFilesPattern> [--output=<outputDirectory>] [--html=<htmlFilePattern>] [--noheader] 
+[--target=<browser|esm>]
 
 ```
 
@@ -162,15 +161,17 @@ to-esm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=ou
 ## Options (via command line)
 
 
-| **Options**  | **Description**                                 |                     |
-|--------------|-------------------------------------------------|---------------------
-| --input      | _File list to convert_                          | **Only required option**
-| --output     | _Output directory_                              |
-| --html       | _html files to receive importmaps_              |
-| --noHeader   | _Options to not generate automatic header_      |
-| --withReport | _Output conversion in the console_              |
-| --comments   | _Allow converting code in comments and strings_ |
-| --target     | _Setting the targeted environment_              | all / esm / browser |  
+| **Options**  | **Description**                                   |                          |
+|--------------|---------------------------------------------------|--------------------------
+| --input      | _File list to convert_                            | **Only required option**
+| --output     | _Output directory_                                | directory path
+| --html       | _html files to receive importmaps_                | glob
+| --noHeader   | _Options to not generate automatic header_        |
+| --withReport | _Output conversion in the console_                |
+| --target     | _Setting the targeted environment_                | all / esm / browser      |  
+| --bundle     | _Generate minify version for browser environment_ | file path                |  
+| --entrypoint     | _Path to .cjs entrypoint_                         | file path                |  
+| --update-all | _Modify package.json to set entry points_         |                          |  
 
 
 
@@ -186,6 +187,7 @@ To apply advanced options, create a config file and make the CLI point to it.
 
 >
 > to-esm --input=... --output=... --config=.to-esm.cjs
+
 
 Keys within the config file are case sensitive.
 

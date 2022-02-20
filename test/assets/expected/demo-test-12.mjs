@@ -3,7 +3,7 @@
  * This file is generated following the conversion of 
  * [./test/assets/given/demo-test-12.cjs]{@link ./test/assets/given/demo-test-12.cjs}
  * 
- **/    
+ **/
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 

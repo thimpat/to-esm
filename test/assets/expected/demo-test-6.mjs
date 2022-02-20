@@ -3,7 +3,7 @@
  * This file is generated following the conversion of 
  * [./test/assets/given/demo-test-6.cjs]{@link ./test/assets/given/demo-test-6.cjs}
  * 
- **/    
+ **/
 import SuperLog from "./test/src/cjs/quick-log-1.mjs";
 import {LOG_CONTEXT, LOG_TARGETS}  from "./test/assets/given/contexts-def.mjs"
 ;

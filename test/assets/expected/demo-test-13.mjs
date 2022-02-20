@@ -3,7 +3,7 @@
  * This file is generated following the conversion of 
  * [./test/assets/given/demo-test-13.cjs]{@link ./test/assets/given/demo-test-13.cjs}
  * 
- **/    
+ **/
 /** to-esm-browser: remove **/
 import path  from "path";
 import fs  from "fs";

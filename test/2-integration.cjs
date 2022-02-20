@@ -17,6 +17,7 @@ describe("The converter tool", function ()
 {
     before(function ()
     {
+        // Prepare actual folder
         const assetsFolder = path.join(rootDir, "/actual");
         if (fs.existsSync(assetsFolder))
         {
@@ -32,6 +33,7 @@ describe("The converter tool", function ()
 
     after(function ()
     {
+        // Delete test noises
         if (fs.existsSync(path.join(rootDir, "/esm2")))
         {
             // fs.rmSync(path.join(rootDir, "/esm"))
@@ -46,6 +48,7 @@ describe("The converter tool", function ()
 
     beforeEach(function ()
     {
+        // Regenerate .html files on every test
         const index1 = path.join(rootDir, "actual", "index.html");
         const index2 = path.join(rootDir, "actual", "index-2.html");
         const index3 = path.join(rootDir, "actual", "other.html");
@@ -57,6 +60,14 @@ describe("The converter tool", function ()
         fs.copyFileSync(path.join(rootDir, "index.html"), index1);
         fs.copyFileSync(path.join(rootDir, "index-2.html"), index2);
         fs.copyFileSync(path.join(rootDir, "other.html"), index3);
+
+        // Regenerate package.json on every test
+        const packageJsonPath = path.join(rootDir, "package.json");
+        if (fs.existsSync(packageJsonPath))
+        {
+            fs.rmSync(packageJsonPath);
+        }
+        fs.copyFileSync(path.join(rootDir, "given", "package.json"), packageJsonPath);
     });
 
     describe("from the file system", function ()
@@ -82,7 +93,7 @@ describe("The converter tool", function ()
             expect(res).to.be.false;
         });
 
-        it("should convert ./given/demo-test.cjs into ./expected/demo-test.esm", async function ()
+        it("should convert ./given/demo-test.cjs into ./expected/demo-test.mjs", async function ()
         {
             const input = "./test/assets/given/demo-test.cjs";
             const options = {
@@ -96,10 +107,10 @@ describe("The converter tool", function ()
             await convert(options);
             const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.mjs"), "utf8");
 
-            expect(converted).to.equalIgnoreSpaces(expectedConversion);
+            expect(converted).to.equal(expectedConversion);
         });
 
-        it("should convert ./given/demo-test-2.cjs into ./expected/demo-test-2.esm", async function ()
+        it("should convert ./given/demo-test-2.cjs into ./expected/demo-test-2.mjs", async function ()
             {
                 const input = "./test/assets/given/demo-test-2.cjs";
                 const options = {
@@ -114,11 +125,11 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-2.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
-        it("should convert ./given/demo-test-3.cjs into ./expected/demo-test-3.esm", async function ()
+        it("should convert ./given/demo-test-3.cjs into ./expected/demo-test-3.mjs", async function ()
             {
                 const input = "./test/assets/given/demo-test-3.cjs";
                 const options = {
@@ -133,11 +144,11 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-3.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
-        it("should convert ./given/demo-test-4.cjs into ./expected/demo-test-4.esm", async function ()
+        it("should convert ./given/demo-test-4.cjs into ./expected/demo-test-4.mjs", async function ()
             {
                 const input = "./test/assets/given/demo-test-4.cjs";
                 const options = {
@@ -165,11 +176,11 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-4.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
-        it("should parse with regex and convert ./given/demo-test-6.cjs into ./expected/demo-test-6.esm", async function ()
+        it("should parse with regex and convert ./given/demo-test-6.cjs into ./expected/demo-test-6.mjs", async function ()
             {
                 const input = "./test/assets/given/demo-test-6.cjs";
                 const options = {
@@ -197,7 +208,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-6.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -225,7 +236,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-7.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -252,7 +263,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual/node_modules/rgb-hex-cjs/", "index.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -279,7 +290,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-9.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -307,7 +318,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-10.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -325,7 +336,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-12.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -343,7 +354,7 @@ describe("The converter tool", function ()
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-13.mjs"), "utf8");
 
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -369,7 +380,7 @@ describe("The converter tool", function ()
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "index.html"), "utf8");
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "index.html"), "utf8");
-                expect(converted).to.equalIgnoreSpaces(expectedConversion);
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
@@ -394,7 +405,7 @@ describe("The converter tool", function ()
             }
         );
 
-        it("should fail ./given/demo-bad-syntax.cjs into ./expected/demo-bad-syntax.esm", async function ()
+        it("should fail ./given/demo-bad-syntax.cjs into ./expected/demo-bad-syntax.mjs", async function ()
             {
                 const input = "./test/assets/given/demo-bad-syntax.cjs";
                 const options = {
@@ -432,6 +443,132 @@ describe("The converter tool", function ()
             {
                 const result = await convert();
                 chai.expect(result).to.be.false;
+            }
+        );
+
+        it("should modify entry points in the package.json", async function ()
+            {
+                process.chdir("./test/assets");
+                const input = "./given/demo-test-14.cjs";
+                const options = {
+                    input,
+                    "output"  :  "./actual",
+                    "noheader": false,
+                    "target"  : "all",
+                    "entrypoint": "./given/demo-test-14.cjs",
+                    "update-all": true
+                };
+
+                await convert(options);
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package.json"), "utf8");
+                const converted = fs.readFileSync(path.join(rootDir, "package.json"), "utf8");
+                process.chdir("../..");
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should modify entry points in the package-1.json", async function ()
+            {
+                const packageJsonPath = path.join(rootDir, "package.json");
+                if (fs.existsSync(packageJsonPath))
+                {
+                    fs.rmSync(packageJsonPath);
+                }
+                fs.copyFileSync(path.join(rootDir, "given", "package-1.json"), packageJsonPath);
+
+                process.chdir("./test/assets");
+                const input = "./given/demo-test-14.cjs";
+                const options = {
+                    input,
+                    "output"  :  "./actual",
+                    "noheader": false,
+                    "target"  : "all",
+                    "entrypoint": "./given/demo-test-14.cjs",
+                    "update-all": true
+                };
+
+                await convert(options);
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package.json"), "utf8");
+                const converted = fs.readFileSync(path.join(rootDir, "package.json"), "utf8");
+                process.chdir("../..");
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should modify entry points in the package-2.json", async function ()
+            {
+                const packageJsonPath = path.join(rootDir, "package.json");
+                if (fs.existsSync(packageJsonPath))
+                {
+                    fs.rmSync(packageJsonPath);
+                }
+                fs.copyFileSync(path.join(rootDir, "given", "package-2.json"), packageJsonPath);
+
+                process.chdir("./test/assets");
+                const input = "./given/demo-test-14.cjs";
+                const options = {
+                    input,
+                    "output"  :  "./actual",
+                    "noheader": false,
+                    "target"  : "all",
+                    "entrypoint": "./given/demo-test-14.cjs",
+                    "update-all": true
+                };
+
+                await convert(options);
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package.json"), "utf8");
+                const converted = fs.readFileSync(path.join(rootDir, "package.json"), "utf8");
+                process.chdir("../..");
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should modify entry points in the package-3.json", async function ()
+            {
+                const packageJsonPath = path.join(rootDir, "package.json");
+                if (fs.existsSync(packageJsonPath))
+                {
+                    fs.rmSync(packageJsonPath);
+                }
+                fs.copyFileSync(path.join(rootDir, "given", "package-3.json"), packageJsonPath);
+
+                process.chdir("./test/assets");
+                const input = "./given/demo-test-14.cjs";
+                const options = {
+                    input,
+                    "output"  :  "./actual",
+                    "noheader": false,
+                    "target"  : "all",
+                    "entrypoint": "./given/demo-test-14.cjs",
+                    "update-all": true
+                };
+
+                await convert(options);
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package.json"), "utf8");
+                const converted = fs.readFileSync(path.join(rootDir, "package.json"), "utf8");
+                process.chdir("../..");
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should bundle input files", async function ()
+            {
+                const input = "./test/assets/given/demo-test-14.cjs";
+                const options = {
+                    input,
+                    "output"  :  "./actual",
+                    "noheader": false,
+                    "target"  : "all",
+                    "entrypoint": "./given/demo-test-14.cjs",
+                    "update-all": true,
+                    bundle: "./test/assets/actual/demo-test.min.mjs"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test.min.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test.min.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
             }
         );
 

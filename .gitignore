@@ -76,3 +76,4 @@ dist
 /test/virtual/esm/
 /test/virtual/actual/
 /test/assets/actual/
+test/assets/package.json

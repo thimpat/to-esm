@@ -5,15 +5,15 @@
   "main": "src/converter.cjs",
   "type": "commonjs",
   "bin": {
-    "toesm": "./index.js",
-    "to-esm": "./index.js"
+    "toesm": "index.js",
+    "to-esm": "index.js"
   },
   "scripts": {
-    "demo1": "to-esm  --input=\"example/cjs/*.cjs\" --output=example/esm/",
+    "demo1": "to-esm --input=\"example/cjs/*.cjs\" --output=example/esm/",
     "demo2": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
+    "demo3": "node src/converter.cjs  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
     "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
-    "demo5": "to-esm  --input=\"example/cjs/demo-directives.cjs\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
+    "demo5": "node src/converter.cjs --input=\"example/cjs/demo-directives.cjs\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo": "npm run demo3 && npm run demo4",
     "lint": "eslint.cmd \"src/**/*.{cjs,js}\"",
     "test": "nyc mocha --sort"
@@ -39,7 +39,9 @@
     "glob": "^7.2.0",
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
-    "rgb-hex-cjs": "npm:rgb-hex@^3.0.0"
+    "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
+    "strip-comments-strings": "^1.0.6",
+    "uglify-js": "^3.15.1"
   },
   "devDependencies": {
     "@babel/core": "^7.17.2",

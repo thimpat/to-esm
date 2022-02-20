@@ -1,0 +1,9 @@
+{
+  "name": "something",
+  "main": "./example/cjs/demo.cjs",
+  "module": "./generated/esm/demo.mjs",
+  "type": "commonjs",
+  "exports": {
+
+  }
+}
