@@ -1,0 +1,26 @@
+{
+  "name": "sandbox",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.cjs",
+  "scripts": {
+    "*** Pre-Cleaning ****": "# ----------------------------------------------------------------------------------------------------------",
+    "clean:generated": "rimraf ./generated && rimraf ./dist",
+    "*** On the Terminal ****": "# ----------------------------------------------------------------------------------------------------------",
+    "build:esm:terminal": "npm run clean:generated && to-esm.cmd example/cjs/demo.cjs --output=generated/terminal/ --entrypoint=./src/cjs/ana-logger.cjs --config=.toesm.cjs --target=esm --update-all",
+    "demo:terminal:esm": "npm run build:esm:terminal && node ./generated/terminal/demo.mjs",
+    "*** In the Browser ****": "# ----------------------------------------------------------------------------------------------------------",
+    "build:esm:browser": "npm run clean:generated && to-esm.cmd example/cjs/demo.cjs --output=generated/browser/ --entrypoint=./src/cjs/ana-logger.cjs --config=\".toesm.cjs\" --target=browser --update-all --bundle=\"./dist/analogger-browser.min.mjs\"",
+    "demo:browser": "npm run build:esm:browser && node example/cjs/demo.cjs",
+    "*** In the Browser with importmap ****": "# ----------------------------------------------------------------------------------------------------------",
+    "build:browser:importmap": "npm run build:esm:browser -- --html=example/index.html",
+    "demo:browser:importmap": "npm run build:browser:importmap && node example/cjs/demo.cjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "analogger": "^1.7.0",
+    "to-esm": "file:../.."
+  }
+}
