@@ -1629,14 +1629,28 @@ const installNonHybridModules = async (config = []) =>
             let isDevDependencies = !!moduleItem.cjs.devDependencies;
 
             // Install cjs package
-            installPackage({version, name: cjsName, isDevDependencies, moduleName, isCjs: true, packageJson: toEsmPackageJson});
+            installPackage({
+                version,
+                name       : cjsName,
+                isDevDependencies,
+                moduleName,
+                isCjs      : true,
+                packageJson: toEsmPackageJson
+            });
 
             version = moduleItem.esm.version || "@latest";
             let esmName = moduleItem.esm.name || moduleName;
             isDevDependencies = !!moduleItem.esm.devDependencies;
 
             // Install esm package
-            installPackage({version, name: esmName, isDevDependencies, moduleName, isCjs: false, packageJson: toEsmPackageJson});
+            installPackage({
+                version,
+                name       : esmName,
+                isDevDependencies,
+                moduleName,
+                isCjs      : false,
+                packageJson: toEsmPackageJson
+            });
 
             nonHybridModules[cjsName] = esmName;
         }
@@ -1650,12 +1664,51 @@ const installNonHybridModules = async (config = []) =>
     return nonHybridModules;
 };
 
+const parseEsm = (filepath, content, {
+    range = false,
+    loc = false,
+    comment = false,
+    tokens = false,
+    ecmaVersion = "latest",
+    allowReserved = false,
+    sourceType = "module",
+    ecmaFeatures = {
+        jsx          : false,
+        globalReturn : false,
+        impliedStrict: false
+    }
+} = {}) =>
+{
+    try
+    {
+        const parserOtions = {
+            range,
+            loc,
+            comment,
+            tokens,
+            ecmaVersion,
+            allowReserved,
+            sourceType,
+            ecmaFeatures
+        };
+        content = content || fs.readFileSync(filepath, "utf-8");
+
+        espree.parse(content, parserOtions);
+    }
+    catch (error)
+    {
+        return {success: false, error};
+    }
+
+    return {success: true};
+};
+
 /**
  * Check whether a file is CommonJs
  * @param filepath
  * @returns {boolean}
  */
-const isCjsCompatible = (filepath) =>
+const isCjsCompatible = (filepath, content = "") =>
 {
     const extension = path.extname(filepath);
     if (".mjs" === extension)
@@ -1663,13 +1716,13 @@ const isCjsCompatible = (filepath) =>
         return false;
     }
 
-    let content = fs.readFileSync(filepath, "utf-8");
+    content = content || fs.readFileSync(filepath, "utf-8");
     content = stripComments(content, "");
     content = stripStrings(content, "", {includeDelimiter: false});
 
     if (content.indexOf("import") > -1 || content.indexOf("from") > -1 || content.indexOf("export ") > -1)
     {
-        return true;
+        return false;
     }
 
     if (content.indexOf("require") > -1 || content.indexOf("exports") > -1)
