@@ -1,4 +1,9 @@
 let SuperLog;
+
+const rgbHex = require('rgb-hex-cjs');
+const beforeReplace = require("before-replace");
+const {stripStrings, parseString, stripComments} = require("strip-comments-strings");
+
 const {LOG_CONTEXT, LOG_TARGETS} = require("./contexts-def.cjs")
 SuperLog = require("../../src/cjs/quick-log-1.cjs");
 

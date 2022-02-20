@@ -9,9 +9,9 @@
     "to-esm": "index.js"
   },
   "scripts": {
-    "demo1": "to-esm --input=\"example/cjs/*.cjs\" --output=example/esm/",
-    "demo2": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "node src/converter.cjs  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
+    "demo1": "node src/converter.cjs example/cjs/demo-1.cjs --output=example/esm/",
+    "demo2": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
+    "demo3": "node src/converter.cjs --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
     "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo5": "node src/converter.cjs --input=\"example/cjs/demo-directives.cjs\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo": "npm run demo3 && npm run demo4",
