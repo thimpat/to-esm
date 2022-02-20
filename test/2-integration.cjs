@@ -559,6 +559,7 @@ describe("The converter tool", function ()
                     "output"  :  "./actual",
                     "noheader": false,
                     "target"  : "all",
+                    "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true,
                     bundle: "./test/assets/actual/demo-test.min.mjs"
                 };
