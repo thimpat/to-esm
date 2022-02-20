@@ -2168,9 +2168,21 @@ const convert = async (rawCliOptions = {}) =>
 
     // Input Files
     let inputFileMaskArr = [];
+    if (rawCliOptions._ && rawCliOptions._.length)
+    {
+        inputFileMaskArr.push(...rawCliOptions._);
+    }
+
     if (cliOptions.input)
     {
-        inputFileMaskArr = Array.isArray(cliOptions.input) ? cliOptions.input : [cliOptions.input];
+        if (Array.isArray(cliOptions.input))
+        {
+            inputFileMaskArr.push(...cliOptions.input);
+        }
+        else
+        {
+            inputFileMaskArr.push(cliOptions.input);
+        }
     }
 
     // Output Files
