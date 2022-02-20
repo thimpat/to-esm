@@ -1949,6 +1949,7 @@ const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 
         const options = {toplevel: true};
         const result = UglifyJS.minify(code, options);
+        result.code = normaliseString(result.code);
 
         const minifyDir = path.parse(bundlePath).dir;
         buildTargetDir(minifyDir);
@@ -2255,7 +2256,6 @@ const convert = async (rawCliOptions = {}) =>
     if (html)
     {
         htmlOptions.pattern = html;
-
     }
 
     const moreOptions = {
