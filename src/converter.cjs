@@ -6,6 +6,7 @@ const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText} = require("before-replace");
+const {stripComments, stripStrings} = require("strip-comments-strings");
 
 const extractComments = require("extract-comments");
 
@@ -768,7 +769,7 @@ const convertModuleExportsToExport = (converted) =>
  */
 const convertRequiresToImport = (converted) =>
 {
-    converted = stripComments(converted);
+    converted = stripCodeComments(converted);
 
     // convert require with .json file to import
     converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
@@ -872,7 +873,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
                     prop.text = "let " + prop.text;
                 }
 
-                let transformedLines = stripComments(prop.text);
+                let transformedLines = stripCodeComments(prop.text);
                 transformedLines = convertRequiresToImport(transformedLines);
 
                 const valid = validateSyntax(transformedLines, "module");
@@ -1116,7 +1117,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
  * @param {[]} extracted If not null, comments are replaced instead of removed.
  * @returns {*}
  */
-const stripComments = (code, extracted = null) =>
+const stripCodeComments = (code, extracted = null) =>
 {
     const commentProps = extractComments(code, {}, null);
 
@@ -1434,7 +1435,7 @@ const convertToESMWithRegex = (converted, list, {
 
         if (!comments)
         {
-            converted = stripComments(converted, extractedComments);
+            converted = stripCodeComments(converted, extractedComments);
         }
 
         converted = parseImportWithRegex(converted, list, {source, outputDir, rootDir}, workingDir);
@@ -1655,6 +1656,36 @@ const installNonHybridModules = async (config = []) =>
 };
 
 /**
+ * Check whether a file is CommonJs
+ * @param filepath
+ * @returns {boolean}
+ */
+const isCjsCompatible = (filepath) =>
+{
+    const extension = path.extname(filepath);
+    if (".mjs" === extension)
+    {
+        return false;
+    }
+
+    let content = fs.readFileSync(filepath, "utf-8");
+    content = stripComments(content, "");
+    content = stripStrings(content, "", {includeDelimiter: false});
+
+    if (content.indexOf("import") > -1 || content.indexOf("from") > -1 || content.indexOf("export ") > -1)
+    {
+        return true;
+    }
+
+    if (content.indexOf("require") > -1 || content.indexOf("exports") > -1)
+    {
+        return true;
+    }
+
+    return true;
+};
+
+/**
  * Add a file to the list of files to parse.
  * @param source
  * @param rootDir
@@ -1668,6 +1699,11 @@ const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnD
     if (!fs.existsSync(source))
     {
         console.error(`${toEsmPackageJson.name}: (1141) Could not find the file [${source}]`);
+        return false;
+    }
+
+    if (!isCjsCompatible(source))
+    {
         return false;
     }
 
@@ -1779,6 +1815,7 @@ const convertCjsFiles = (list, {
         try
         {
             let {source, outputDir, rootDir, notOnDisk} = list[dynamicIndex];
+
             console.log(`${toEsmPackageJson.name}: (1130) ================================================================`);
             console.log(`${toEsmPackageJson.name}: (1132) Processing: ${source}`);
             console.log(`${toEsmPackageJson.name}: (1134) ----------------------------------------------------------------`);
@@ -2004,6 +2041,12 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
 
         let str = normaliseString(JSON.stringify(json, null, indent));
         fs.writeFileSync(packageJsonLocation, str, "utf8");
+
+        console.log(`${toEsmPackageJson.name}: (1412) `);
+        console.log(`${toEsmPackageJson.name}: (1414) ================================================================`);
+        console.log(`${toEsmPackageJson.name}: (1416) package.json updated`);
+        console.log(`${toEsmPackageJson.name}: (1418) ----------------------------------------------------------------`);
+        console.log(`${toEsmPackageJson.name}: (1420) Your package.json has successfully been updated (--update-all option)`);
     }
     catch (e)
     {
@@ -2228,7 +2271,7 @@ module.exports.getNodeModuleProp = getNodeModuleProperties;
 module.exports.reviewEsmImports = reviewEsmImports;
 module.exports.parseImportWithRegex = parseImportWithRegex;
 module.exports.applyReplace = applyReplaceFromConfig;
-module.exports.stripComments = stripComments;
+module.exports.stripComments = stripCodeComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
 module.exports.convertRequireToImport = convertRequiresToImport;
 module.exports.validateSyntax = validateSyntax;
