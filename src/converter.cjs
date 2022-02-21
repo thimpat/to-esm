@@ -5,8 +5,9 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
-const {hideText, restoreText} = require("before-replace");
-const {stripComments, stripStrings} = require("strip-comments-strings");
+const {hideText, restoreText, beforeReplace} = require("before-replace");
+const {stripComments, stripStrings, clearStrings} = require("strip-comments-strings");
+const beautify = require("js-beautify").js;
 
 const extractComments = require("extract-comments");
 
@@ -522,7 +523,8 @@ const reviewEsmImports = (text, list, {
                         outputDir,
                         workingDir,
                         followlinked,
-                        notOnDisk: moreOptions.useImportMaps
+                        notOnDisk: moreOptions.useImportMaps,
+                        referrer : source
                     });
                 }
 
@@ -540,7 +542,7 @@ const reviewEsmImports = (text, list, {
                 return match.replace(regexRequiredPath, projectedRequiredPath);
             }
 
-            if (regexRequiredPath.startsWith("./") || regexRequiredPath.startsWith("..") || translated)
+            if (regexRequiredPath.startsWith("./") || regexRequiredPath.startsWith(".."))
             {
                 // Source path of projected original source (the .cjs)
                 let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
@@ -557,11 +559,12 @@ const reviewEsmImports = (text, list, {
                 if (followlinked)
                 {
                     addFileToConvertingList({
-                        source : requiredPath,
-                        rootDir: workingDir,
+                        source  : requiredPath,
+                        rootDir : workingDir,
                         outputDir,
                         workingDir,
-                        followlinked
+                        followlinked,
+                        referrer: source
                     });
                 }
 
@@ -936,7 +939,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
                             const funcname = parent.expression.right.name;
 
                             detectedExported.push({
-                                namedExport, funcname
+                                namedExport, funcname, source
                             });
                         }
 
@@ -1121,6 +1124,11 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 
         outputDir = normalisePath(outputDir, {isFolder: true});
 
+        let id = require("crypto")
+            .createHash("sha256")
+            .update(target)
+            .digest("hex");
+
         return {
             source,
             sourceAbs,
@@ -1130,7 +1138,9 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
             subPath,
             subDir,
             target,
-            targetAbs
+            targetAbs,
+            id,
+            weight: 1
         };
     }
     catch (e)
@@ -1600,6 +1610,7 @@ const parseEsm = (filepath, content, {
     return {success: true};
 };
 
+
 /**
  * Check whether a file is CommonJs
  * @param filepath
@@ -1614,7 +1625,7 @@ const isCjsCompatible = (filepath, content = "") =>
     }
 
     content = content || fs.readFileSync(filepath, "utf-8");
-    content = stripComments(content, "");
+    content = stripComments(content);
     content = stripStrings(content, "", {includeDelimiter: false});
 
     if (content.indexOf("import") > -1 || content.indexOf("from") > -1 || content.indexOf("export ") > -1)
@@ -1630,6 +1641,25 @@ const isCjsCompatible = (filepath, content = "") =>
     return true;
 };
 
+const findEntry = (source, propertyName = "source") =>
+{
+    if (!source)
+    {
+        return null;
+    }
+
+    const n = cjsList.length;
+    for (let i = 0; i < n; ++i)
+    {
+        const item = cjsList[i] || {};
+        if (item[propertyName] === source)
+        {
+            return item;
+        }
+    }
+    return null;
+};
+
 /**
  * Add a file to the list of files to parse.
  * @param source
@@ -1637,9 +1667,18 @@ const isCjsCompatible = (filepath, content = "") =>
  * @param outputDir
  * @param workingDir
  * @param notOnDisk
- * @returns {boolean}
+ * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source:
+ *     string, subPath: *, target: string}}
  */
-const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnDisk}) =>
+const addFileToConvertingList = ({
+                                     source,
+                                     rootDir,
+                                     outputDir,
+                                     workingDir,
+                                     notOnDisk,
+                                     referrer = null,
+                                     entryPoint = false
+                                 }) =>
 {
     if (!fs.existsSync(source))
     {
@@ -1647,16 +1686,28 @@ const addFileToConvertingList = ({source, rootDir, outputDir, workingDir, notOnD
         return false;
     }
 
-    const entry = formatConvertItem({source, rootDir, outputDir, workingDir});
+    const entryReferer = findEntry(referrer) || {weight: 1};
+    let entry = findEntry(source);
+    if (!entry)
+    {
+        entry = formatConvertItem({source, rootDir, outputDir, workingDir});
+    }
 
+    entry.weight = entry.weight + entryReferer.weight;
     entry.notOnDisk = !!notOnDisk;
+    entry.entryPoint = entryPoint;
+    entry.referrees = entry.referrees || [];
+    if (referrer)
+    {
+        ++entry.weight;
+        entry.referrees.push(referrer);
+    }
 
     for (let i = 0; i < cjsList.length; ++i)
     {
         const item = cjsList[i];
         if (entry.source === item.source)
         {
-            // item is already in the list
             return entry;
         }
     }
@@ -1827,6 +1878,114 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
     return true;
 };
 
+const reorderImportListByWeight = (cjsList) =>
+{
+    cjsList.sort((entry0, entry1) =>
+    {
+        return entry1.weight - entry0.weight;
+    });
+};
+
+const concatFiles = (files, dest) =>
+{
+    var writeStream = fs.createWriteStream(dest);
+
+    const n = files.length;
+    for (let i = 0; i < n; ++i)
+    {
+        let file = files[i];
+        fs.readFileSync(file).pipe(writeStream);
+    }
+};
+
+const buildExport = ({exported, id}) =>
+{
+    let str = "";
+    if (!exported)
+    {
+        return str;
+    }
+
+    for (let i = 0; i < exported.length; ++i)
+    {
+        const current = exported[i];
+        str += `ESM["${id}"]["${current.namedExport}"] = ${current.namedExport};${EOL}`;
+    }
+    return str;
+};
+
+const mergeCode = (codes) =>
+{
+    let newCode = [`
+        // ====================================================================
+        // Bundled with to-esm
+        // --------------------------------------------------------------------
+        
+        const ESM = {};${EOL}    
+    `];
+    const n = codes.length;
+    for (let i = 0; i < n; ++i)
+    {
+        let {content, entry} = codes[i];
+
+        const exportTable = buildExport(entry);
+
+        content = normaliseString(content);
+        content = stripComments(content);
+
+        content = `
+        
+        // ====================================================================
+        // ${entry.target}$
+        // --------------------------------------------------------------------
+        
+(function ()
+{
+    ESM["${entry.id}"] = {};
+
+    ${content}
+    
+    ${exportTable}
+        
+}());
+    ${EOL}${EOL}${EOL}    
+        `;
+
+        content = content.replace(/export\s+const/gm, "const");
+        content = content.replace(/export\s+default/gm, `ESM["${entry.id}"].default = `);
+
+        content = beforeReplace(/import.*?from\s*(["']([^"']+)["'])/gi, content, function (found, wholeText, index, match)
+        {
+            let requiredPath = concatenatePaths(entry.target, match[2]);
+            const item = findEntry(requiredPath, "target");
+            if (item)
+            {
+                found = found.replace("import", "let");
+                found = found.replace("from", "=");
+
+                found = found.replace(match[1], `ESM["${item.id}"]`);
+                if (found.indexOf("{") === -1)
+                {
+                    found = found + ".default";
+                }
+
+                found = found + ";";
+            }
+
+            // console.log(match[1]);
+            // console.log(entry);
+            // console.log(found, match, index);
+            return found;
+        });
+
+        newCode.push(content);
+    }
+
+    newCode = newCode.join(EOL);
+    return newCode;
+};
+
+
 /**
  * Bundle generated ESM code into o minified bundle
  * @param cjsList
@@ -1835,23 +1994,41 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
  */
 const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 {
+    const {Readable} = require("stream");
     const code = {};
+    let codes = [];
+
+    reorderImportListByWeight(cjsList);
 
     if (target === TARGET.BROWSER || target === TARGET.ALL)
     {
-        cjsList.forEach(function (entry)
-        {
-            code[entry.target] = entry.converted;
-        });
-
-        const options = {toplevel: true};
-        const result = UglifyJS.minify(code, options);
-        result.code = normaliseString(result.code);
-
         const minifyDir = path.parse(bundlePath).dir;
         buildTargetDir(minifyDir);
 
-        fs.writeFileSync(bundlePath, result.code, "utf-8");
+        var writeStream = fs.createWriteStream(bundlePath);
+
+        cjsList.forEach(function (entry)
+        {
+            code[entry.target] = entry.converted;
+            codes.push({
+                entry,
+                content: entry.converted
+            });
+
+        });
+
+        let newCode = mergeCode(codes);
+
+        newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
+
+        const readable = Readable.from([newCode]);
+        readable.pipe(writeStream);
+
+        // const options = {toplevel: true, mangle: false, compress: false, warnings: true};
+        // const result = UglifyJS.minify(code, options);
+        // result.code = normaliseString(result.code);
+        //
+        // fs.writeFileSync(bundlePath, result.code, "utf-8");
 
         console.log(`${toEsmPackageJson.name}: (1312) `);
         console.log(`${toEsmPackageJson.name}: (1314) ================================================================`);
@@ -1926,6 +2103,8 @@ const convertCjsFiles = (list, {
 
                 converted = result.converted;
                 success = result.success;
+
+                list[dynamicIndex].exported = result.detectedExported;
 
                 if (success)
                 {
@@ -2135,7 +2314,13 @@ const convert = async (rawCliOptions = {}) =>
         const entrypointPath = normalisePath(cliOptions.entrypoint);
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
-        entryPoint = addFileToConvertingList({source: entrypointPath, rootDir, outputDir: firstOutputDir, workingDir});
+        entryPoint = addFileToConvertingList({
+            source    : entrypointPath,
+            rootDir,
+            outputDir : firstOutputDir,
+            workingDir,
+            entryPoint: true
+        });
     }
 
     // No header
