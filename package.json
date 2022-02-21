@@ -37,10 +37,11 @@
     "estraverse": "^5.3.0",
     "extract-comments": "^1.1.0",
     "glob": "^7.2.0",
+    "js-beautify": "^1.14.0",
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
     "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
-    "strip-comments-strings": "^1.0.6",
+    "strip-comments-strings": "^1.1.4",
     "uglify-js": "^3.15.1"
   },
   "devDependencies": {
