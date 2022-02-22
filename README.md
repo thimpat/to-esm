@@ -1,3 +1,24 @@
+# Table of contents
+
+  1. [Description](#description)
+  1. [Installation](#installation)
+  1. [Usage](#usage)
+  1. [Examples](#examples)
+      1. [Generate ESM code](#generate-esm-code)
+      1. [Generate code into a dedicated directory](#generate-code-into-a-dedicated-directory)
+      1. [Remove automatic generated header](#remove-automatic-generated-header)
+      1. [Generate code for the browser](#generate-code-for-the-browser)
+      1. [ Generate some importmap within html files](#generate-some-importmap-within-html-files)
+      1. [Convert files with patterns](#convert-files-with-patterns)
+  1. [Options (via command line)](#options-(via-command-line))
+  1. [Advanced Options (via config file)](#advanced-options-(via-config-file))
+  1. [Directives](#directives)
+
+
+
+<br/><br/>
+
+---
 
 [![Test workflow](https://github.com/thimpat/to-esm/actions/workflows/test.yml/badge.svg)](https://github.com/thimpat/to-esm/blob/main/README.md)
 [![nycrc Coverage](https://img.shields.io/nycrc/thimpat/to-esm?preferredThreshold=lines)](https://github.com/thimpat/to-esm/blob/main/README.md)
@@ -5,37 +26,30 @@
 [![npm version](https://badge.fury.io/js/to-esm.svg)](https://www.npmjs.com/package/to-esm)
 <img alt="semantic-release" src="https://img.shields.io/badge/semantic--release-19.0.2-e10079?logo=semantic-release">
 
+---
+
+<br/><br/>
 
 ## Description
 
-
-
 A tool to convert Commonjs files into ESM.
 
-
 <br>
-
-
 
 ---
 
 ## Installation
 
-
-
 ```shell
 
-npm install to-esm
+npm install to-esm -g
 
 ```
 
-
-
 <br>
 
-
-
 ---
+
 
 ## Usage
 
@@ -43,69 +57,406 @@ npm install to-esm
 
 ```shell
 
-to-esm --input=<inputFilesPattern> [--output=<outputDirectory>] [--html=<htmlFilePattern>] [--noheader] 
-[--target=<browser|esm>]
+to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--target=< browser|esm >] 
+[--bundle=<filepath>] [--update-all]
 
 ```
 
+---
 
+<br/>
 
-<br>
+## Examples
 
+<br/>
 
+<span style="font-size:40px;">📋</span>
 
-### Examples
+#### Generate ESM code
 
+To generate an **.mjs**(ES module) file from a **.js** file do:
 
-
-The following examples will work on a folder structure that looks like this:
-
->
-> example/cjs/input.js
->
-> example/cjs/dep-1.cjs
->
-> example/cjs/dep-2.cjs
->
-> example/index.html
-
-
-
-<br>
-
-
-
-### Create a copy of input.js and convert it to ESM (input.mjs)
-
-The example below will convert ./example/cjs/input.cjs to ./input.mjs in the working directory.
-Note that to-esm will also follow the linked files.
+---
 
 ```shell
-
-# Generates => 📝 ./input.mjs
-
-to-esm  --input=example/cjs/input.cjs
-
+# 💻 < Command
+$> to-esm  example/cjs/input.js
 ```
 
+> 🚫
+> **NOTE: to-esm should run from the project root folder.**
 
-<br>
+
+---
 
 
-### Automatically write an importmap within html files
+###### Click on the arrow to expand or collapse
 
-An import map will allow writing named imports like ```import rgbhex from "rgb-hex"``` rather than specifying a 
-whole path ```import rgbhex from "../../../path/to/rgb-hex.mjs"``.
+<details><summary><strong>⏳  Before...</strong></summary>
+
+```
+📁project                 ⇽ Ran from here
+│
+└───📁example
+│   │
+│   └───📁code
+│       │   📝 library.js
+│       │   📝 demo.js   ⇽
+│       │   ...
+│
+```
+
+📝 _library.js_ ↴
+```javascript
+function hi() 
+{
+    console.log(`I wanted to say hi!`)
+}
+module.exports = hi;
+```
+
+📝 _demo.js_ ↴
+```javascript
+const hi = require("./library.js");
+hi();
+```
+
+**./demo.js => ./demo.mjs 📝**
+
+</details>
+<br/>
+
+
+
+
+<details><summary><strong>⌛ After...</strong></summary>
+
+```
+📁project
+│
+└───📁example
+│   │
+│   └───📁code
+│       │   📄 library.js
+│       │   📄 demo.js
+│       │   📝 library.mjs   ⇽
+│       │   ...
+│
+└ 📝 demo.mjs     ⇽
+```
+
+📝 _library.js_ ↴
+```javascript
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+export default hi;
+```
+
+📝 _demo.js_ ↴
+```javascript
+import hi  from "./example/code/library.mjs";
+hi();
+```
+
+The file given as entrypoint will be converted inside the working
+directory. The others, will depend on the source location.
+
+</details>
+
+
+
+---
+
+<br/><br/>
+
+<span style="font-size:40px;">📋</span>
+
+#### Generate code into a dedicated directory
+
+> --output < folder >
 
 ```shell
-# Generates => 📝 ./example/cjs/input.mjs
-
-to-esm --input="example/cjs/demo.cjs" --output=generated/browser/ --config=".toesm.cjs" --html=example/*.html
+# 💻 < Command
+$> to-esm  example/cjs/input.cjs --output generated/esm
 ```
 
-###### See below to see how to structure .toesm.cjs
+---
 
+
+###### Click on the arrow to expand or collapse
+<details><summary><strong>⏳ Before...</strong></summary>
+
+```
+📁project                 ⇽ Ran from here
+│
+└───📁example
+│   │
+│   └───📁code
+│       │   📝 library.js
+│       │   📝 demo.js   ⇽ 🚩
+│       │   ...
+```
+</details>
+<br/>
+
+
+
+<details><summary><strong>⌛ After...</strong></summary>
+
+```
+📁project                 
+│
+└───📁example
+│   │
+│   └───📁code
+│       │   📝 library.js
+│       │   📝 demo.js   
+│       │   ...
+│
+└───📁generated                   ⇽ 🚩
+│   └───📁esm
+│       └───📁example   
+│           └───📁code
+│                  📝 library.mjs ⇽ 🚩
+│                  📝 demo.mjs    ⇽ 
+│                   ...
+```
+
+</details>
+
+<br/>
+
+<details><summary><strong>⌛ Check...</strong></summary>
+
+##### Checking the conversion has succeeded
+
+```shell
+node generated/esm/example/code/demo.mjs
+```
+
+</details>
+
+
+
+---
+
+<br/><br/>
+
+<span style="font-size:40px;">📋</span>
+
+#### Remove automatic generated header
+
+> --noheader
+
+
+```shell
+# 💻 < Command
+$> to-esm  example/cjs/input.cjs --output generated --noheader
+```
+---
+
+
+<details><summary><strong>⌛ --noheader in action</strong></summary>
+
+#### ⏳ - Without the --noheader option
+
+```javascript
+/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of 
+ * [./example/code/demo.js]{@link ./example/code/demo.js}
+ * 
+ **/
+import hi  from "./example/code/library.mjs";
+hi();
+```
+<br/>
+
+
+#### ⌛ With the --noheader option
+
+```javascript
+import hi  from "./example/code/library.mjs";
+hi();
+```
+
+</details>
+
+
+
+---
+
+<br/><br/>
+
+
+<span style="font-size:40px;">📋</span>
+
+
+#### Generate code for the browser
+
+> **--target** < **browser** | esm | all >
+
+```shell
+# Command < 💻
+$> to-esm  example/cjs/input.cjs --output generated --target browser
+```
+---
+
+
+
+###### Click on the arrow to expand or collapse
+<details><summary><strong>You see a warning when using node native module within the browser</strong></summary>
+
+#### 1- When generating code for the browser, **to-esm** will display a warning when the code uses a native Node library.
+
+
+
+📝 _demo.js_ ↴
+```javascript
+const path = require("path");                   // See directives below to see how to remove this call
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+module.exports = hi;
+```
+
+
+###### During conversion:
+```shell
+💻 >
+to-esm: (1130) ================================================================
+to-esm: (1132) Processing: ./example/code/demo.js
+to-esm: (1134) ----------------------------------------------------------------
+to-esm: (1060) ✔ SUCCESS: Converted [./example/code/demo.js] to [generated-browser\demo.mjs]
+to-esm: (1150) 
+to-esm: (1130) ================================================================
+to-esm: (1132) Processing: ./example/code/library.js
+to-esm: (1134) ----------------------------------------------------------------
+to-esm: (1017) path is a built-in NodeJs module. ⇽ 🚩
+to-esm: (1060) ✔ SUCCESS: Converted [./example/code/library.js] to [generated-browser\example\code\library.mjs]
+to-esm: (1150) 
+
+```
+
+
+#### 2- To load your files in the HTML code, you only point to the entry file (demo.js).
+
+The browser will automatically load the other files.
+
+![img.png](docs/images/img_3.png)
+
+> **demo.mjs** is the entrypoint.
+
+All of the connected files are automatically loaded by the browser.
+<br/>
+
+</details>
+
+---
+
+###### Click on the arrow to expand or collapse
+
+<details><summary><strong>NodeJs Third Party modules in browser</strong></summary>
+
+
+When there is a requirement to load libraries from the node_modules folder,
+to-esm will generate a converted copy of the files to the output directory.
+
+📝 _demo.js_ ↴
+```javascript
+const toAnsi = require("to-ansi");
+const rgbHex = require("rgb-hex-cjs");
+const {COLOR_TABLE, SYSTEM} = require("./some-lib.js");
+// ...
+```
+
+```
+📁project  
+└─── 📁 original  
+     │─── 📝 index.html
+     │─── 📝 demo.js
+     │─── 📝 some-lib.js
+     │
+     └─── 📁 generated  
+           │─── 📝 demo.mjs             ⬅ 🚩
+           │─── 📝 some-lib.mjs         ⬅ 🚩
+           │
+           └─── 📁 node_modules         ⬅ 🚩
+               │
+               └───📁 rgb-hex
+               │   └── 📝 index.js
+               │     
+               └───📁 to-ansi
+                   └── 📝 index.js 
+                         
+```
+
+The two libraries used will be easily accessible by the system, and ease the bundling in production.
+See the importmap section to have a more modular approach.
+
+
+</details>
+
+
+
+---
+
+<br/><br/>
+
+
+<span style="font-size:40px;">📋</span>
+
+####  Generate some importmap within html files
+
+> --html < pattern | html >
+
+```shell
+# Generates => 📝 ./demo.mjs & update index.html
+$> to-esm example/cjs/demo.cjs --html index.html
+```
+
+---
+
+###### An import map will allow writing imports like this
+
+```javascript
+import rgbhex from "rgb-hex"
+```
+
+
+###### instead of
+
+```javascript
+import rgbhex from "../../../path/to/rgb-hex.mjs"
+```
+
+---
+
+###### Click on the arrow to expand or collapse
+<details><summary><strong>HTML importmap section</strong></summary>
+
+
+
+
+###### Before
 📝 index.html ↴
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+</head>
+<body>
+<script type="module" src="actual/demo-test.mjs"></script>
+</body>
+</html>
+```
+
+###### After
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -124,60 +475,59 @@ to-esm --input="example/cjs/demo.cjs" --output=generated/browser/ --config=".toe
 </html>
 ```
 
-<br>
+</details>
+
+---
+
+importmap allows some more elaborated setups where third party caching will be entirely handled by the browser.
 
 
 
-### Convert all .cjs and .js files into example/esm keeping folder structure
+---
 
-Note that it is only helpful to do this when the files are not connected to each other (or some conversions failed)
+<br><br>
 
-```shell
+<span style="font-size:40px;">📋</span>
 
-to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
+#### Convert files with patterns
 
-```
-
-<br>
-
-
-
-### We can specify multiple directories if necessary
+You can have multiple files converted in one go. It can be helpful if some files are not connected to each other.
 
 ```shell
 
-to-esm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=outdir1/esm/ --output=outdir2/esm/
+$> to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
 
 ```
+
 
 
 
 <br><br>
 
 
-
-
+<span style="font-size:40px;">🪛</span>
 
 ## Options (via command line)
 
 
-| **Options**  | **Description**                                   |                          |
-|--------------|---------------------------------------------------|--------------------------
-| --input      | _File list to convert_                            | **Only required option**
-| --output     | _Output directory_                                | directory path
-| --html       | _html files to receive importmaps_                | glob
-| --noHeader   | _Options to not generate automatic header_        |
-| --withReport | _Output conversion in the console_                |
-| --target     | _Setting the targeted environment_                | all / esm / browser      |  
-| --bundle     | _Generate minify version for browser environment_ | file path                |  
-| --entrypoint     | _Path to .cjs entrypoint_                         | file path                |  
-| --update-all | _Modify package.json to set entry points_         |                          |  
+| **Options**  | **Description**                                         | **Expect**               |
+|--------------|---------------------------------------------------------|--------------------------|
+| filepath     | _File or pattern to convert_                            | **Only required option** |
+| --output     | _Output directory_                                      | directory path           |
+| --html       | _html files to receive importmaps_                      | glob                     |
+| --noHeader   | _Options to not generate automatic header_              |                          |
+| --target     | _Setting the targeted environment_                      | all / esm / browser      |  
+| --bundle     | _Generate minified bundle for browser environment_      | file path                |  
+| --entrypoint | _Path to .js entrypoint_                                | file path                |  
+| --update-all | _Automatically update package.json to set entry points_ |                          |  
+
+
 
 
 
 <br><br>
 
-
+<span style="font-size:40px;">💎</span>
 
 ## Advanced Options (via config file)
 
@@ -185,15 +535,19 @@ to-esm  --input="folder1/cjs/**/*.?(c)js" --input="folder2/**/*.cjs" --output=ou
 
 To apply advanced options, create a config file and make the CLI point to it.
 
->
-> to-esm --input=... --output=... --config=.to-esm.cjs
+```shell
+to-esm --config=.to-esm.cjs
+```
+
 
 
 Keys within the config file are case sensitive.
 
 
 
+
 ### Options to replace strings before and after every conversion
+
 
 #### [replaceStart, replaceEnd]
 
@@ -222,7 +576,7 @@ module.exports = {
 
 ```
 
-| **Options**          | **Description**                                                       | 
+| **Properties**       | **Description**                                                       | 
 |----------------------|-----------------------------------------------------------------------|
 | replaceStart         | _will perform a replacement **_before_** doing the conversion to ESM_ |
 | replaceEnd           | _will perform a replacement **_after_** doing the conversion to ESM_  |
@@ -235,9 +589,11 @@ module.exports = {
 
 
 
+
 ### Options to use two different modules of the same library.
 
-#### [replaceModules]
+
+> "replaceModules": ...
 
 Sometimes, you may find libraries where only ESM is available when CJS was available on older versions.
 
@@ -247,7 +603,7 @@ For instance, the module "chalk" uses ESM for its Export on its latest version (
 
 1.2).
 
-You can setup toesm to use the appropriate version depending on your config file:
+You can setup toesm to use the appropriate version:
 
 
 
@@ -260,11 +616,15 @@ module.exports = {
             "rgb-hex":
                 {
                     cjs: {
-                        name   : "rgb-hex-cjs",
+                        name   : "rgb-hex-cjs",             // ⬅ 🚩 .cjs files will use 
+                                                            // ... = require("rgb-hex-cjs")  
+                                                            // to load the module (v3.0.0)
                         version: "@^3.0.0"
                     },
                     esm: {
-                        version: "@latest"
+                        version: "@latest"                  // ⬅ 🚩 .mjs files will use
+                                                            // import ... from "rgb-hex"
+                                                            // to load the module
                     }
                 }
         },
@@ -281,15 +641,17 @@ const rgbhex = require("rgb-hex-cjs");
 Which is going to be transformed to:
 
 ```javascript
-import rgbhex  from "RGB-hex";
+import rgbhex  from "rgb-hex";
 ```
 
+---
 
-| **Options**                       | **Description**                                         | 
+| **Properties**                    | **Description**                                         | 
 |-----------------------------------|---------------------------------------------------------|
 | replaceModules[\<moduleName>]     | _The module we want to use two different versions with_ |
 | replaceModules[\<moduleName>].cjs | _The module version to use with CommonJs files_         |
 | replaceModules[\<moduleName>].mjs | _The module version to use with converted files_        |
+
 
 
 <br><br>
@@ -297,15 +659,18 @@ import rgbhex  from "RGB-hex";
 
 ### Options to set html sources and manipulate importmaps.
 
-####[html]
+> "html": ...
 
-```html
-module.exports = {
-    html          :
+```javascript
+module.exports = 
+{
+    html :
         {
             pattern: "/index.html",
-            importmap       : {
-                "ttt": "http://somewhere"
+            importmap       : 
+            {
+                    "my-project": "../node_modules/my-project/src/esm/add.mjs",
+                    "lodash": "https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"
             },
             importmapReplace: [{
                 search : "./node_modules",
@@ -316,21 +681,19 @@ module.exports = {
 ```
 
 
-| **Options**                       | **Description**                                    | 
-|-----------------------------------|----------------------------------------------------|
-| pattern                    | _HTML file pattern where importmap needs updating_ |
-| importmap                    | _value to add to html files_                       |
-| importmapReplace                             | _Apply replacements on the importmap list_         |
+| **Properties**   | **Description**                                    | 
+|------------------|----------------------------------------------------|
+| pattern          | _HTML file pattern where importmap needs updating_ |
+| importmap        | _value to add to html files_                       |
+| importmapReplace | _Apply replacements on the importmap list_         |
 
 
 <br/><br/>
 
-##### Quick description
 
-When we specify "importmap" in the browser,
-instead of using long paths to identify the location of a library, we can use identifiers to state their place.
 
-For instance, with this html:
+###### The options above will be deployed as below:
+
 
 ```html
 
@@ -344,22 +707,35 @@ For instance, with this html:
     </script>
 
 ```
-
-Instead of writing:
-```javascript
-import {add} from "../node_modules/my-project/src/esm/add.mjs"
-```
-
-We can write this:
+Allowing to write this:
 
 ```javascript
 import {add} from "my-project"
 ```
 
+> 🚫
+> **NOTE: All of the caching is handled by the browser. You only bundle your code.**
+
+ 
+
+
+<br/><br/><br/>
 
 ---
 
+
+## 💉
+
+
 ## Directives
+
+<br/>
+
+#### Directives allow more control over the generated code.
+
+<br/>
+
+---
 
 ### Directives to replace code directly from the source.
 
@@ -374,9 +750,10 @@ const os = require("os");
 /** to-esm-browser: end-remove **/
 ```
 
+<br>
 
+---
 
-<br><br>
 
 ### Directives to add code to the source.
 
@@ -396,9 +773,10 @@ In this example, after conversion, the above code will become this:
 this.realConsoleLog("LogToFile is not supported in this environment. ")
 ```
 
-<br><br>
+<br>
 
 ---
+
 
 ### Directives to ignore code during the parsing, so it won't be converted by mistake.
 
@@ -408,20 +786,58 @@ console.log("Skip this");
 /** to-esm-all: end-skip **/
 ```
 
+
 <br><br>
 
 ---
 
-## Troubleshooting
+<span style="font-size:40px;">💡</span>
+
+## Working with both CJS and ESM
+
+You may want to work with both CommonJs and ESM together. So, you benefit from both world.
+
+The CommonJs approach is a dynamic one. You can do things like:
+
+```javascript
+if (a)
+{
+    // load module a
+    require(a);
+}
+else
+{
+    // load module b
+    require(b)
+}
+```
+
+With ESM and its static approach, loading both modules is necessary.
+```javascript
+    // load module a
+    import "a";
+    // load module b
+    import "b";
+```
 
 
-
-### 😓 Uncaught SyntaxError: The requested module '***' does not provide an export named '...'
-
+JavaScript being a dynamic language, the usage of Cjs still does make sense.
 
 
-### Quick Fix => Use named exports
+<br/><br/><br/>
 
+---
+
+<br/><br/>
+
+## 💡
+
+## Write code for CommonJs and ES Modules
+
+
+### Use named exports
+
+For having best compatibility between the two systems, prefer using named exports.
 
 
 Replace structure like:
@@ -429,7 +845,9 @@ Replace structure like:
 ```javascript
 
 module.exports = {
-    COLOR_TABLE: ["#FFA07A", "#FF7F50", "#FF6347"]
+    TABLE1: ...,
+    TABLE2: ...,
+    otherKey: ...
 }
 ```
 
@@ -437,71 +855,384 @@ with:
 
 ```javascript
 
-module.exports.COLOR_TABLE = ["#FFA07A", "#FF7F50", "#FF6347"];
+module.exports.TABLE1 = ...;
+module.exports.TABLE2 = ...;
+module.exports.otherKey = ...;
 ```
 
+Or, providing a default export too:
+
+```javascript
+// Default export
+module.exports = {
+    TABLE1, TABLE2, ...
+}
+
+// Named export
+module.exports.TABLE1 = ...;
+module.exports.TABLE2 = ...;
+module.exports.otherKey = ...;
+```
+
+
+
+<br><br>
+
+<span style="font-size:40px;">💡</span>
+
+## Create a Hybrid Library with to.esm
+
 <br><br>
 
 
+### 1- Use the .cjs extensions instead of .js
 
-<br><br><br><br>
-
-
-
-<br><br><br><br>
-## Create a Hybrid Library
-
-
-
-<br><br>
-
-
-
-### 1- Have all of your CommonJs code in a subdirectories
-
-
-
-![img.png](https://github.com/thimpat/to-esm/blob/main/docs/images/img.png)
-
-
-
-Here we put all of our existing code within the cjs directory.
-
+```
+📁project  
+└─── 📝 index.cjs                ⬅ 🚩
+└─── 📝 package.json
+└─── 📁example
+│    │
+│    └───📁code
+│        └───   📝 library.cjs   ⇽ 🚩
+│               ...
+│
+└─── 📁 node_modules
+│    └── ...
+         
+```
 
 
 <br/>
 
 
 
-### 2- Change CommonJs file extensions to .cjs
-
-
-
-Refactor the files that use CommonJs modules to have the new .cjs extensions.
-
-
-
-<br/>
-
-
-
-### 3- Run the to-esm command
-
-
-
-Generate the ESM code into the targeted directory.
-
-
+### 2- Run to-esm against the entrypoint
 
 ```shell
+to-esm --entrypoint index.cjs --update-all
+```
 
-to-esm.cmd --input="src/cjs/**/*.?(c)js" --output=src/esm/
+> 🚫
+_The option --update-all will modify your package.json to make it point to your entrypoint._
+> ```javascript
+> // Will point to .index.cjs
+> require("your-module-name")
+>  
+> // Will point to .index.mjs
+> import("your-module-name") 
+> ```
+
+---
+
+
+###### Click on the arrow to expand or collapse
+<details><summary><strong>⏳ Before...</strong></summary>
+
+📝 ./package.json ↴
+```json
+{
+  "name": "my-project",
+  "main": "./index.cjs",
+  "scripts": {
+    "build": "to-esm --entrypoint index.cjs"
+  },
+  "devDependencies": {
+    "to-esm": "file:.."
+  }
+}
+```
+
+📝 ./index.cjs ↴
+```javascript
+const hi = require("./example/code/library.cjs");
+hi();
+```
+
+📝 ././example/code/library.cjs ↴
+```javascript
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+module.exports = hi;
+```
+
+</details>
+
+---
+
+<details><summary><strong>⌛ After...</strong></summary>
+
+📝 ./package.json ↴
+```json
+{
+  "name": "my-project",
+  "main": "./index.cjs",
+  "scripts": {
+    "build": "to-esm --entrypoint index.cjs"
+  },
+  "devDependencies": {
+    "to-esm": "file:.."
+  },
+  "module": "./index.mjs",        ⬅ 🚩
+  "type": "module",               ⬅ 🚩 // (Change to commonjs if you don't want to use .cjs extension)
+  "exports": {
+    ".": {
+      "require": "./index.cjs",   ⬅ 🚩
+      "import": "./index.mjs"     ⬅ 🚩
+    }
+  }
+}
 
 ```
 
 
+📝 ./index.mjs ↴
+```javascript
+/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of
+ * [./index.cjs]{@link ./index.cjs}
+ *
+ **/
+import hi  from "./example/code/library.mjs";
+hi();
+```
+
+📝 ././example/code/library.mjs ↴
+```javascript
+/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of
+ * [./example/code/library.cjs]{@link ./example/code/library.cjs}
+ *
+ **/
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+export default hi;
+```
+
+</details>
 
 <br/>
+
+
+
+### 3- Your code is generated.
+
+To test it in NodeJs
+
+```shell
+node index.mjs
+```
+
+
+
+
+<br/><br/>
+
+
+---
+
+<span style="font-size:40px;">💡</span>
+
+## Create a Hybrid Library with to.esm supporting the browser
+
+
+<br><br>
+
+
+
+
+### 1- Use .cjs extensions instead of .js
+
+```
+📁project  
+└─── 📝 index.cjs                ⬅ 🚩
+└─── 📝 package.json
+└─── 📁example
+│    │
+│    └───📁code
+│        └───   📝 library.cjs   ⇽ 🚩
+│               ...
+│
+└─── 📁 node_modules
+│    └── ...
+         
+```
+
+
+<br/>
+
+
+
+### 2- Run to-esm against the entrypoint
+
+```shell
+$> to-esm --entrypoint index.cjs --output ./generated --update-all --target browser --bundle index.min.cjs
+```
+
+> 🚫
+_If you are not targeting the browser, ignore --target and --bundle options_
+> ```shell
+> $> to-esm --entrypoint index.cjs --update-all
+> ```
+
+---
+
+
+
+###### Click on the arrow to expand or collapse
+<details><summary><strong>⏳ Before...</strong></summary>
+
+📝 ./package.json ↴
+```json
+{
+  "name": "my-project",
+  "main": "./index.cjs",
+  "scripts": {
+    "build": "to-esm --entrypoint index.cjs"
+  },
+  "devDependencies": {
+    "to-esm": "file:.."
+  }
+}
+```
+
+📝 ./index.cjs ↴
+```javascript
+const hi = require("./example/code/library.cjs");
+hi();
+```
+
+📝 ././example/code/library.cjs ↴
+```javascript
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+module.exports = hi;
+```
+
+</details>
+
+---
+
+<details><summary><strong>⌛ After...</strong></summary>
+
+📝 **./package.json** ↴ _(Updated because of the --update-all option)_
+```json
+{
+  "name": "my-project",
+  "main": "./index.cjs",
+  "scripts": {
+    "build": "to-esm --entrypoint index.cjs"
+  },
+  "devDependencies": {
+    "to-esm": "file:.."
+  },
+  "module": "./index.mjs",
+  "type": "module",
+  "exports": {
+    ".": {
+      "require": "./index.cjs",   // ⬅ 
+      "import": "./index.mjs"     // ⬅ 
+    }
+  }
+}
+
+```
+
+
+📝 ./index.mjs ↴
+```javascript
+/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of
+ * [./index.cjs]{@link ./index.cjs}
+ *
+ **/
+import hi  from "./example/code/library.mjs";
+hi();
+```
+
+📝 ././example/code/library.mjs ↴
+```javascript
+/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of
+ * [./example/code/library.cjs]{@link ./example/code/library.cjs}
+ *
+ **/
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+export default hi;
+```
+
+📝 **./dist/index.min.js** ↴ (Generated because of the --bundle option)
+```javascript
+const c={"95c93":{}};c["95c93"].default=function(){console.log("I wanted to say hi!")};{c.bbc7e={};let b=c["95c93"].default;b()}
+```
+
+
+</details>
+
+---
+
+<br/>
+
+
+
+### 3- Your code is generated.
+
+```
+📁project  
+└─── 📝 index.cjs                
+└─── 📝 package.json
+└─── 📁generated                 
+│    │
+│    └─── 📝 index.mjs          ⬅ 🚩
+│    │     
+│    └─── 📝 ...
+│
+└─── 📁 dist         
+│    └── index.min.js           ⬅ 🚩
+         
+```
+
+##### Insert the standard JavaScript version
+
+```html
+...
+<body>
+<script type="module" src="generated/index.mjs"></script>      ⬅ 🚩    
+</body>
+...
+```
+
+##### or the bundled version into your HTML
+
+```html
+...
+<body>
+<script type="module" src="dist/index.min.mjs"></script>      ⬅ 🚩    
+</body>
+...
+```
+
+
+
+<br/><br/>
+
 
 
 
@@ -510,35 +1241,15 @@ to-esm.cmd --input="src/cjs/**/*.?(c)js" --output=src/esm/
 ###### ⭐ Overview ↴
 
 
+---
 
-![](https://github.com/thimpat/to-esm/blob/main/docs/images/convert-to-esm-1.gif)
+###💊🔥🧨🔥💊💥
 
-
-
-### 4- Update your package.json to point to the correct target based on the environment
-
-
-
-```JSON
-
-{
-  "name": "my-project",
-  "version": "1.0.0",
-  "description": "",
-  "main": "src/cjs/add.cjs",             ← 
-  "module": "src/ejs/add.mjs",           ←  
-  "type": "module",                      ←   
-  "scripts": {
-    "gen:esm": "toesm.cmd --input=\"src/cjs/demo.cjs\" --output=src/esm/"
-  },
-  "exports": {
-    ".":{
-      "require": "./src/cjs/add.cjs",    ← 
-      "import": "./src/esm/add.mjs"      ← 
-    }
-  },
-  "author": "",
-  "license": "ISC"
-}
-```
+> **Benefits:**
+>
+> - You do not need a sourcemap when working in development
+> - You do not need to bundle your code in development
+> - You benefit directly from your **browser caching ability** (No more bundling of common libraries)
+> - The generated code looks like the original code.
+> - ...
 

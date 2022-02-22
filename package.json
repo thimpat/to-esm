@@ -9,11 +9,13 @@
     "to-esm": "index.js"
   },
   "scripts": {
+    "docs": "markdown-include markdown.json",
     "demo1": "node src/converter.cjs example/cjs/demo-1.cjs --output=example/esm/",
     "demo2": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "node src/converter.cjs --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
+    "demo3": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
     "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo5": "node src/converter.cjs --input=\"example/cjs/demo-directives.cjs\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
+    "demo-docs": "node src/converter.cjs --input=example/plus/simple.js --output=./here",
     "demo": "npm run demo3 && npm run demo4",
     "lint": "eslint.cmd \"src/**/*.{cjs,js}\"",
     "test": "nyc mocha --sort"
@@ -39,6 +41,7 @@
     "find-entry-point": "^1.0.0",
     "glob": "^7.2.0",
     "js-beautify": "^1.14.0",
+    "markdown-include": "^0.4.3",
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
     "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
