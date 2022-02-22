@@ -298,7 +298,7 @@ const convertToSubRootDir = (wholePath) =>
 };
 
 /**
- * Remove part of path by substracting a given directory from a whole path
+ * Remove part of path by subtracting a given directory from a whole path
  * @param wholePath File Path
  * @param pathToSubtract Subdirectory to remove from path
  * @returns {*}
@@ -641,7 +641,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
         const {source, outputDir} = list[index];
         const basename = path.parse(source).name;
 
-        // Absolute path in the require
+        // Absolute path in the "require"
         const destinationPath = path.resolve(outputDir);
 
         let relativePath = path.relative(sourcePath, destinationPath);
@@ -808,7 +808,6 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             }
         }
 
-        const EOL = require("os").EOL;
         converted = importList.reverse().join(EOL) + converted;
     }
     catch (e)
@@ -1159,7 +1158,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 
 const hasImportmap = (content) =>
 {
-    const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
+    const regex = /<script.+importmap.+>([\s\S]+?)<\/script>/gm;
     let match;
     match = regex.exec(content);
     return match && match.length;
@@ -1169,7 +1168,7 @@ const getImportMapFromPage = (fullHtmlPath) =>
 {
     let content = fs.readFileSync(fullHtmlPath, "utf-8");
 
-    const regex = /\<script.+importmap.+\>([\s\S]+?)\<\/script>/gm;
+    const regex = /<script.+importmap.+>([\s\S]+?)<\/script>/gm;
 
     let match;
     match = regex.exec(content);
@@ -1256,7 +1255,7 @@ const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
 
     if (hasImportmap(content))
     {
-        content = content.replace(/(\<script.+importmap.+\>)([\s\S]+?)(\<\/script>)/gm, `$1${scriptMap}$3`);
+        content = content.replace(/(<script.+importmap.+>)([\s\S]+?)(<\/script>)/gm, `$1${scriptMap}$3`);
     }
     else
     {
@@ -1264,8 +1263,7 @@ const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
     ${scriptMap}
 </script>
 `;
-        const EOL = require("os").EOL;
-        content = content.replace(/(\<head.*?\>)/gm, `$1${EOL}${ins}`);
+        content = content.replace(/(<head.*?>)/gm, `$1${EOL}${ins}`);
     }
 
     fs.writeFileSync(fullHtmlPath, content, "utf-8");
@@ -1650,12 +1648,7 @@ const isCjsCompatible = (filepath, content = "") =>
         return true;
     }
 
-    if (/\bexport\b\s+/gm.test(content))
-    {
-        return false;
-    }
-
-    return true;
+    return !/\bexport\b\s+/gm.test(content);
 };
 
 const findEntry = (source, propertyName = "source") =>
@@ -1687,7 +1680,7 @@ const findEntry = (source, propertyName = "source") =>
  * @param referrer
  * @param entryPoint
  * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source:
- *     string, subPath: *, target: string}}
+ *     string, subPath: *, target: string}|{boolean}}
  */
 const addFileToConvertingList = ({
                                      source,
@@ -2429,7 +2422,6 @@ const convert = async (rawCliOptions = {}) =>
 
 };
 
-module.exports.COMMENT_MASK = COMMENT_MASK;
 module.exports.buildTargetDir = buildTargetDir;
 module.exports.convertNonTrivial = convertNonTrivial;
 module.exports.reviewEsmImports = reviewEsmImports;
