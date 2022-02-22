@@ -8,6 +8,7 @@ const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace} = require("before-replace");
 const {stripComments, clearStrings} = require("strip-comments-strings");
 const beautify = require("js-beautify").js;
+const {Readable} = require("stream");
 
 const {findPackageEntryPoint} = require("find-entry-point");
 
@@ -1991,6 +1992,64 @@ const mergeCode = (codes) =>
     return newCode;
 };
 
+const minify = (cjsList, bundlePath) =>
+{
+    const code = {};
+    let codes = [];
+    return new Promise(function (resolve, reject)
+    {
+        try
+        {
+            const minifyDir = path.parse(bundlePath).dir;
+            buildTargetDir(minifyDir);
+
+            const writeStream = fs.createWriteStream(bundlePath);
+
+            cjsList.forEach(function (entry)
+            {
+                code[entry.target] = entry.converted;
+                codes.push({
+                    entry,
+                    content: entry.converted
+                });
+
+            });
+
+            let newCode = mergeCode(codes);
+
+            newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
+
+            const options = {toplevel: true, mangle: false, compress: true, warnings: true};
+            const result = UglifyJS.minify(newCode, options);
+            newCode = normaliseString(result.code);
+
+            const readable = Readable.from([newCode]);
+            writeStream.on("finish", ()=>
+            {
+                resolve(true);
+            });
+
+            writeStream.on("error", ()=>
+            {
+                console.error(`${toEsmPackageJson.name}: (1383) Fail to bundle. Write error.`);
+                resolve(false);
+            });
+
+            readable.on("error", (e)=>{
+                console.error(`${toEsmPackageJson.name}: (1385) Fail to bundle. Read error.`);
+                reject(e);
+            });
+
+            readable.pipe(writeStream);
+        }
+        catch (e)
+        {
+            console.error(`${toEsmPackageJson.name}: (1387) Fail to bundle.`);
+            reject(e);
+        }
+    });
+};
+
 
 /**
  * Bundle generated ESM code into o minified bundle
@@ -1998,41 +2057,14 @@ const mergeCode = (codes) =>
  * @param target
  * @param bundlePath
  */
-const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
+const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 {
-    const {Readable} = require("stream");
-    const code = {};
-    let codes = [];
 
     reorderImportListByWeight(cjsList);
 
     if (target === TARGET.BROWSER || target === TARGET.ALL)
     {
-        const minifyDir = path.parse(bundlePath).dir;
-        buildTargetDir(minifyDir);
-
-        const writeStream = fs.createWriteStream(bundlePath);
-
-        cjsList.forEach(function (entry)
-        {
-            code[entry.target] = entry.converted;
-            codes.push({
-                entry,
-                content: entry.converted
-            });
-
-        });
-
-        let newCode = mergeCode(codes);
-
-        newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
-
-        const options = {toplevel: true, mangle: false, compress: true, warnings: true};
-        const result = UglifyJS.minify(newCode, options);
-        newCode = normaliseString(result.code);
-
-        const readable = Readable.from([newCode]);
-        readable.pipe(writeStream);
+        await minify(cjsList, bundlePath);
 
         console.log(`${toEsmPackageJson.name}: (1312) `);
         console.log(`${toEsmPackageJson.name}: (1314) ================================================================`);
@@ -2365,7 +2397,7 @@ const convert = async (rawCliOptions = {}) =>
 
     if (cliOptions.bundle)
     {
-        bundleResult(cjsList, {target: cliOptions.target, bundlePath: cliOptions.bundle});
+        await bundleResult(cjsList, {target: cliOptions.target, bundlePath: cliOptions.bundle});
     }
 
     if (cliOptions["update-all"])
