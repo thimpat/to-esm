@@ -16,6 +16,8 @@ const extractComments = require("extract-comments");
 const espree = require("espree");
 const estraverse = require("estraverse");
 
+const UglifyJS = require("uglify-js");
+
 const toEsmPackageJson = require("../package.json");
 
 const TARGET = {
@@ -1893,7 +1895,7 @@ const reorderImportListByWeight = (cjsList) =>
 
 const concatFiles = (files, dest) =>
 {
-    var writeStream = fs.createWriteStream(dest);
+    const writeStream = fs.createWriteStream(dest);
 
     const n = files.length;
     for (let i = 0; i < n; ++i)
@@ -2009,7 +2011,7 @@ const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
         const minifyDir = path.parse(bundlePath).dir;
         buildTargetDir(minifyDir);
 
-        var writeStream = fs.createWriteStream(bundlePath);
+        const writeStream = fs.createWriteStream(bundlePath);
 
         cjsList.forEach(function (entry)
         {
@@ -2024,6 +2026,10 @@ const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
         let newCode = mergeCode(codes);
 
         newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
+
+        const options = {toplevel: true, mangle: false, compress: true, warnings: true};
+        const result = UglifyJS.minify(newCode, options);
+        newCode = normaliseString(result.code);
 
         const readable = Readable.from([newCode]);
         readable.pipe(writeStream);
