@@ -205,6 +205,7 @@ const calculateRelativePath = (source, requiredPath) =>
 /**
  * Third Party Module path starting with ./node_modules/ + relative path to the entry point
  * @param moduleName
+ * @param targetDir
  * @returns {string|null}
  */
 const getModuleEntryPointPath = (moduleName, targetDir = "") =>
@@ -216,6 +217,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "") =>
         entryPoint = normalisePath(entryPoint);
 
         const nodeModulesPos = entryPoint.indexOf("node_modules");
+        /* istanbul ignore next */
         if (nodeModulesPos === -1)
         {
             console.error(`${toEsmPackageJson.name}: (1381) The mode [${moduleName}] is located in a non-node_modules directory.`);
@@ -614,6 +616,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
         }
         else if (![".js", ".cjs"].includes(extension))
         {
+            /* istanbul ignore next */
             return match;
         }
         else
@@ -1148,6 +1151,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error(`${toEsmPackageJson.name}: (1011)`, e.message);
     }
 };
@@ -1182,6 +1186,7 @@ const getImportMapFromPage = (fullHtmlPath) =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error(`${toEsmPackageJson.name}: (1231)`, e.message);
     }
 
@@ -1212,6 +1217,7 @@ const rewriteImportMapPaths = (newMaps, htmlPath) =>
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.error(`${toEsmPackageJson.name}: (1205)`, e.message);
         }
     }
@@ -1363,6 +1369,7 @@ const convertToESMWithRegex = (converted, list, {
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error(`${toEsmPackageJson.name}: (1012)`, e.message);
     }
     return converted;
@@ -1379,6 +1386,7 @@ const getOptionsConfigFile = async (configPath) =>
 
         if ([".js", ".cjs"].includes(extension))
         {
+            /* istanbul ignore next */
             confFileOptions = require(configPath);
         }
         else if ([".mjs"].includes(extension))
@@ -1395,8 +1403,8 @@ const getOptionsConfigFile = async (configPath) =>
             }
             catch (e)
             {
-                console.error(`${toEsmPackageJson.name}: (1013)`, e.message);
-                console.info("Skipping config file options");
+                /* istanbul ignore next */
+                console.error(`${toEsmPackageJson.name}: (1013) Skipping config file options`, e.message);
             }
         }
     }
@@ -1454,7 +1462,6 @@ const getLibraryInfo = (modulePackname) =>
 };
 
 /* istanbul ignore next */
-
 /**
  * Install npm packages on the users project.
  * Ignore for the tests as it requires some End to End testing.
@@ -1496,6 +1503,7 @@ const installPackage =
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
         console.info(`${packageJson.name}: (1144) ✔ Success`);
     };
+
 /**
  * When defined in the config file, install a specific module version for commonjs
  * and a specific module version for ESM.
@@ -1617,6 +1625,7 @@ const parseEsm = (filepath, content, {
 /**
  * Check whether a file is CommonJs
  * @param filepath
+ * @param content
  * @returns {boolean}
  */
 const isCjsCompatible = (filepath, content = "") =>
@@ -1675,6 +1684,8 @@ const findEntry = (source, propertyName = "source") =>
  * @param outputDir
  * @param workingDir
  * @param notOnDisk
+ * @param referrer
+ * @param entryPoint
  * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source:
  *     string, subPath: *, target: string}}
  */
@@ -1738,6 +1749,7 @@ const getIndent = async (str) =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error(`${toEsmPackageJson.name}: (1301)`, e.message);
     }
     return 2;
@@ -1894,18 +1906,6 @@ const reorderImportListByWeight = (cjsList) =>
     });
 };
 
-const concatFiles = (files, dest) =>
-{
-    const writeStream = fs.createWriteStream(dest);
-
-    const n = files.length;
-    for (let i = 0; i < n; ++i)
-    {
-        let file = files[i];
-        fs.readFileSync(file).pipe(writeStream);
-    }
-};
-
 const buildExport = ({exported, id}) =>
 {
     let str = "";
@@ -1979,9 +1979,6 @@ const mergeCode = (codes) =>
                 found = found + ";";
             }
 
-            // console.log(match[1]);
-            // console.log(entry);
-            // console.log(found, match, index);
             return found;
         });
 
@@ -2029,13 +2026,17 @@ const minify = (cjsList, bundlePath) =>
                 resolve(true);
             });
 
+            /* istanbul ignore next */
             writeStream.on("error", ()=>
             {
+                /* istanbul ignore next */
                 console.error(`${toEsmPackageJson.name}: (1383) Fail to bundle. Write error.`);
                 resolve(false);
             });
 
+            /* istanbul ignore next */
             readable.on("error", (e)=>{
+                /* istanbul ignore next */
                 console.error(`${toEsmPackageJson.name}: (1385) Fail to bundle. Read error.`);
                 reject(e);
             });
@@ -2044,6 +2045,7 @@ const minify = (cjsList, bundlePath) =>
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.error(`${toEsmPackageJson.name}: (1387) Fail to bundle.`);
             reject(e);
         }
@@ -2232,6 +2234,7 @@ const convertCjsFiles = (list, {
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.error(`${toEsmPackageJson.name}: (1011)`, e.message);
             if (!withreport)
             {
