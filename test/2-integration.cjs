@@ -1,10 +1,5 @@
 const chai = require("chai");
 const expect = chai.expect;
-const chaiString = require("chai-string");
-const EOL = require("os").EOL;
-const sinon = require("sinon");
-
-chai.use(chaiString);
 
 const fs = require("fs");
 const path = require("path");
@@ -504,7 +499,9 @@ describe("The converter tool", function ()
                 }
                 fs.copyFileSync(path.join(rootDir, "given", "package-2.json"), packageJsonPath);
 
+                console.log(process.cwd());
                 process.chdir("./test/assets");
+                console.log(process.cwd());
                 const input = "./given/demo-test-14.cjs";
                 const options = {
                     input,
@@ -553,15 +550,16 @@ describe("The converter tool", function ()
 
         it("should bundle input files", async function ()
             {
-                const input = "./test/assets/given/demo-test-14.cjs";
+                process.chdir("./test/assets");
+                const input = "./given/demo-test-14.cjs";
                 const options = {
                     input,
-                    "output"  :  "./actual",
-                    "noheader": false,
-                    "target"  : "all",
+                    "output"    : "./actual",
+                    "noheader"  : false,
+                    "target"    : "all",
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true,
-                    bundle: "./test/assets/actual/demo-test.min.mjs"
+                    bundle      : "./actual/demo-test.min.mjs"
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test.min.mjs"), "utf8");
