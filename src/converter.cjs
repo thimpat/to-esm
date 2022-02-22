@@ -6,15 +6,15 @@ const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace} = require("before-replace");
-const {stripComments, stripStrings, clearStrings} = require("strip-comments-strings");
+const {stripComments, clearStrings} = require("strip-comments-strings");
 const beautify = require("js-beautify").js;
+
+const {findPackageEntryPoint} = require("find-entry-point");
 
 const extractComments = require("extract-comments");
 
 const espree = require("espree");
 const estraverse = require("estraverse");
-
-const UglifyJS = require("uglify-js");
 
 const toEsmPackageJson = require("../package.json");
 
@@ -204,26 +204,27 @@ const calculateRelativePath = (source, requiredPath) =>
  * @param moduleName
  * @returns {string|null}
  */
-const getModuleEntryPointPath = (moduleName) =>
+const getModuleEntryPointPath = (moduleName, targetDir = "") =>
 {
     try
     {
-        let entryPoint = require.resolve(moduleName);
-        if (!entryPoint)
-        {
-            return null;
-        }
-
+        let entryPoint;
+        entryPoint = findPackageEntryPoint(moduleName, targetDir);
         entryPoint = normalisePath(entryPoint);
 
         const nodeModulesPos = entryPoint.indexOf("node_modules");
+        if (nodeModulesPos === -1)
+        {
+            console.error(`${toEsmPackageJson.name}: (1381) The mode [${moduleName}] is located in a non-node_modules directory.`);
+        }
+
         entryPoint = "./" + entryPoint.substring(nodeModulesPos);
 
         return entryPoint;
     }
     catch (e)
     {
-        console.info(`${toEsmPackageJson.name}: (1140) Checking [${moduleName}] package.json`);
+        console.info(`${toEsmPackageJson.name}: (1140) Checking [${moduleName}] package.json`, e.message);
     }
 
     return null;
@@ -497,8 +498,7 @@ const reviewEsmImports = (text, list, {
                     moduleName = nonHybridModuleMap[moduleName];
                 }
 
-                let requiredPath = getModuleEntryPointPath(moduleName);
-
+                let requiredPath = getModuleEntryPointPath( moduleName, workingDir );
                 if (!requiredPath)
                 {
                     console.warn(`${toEsmPackageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
@@ -1626,16 +1626,21 @@ const isCjsCompatible = (filepath, content = "") =>
 
     content = content || fs.readFileSync(filepath, "utf-8");
     content = stripComments(content);
-    content = stripStrings(content, "", {includeDelimiter: false});
+    content = clearStrings(content);
 
-    if (content.indexOf("import") > -1 || content.indexOf("from") > -1 || content.indexOf("export ") > -1)
+    if (/\bimport\b[\s\S]*?\bfrom\b/gm.test(content) || /\bexport\b\s+\bdefault\b/gm.test(content))
     {
         return false;
     }
 
-    if (content.indexOf("require") > -1 || content.indexOf("exports") > -1)
+    if (/\brequire\b\s*\(/gm.test(content) || /(?:module\.)?\bexports\b\.?/gm.test(content))
     {
         return true;
+    }
+
+    if (/\bexport\b\s+/gm.test(content))
+    {
+        return false;
     }
 
     return true;
@@ -1927,7 +1932,6 @@ const mergeCode = (codes) =>
     for (let i = 0; i < n; ++i)
     {
         let {content, entry} = codes[i];
-
         const exportTable = buildExport(entry);
 
         content = normaliseString(content);
@@ -1951,7 +1955,7 @@ const mergeCode = (codes) =>
     ${EOL}${EOL}${EOL}    
         `;
 
-        content = content.replace(/export\s+const/gm, "const");
+        content = content.replace(/export\s+(const|let|var|function)/gm, "$1");
         content = content.replace(/export\s+default/gm, `ESM["${entry.id}"].default = `);
 
         content = beforeReplace(/import.*?from\s*(["']([^"']+)["'])/gi, content, function (found, wholeText, index, match)
@@ -2023,12 +2027,6 @@ const bundleResult = (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 
         const readable = Readable.from([newCode]);
         readable.pipe(writeStream);
-
-        // const options = {toplevel: true, mangle: false, compress: false, warnings: true};
-        // const result = UglifyJS.minify(code, options);
-        // result.code = normaliseString(result.code);
-        //
-        // fs.writeFileSync(bundlePath, result.code, "utf-8");
 
         console.log(`${toEsmPackageJson.name}: (1312) `);
         console.log(`${toEsmPackageJson.name}: (1314) ================================================================`);
