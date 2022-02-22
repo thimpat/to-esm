@@ -211,7 +211,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "") =>
     try
     {
         let entryPoint;
-        entryPoint = findPackageEntryPoint(moduleName, targetDir);
+        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs: false});
         entryPoint = normalisePath(entryPoint);
 
         const nodeModulesPos = entryPoint.indexOf("node_modules");
