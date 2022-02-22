@@ -9,9 +9,9 @@
     "to-esm": "index.js"
   },
   "scripts": {
-    "demo1": "to-esm --input=\"example/cjs/*.cjs\" --output=example/esm/",
-    "demo2": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "node src/converter.cjs  --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
+    "demo1": "node src/converter.cjs example/cjs/demo-1.cjs --output=example/esm/",
+    "demo2": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
+    "demo3": "node src/converter.cjs --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
     "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo5": "node src/converter.cjs --input=\"example/cjs/demo-directives.cjs\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo": "npm run demo3 && npm run demo4",
@@ -36,11 +36,13 @@
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",
     "extract-comments": "^1.1.0",
+    "find-entry-point": "^1.0.0",
     "glob": "^7.2.0",
+    "js-beautify": "^1.14.0",
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
     "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
-    "strip-comments-strings": "^1.0.6",
+    "strip-comments-strings": "^1.1.4",
     "uglify-js": "^3.15.1"
   },
   "devDependencies": {
@@ -59,6 +61,7 @@
     "mocha": "^9.2.0",
     "nyc": "^15.1.0",
     "semantic-release": "^19.0.2",
+    "shelljs": "^0.8.5",
     "sinon": "^13.0.1"
   }
 }

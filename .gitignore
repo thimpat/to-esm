@@ -77,3 +77,5 @@ dist
 /test/virtual/actual/
 /test/assets/actual/
 test/assets/package.json
+/test/sandbox/generated/
+/test/sandbox/node_modules/

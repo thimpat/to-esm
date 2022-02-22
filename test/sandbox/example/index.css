@@ -1,0 +1,83 @@
+.analogger {
+  background-color: #462210;
+  border: 4px solid #16122a;
+  box-shadow: 3px 4px 9px 0px rgba(0, 0, 0, 0.75);
+  height: 320px;
+  overflow: hidden;
+  margin: 1rem;
+  padding: 13px 0 0 0;
+  width: 80%;
+  max-height: 300px;
+}
+.analogger .analogger-view {
+  background-color: #0c0c0c;
+  box-sizing: border-box;
+  color: antiquewhite;
+  display: block;
+  font-family: sans-serif;
+  font-size: 12px;
+  line-height: 30px;
+  height: calc(100% - 20px);
+  margin: 20px 0 0 0;
+  padding: 12px;
+  overflow: auto;
+  position: relative;
+  width: 100%;
+}
+.analogger .analogger-view .to-esm-line {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.analogger .analogger-view .to-esm-line .analogger-col {
+  display: inline-block;
+  overflow: hidden;
+  padding: 0 4px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.analogger .analogger-view .to-esm-line .analogger-col:nth-child(1) {
+  width: 60px;
+}
+.analogger .analogger-view .to-esm-line .analogger-col:nth-child(2) {
+  width: 40px;
+}
+.analogger .analogger-view .to-esm-line .analogger-col:nth-child(3) {
+  width: 20px;
+}
+.analogger .analogger-view .to-esm-line .analogger-col:nth-child(4) {
+  width: 16px;
+}
+.analogger .analogger-view .to-esm-line .analogger-col:nth-child(5) {
+  width: 60px;
+}
+.analogger .analogger-view .to-esm-line .analogger-col:nth-child(6) {
+  width: 70px;
+}
+.analogger .analogger-view .to-esm-line .analogger-col:nth-child(7) {
+  width: auto;
+}
+.analogger .analogger-view .to-esm-line .analogger-col-text {
+  min-width: 200px;
+}
+.analogger .analogger-view::-webkit-scrollbar-thumb {
+  border: 5px solid transparent;
+  border-radius: 100px;
+  background-color: #514b6e;
+  background-clip: content-box;
+}
+.analogger .analogger-view::-webkit-scrollbar {
+  width: 20px;
+}
+.analogger .analogger-view::-webkit-scrollbar-track {
+  background-color: #382525;
+  border-radius: 100px;
+}
+.analogger .analogger-view::-webkit-scrollbar-thumb {
+  border-radius: 100px;
+  border: 4px solid transparent;
+  background-clip: content-box;
+  background-color: #9f6c53;
+}
+
+/*# sourceMappingURL=index.css.map */
