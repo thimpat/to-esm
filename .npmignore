@@ -80,3 +80,4 @@ bump.js
 .eslintrc.cjs
 build-docs/
 markdown.json
+README-OLD.md
