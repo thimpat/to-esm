@@ -2009,7 +2009,7 @@ const minify = (cjsList, bundlePath) =>
 
             newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
 
-            const options = {toplevel: true, mangle: false, compress: true, warnings: true};
+            const options = {toplevel: true, mangle: true, compress: true, warnings: true};
             const result = UglifyJS.minify(newCode, options);
             newCode = normaliseString(result.code);
 
