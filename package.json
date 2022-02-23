@@ -18,7 +18,8 @@
     "demo-docs": "node src/converter.cjs --input=example/plus/simple.js --output=./here",
     "demo": "npm run demo3 && npm run demo4",
     "lint": "eslint.cmd \"src/**/*.{cjs,js}\"",
-    "test": "nyc mocha --sort"
+    "test": "nyc mocha --sort",
+    "test2": "nyc --reporter=lcov --reporter=text-summary mocha --sort"
   },
   "author": "Patrice Thimothee",
   "homepage": "https://github.com/thimpat/to-esm/blob/main/README.md",
