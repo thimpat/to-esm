@@ -2039,8 +2039,7 @@ const minify = (cjsList, bundlePath) =>
         catch (e)
         {
             /* istanbul ignore next */
-            console.error(`${toEsmPackageJson.name}: (1387) Fail to bundle.`);
-            reject(e);
+            reject(`${toEsmPackageJson.name}: (1387) Fail to bundle.`);
         }
     });
 };

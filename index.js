@@ -9,6 +9,7 @@ const {convert} = require("./src/converter.cjs");
     await convert(cliOptions);
 })().catch(err =>
 {
+    /* istanbul ignore next */
     console.error(`${packageJson.name}: (1016)`, err);
 });
 
