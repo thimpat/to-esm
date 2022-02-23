@@ -13,6 +13,10 @@
   1. [Options (via command line)](#options-(via-command-line))
   1. [Advanced Options (via config file)](#advanced-options-(via-config-file))
   1. [Directives](#directives)
+  1. [Working with both CJS and ESM](#working-with-both-cjs-and-esm)
+  1. [Create a Hybrid Library with to.esm](#create-a-hybrid-library-with-to-esm)
+  1. [Create a Hybrid Library with to.esm supporting the browser](#create-a-hybrid-library-with-to-esm-supporting-the-browser)
+    1. [Some thoughts](#some-thoughts)
 
 
 
@@ -161,8 +165,8 @@ import hi  from "./example/code/library.mjs";
 hi();
 ```
 
-The file given as entrypoint will be converted inside the working
-directory. The others, will depend on the source location.
+to-esm will convert the entry point inside the working
+directory. The others will depend on the source location.
 
 </details>
 
@@ -352,7 +356,7 @@ The browser will automatically load the other files.
 
 > **demo.mjs** is the entrypoint.
 
-All of the connected files are automatically loaded by the browser.
+All of the related files are automatically loaded by the browser.
 <br/>
 
 </details>
@@ -396,7 +400,7 @@ const {COLOR_TABLE, SYSTEM} = require("./some-lib.js");
                          
 ```
 
-The two libraries used will be easily accessible by the system, and ease the bundling in production.
+The two libraries used will be easily accessible by the system and ease the bundling in production.
 See the importmap section to have a more modular approach.
 
 
@@ -491,7 +495,7 @@ importmap allows some more elaborated setups where third party caching will be e
 
 #### Convert files with patterns
 
-You can have multiple files converted in one go. It can be helpful if some files are not connected to each other.
+You can have multiple files converted in one go. It can be helpful if some files are not connected.
 
 ```shell
 
@@ -723,9 +727,7 @@ import {add} from "my-project"
 
 ---
 
-
-## 💉
-
+<span style="font-size:40px;">💉</span>
 
 ## Directives
 
@@ -778,7 +780,7 @@ this.realConsoleLog("LogToFile is not supported in this environment. ")
 ---
 
 
-### Directives to ignore code during the parsing, so it won't be converted by mistake.
+### Directives to ignore code during the parsing so it won't be converted by mistake.
 
 ```javascript
 /** to-esm-all: skip **/
@@ -795,9 +797,9 @@ console.log("Skip this");
 
 ## Working with both CJS and ESM
 
-You may want to work with both CommonJs and ESM together. So, you benefit from both world.
+You may want to work with both CommonJs and ESM together. So, you benefit from both worlds.
 
-The CommonJs approach is a dynamic one. You can do things like:
+The CommonJs approach is a dynamic one. So, for example, you can do things like:
 
 ```javascript
 if (a)
@@ -820,24 +822,20 @@ With ESM and its static approach, loading both modules is necessary.
     import "b";
 ```
 
-
-JavaScript being a dynamic language, the usage of Cjs still does make sense.
-
-
-<br/><br/><br/>
-
----
-
 <br/><br/>
 
-## 💡
 
+
+<br><br>
+
+
+<span style="font-size:40px;">💡</span>
 ## Write code for CommonJs and ES Modules
 
 
 ### Use named exports
 
-For having best compatibility between the two systems, prefer using named exports.
+For having the best compatibility between the two systems, it is best to use named exports.
 
 
 Replace structure like:
@@ -907,7 +905,7 @@ module.exports.otherKey = ...;
 
 
 
-### 2- Run to-esm against the entrypoint
+### 2- Run to-esm against the entry point
 
 ```shell
 to-esm --entrypoint index.cjs --update-all
@@ -1025,7 +1023,7 @@ export default hi;
 
 ### 3- Your code is generated.
 
-To test it in NodeJs
+To test it in NodeJs.
 
 ```shell
 node index.mjs
@@ -1071,7 +1069,7 @@ node index.mjs
 
 
 
-### 2- Run to-esm against the entrypoint
+### 2- Run to-esm against the entry point
 
 ```shell
 $> to-esm --entrypoint index.cjs --output ./generated --update-all --target browser --bundle index.min.cjs
@@ -1233,23 +1231,68 @@ const c={"95c93":{}};c["95c93"].default=function(){console.log("I wanted to say 
 
 <br/><br/>
 
+---
+
+<span style="font-size:40px;">💡</span>
+
+### Some thoughts
+
+When you bundle your code, you usually introduce code from other third parties. Therefore, it may create implicit code repetition. Tree shaking eliminates unnecessary code; however, it is done at "compile" time. This means it can not detect what has been repeated (Even though Tree shaking technics seem to go beyond simple dead code elimination).
+
+Also, most IDEs detect the use of dead code, which IMO also mitigate tree shaking greatness.
+
+For instance, let's say you use two libraries.
+Lib1.js and Lib2.js.
+> Lib1 uses lodash and has been minified into lib1.min.js
+> Lib2 also uses lodash and has been minified into lib2.min.js.
+
+When you bundle your code containing lib1.js and lib2.js, you add lodash two times (or some functions of it).
+
+IMO, there are considerable advantages to not using bundled code.
+
+> - 1- Letting the browser cache all shared libraries is one of them; therefore, having the best caching system
+    > (Chrome or Firefox would surely know the best way to cache files coming from a common ground).
+>
+>
+> - 2- Avoiding automated code repetition
+>
+>
+> - 3- Less painful and lengthy wait when the codebase becomes enormous.
+>
+>
+> - 4- Make Hot Reloading obsolete. Instead, use Cold Reloading (you reload when you save, when not the bundler has
+    finished its compilation).
+>
+>
+> - 5- Working directly on the "original code" rather than a defigured one (even using source maps sometimes may make
+    the experience not fantastic).
+>
+>
+
+### In any case, ideally, **you would only bundle your code during production.**
+
+
+
+
+<br/><br/>
 
 
 
 
 
-###### ⭐ Overview ↴
+
+###### ⭐ Benefits ↴
 
 
 ---
 
-###💊🔥🧨🔥💊💥
+##💊🔥🧨🔥💊💥 !heading
 
 > **Benefits:**
 >
-> - You do not need a sourcemap when working in development
-> - You do not need to bundle your code in development
-> - You benefit directly from your **browser caching ability** (No more bundling of common libraries)
+> - You do not need a sourcemap when working in development mode.
+> - You do not need to bundle your code in development.
+> - You benefit directly from your **browser caching ability** (No more bundling of shared libraries)
 > - The generated code looks like the original code.
 > - ...
 

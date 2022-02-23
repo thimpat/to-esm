@@ -1,10 +1,10 @@
 <span style="font-size:40px;">💡</span>
 
-## Working with both CJS and ESM
+## Working with both CJS and ESM !heading
 
-You may want to work with both CommonJs and ESM together. So, you benefit from both world.
+You may want to work with both CommonJs and ESM together. So, you benefit from both worlds.
 
-The CommonJs approach is a dynamic one. You can do things like:
+The CommonJs approach is a dynamic one. So, for example, you can do things like:
 
 ```javascript
 if (a)
@@ -27,56 +27,4 @@ With ESM and its static approach, loading both modules is necessary.
     import "b";
 ```
 
-
-JavaScript being a dynamic language, the usage of Cjs still does make sense.
-
-
-<br/><br/><br/>
-
----
-
 <br/><br/>
-
-## 💡
-
-## Write code for CommonJs and ES Modules
-
-
-### Use named exports
-
-For having best compatibility between the two systems, prefer using named exports.
-
-
-Replace structure like:
-
-```javascript
-
-module.exports = {
-    TABLE1: ...,
-    TABLE2: ...,
-    otherKey: ...
-}
-```
-
-with:
-
-```javascript
-
-module.exports.TABLE1 = ...;
-module.exports.TABLE2 = ...;
-module.exports.otherKey = ...;
-```
-
-Or, providing a default export too:
-
-```javascript
-// Default export
-module.exports = {
-    TABLE1, TABLE2, ...
-}
-
-// Named export
-module.exports.TABLE1 = ...;
-module.exports.TABLE2 = ...;
-module.exports.otherKey = ...;
-```

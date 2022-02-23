@@ -1,6 +1,4 @@
-
-## 💉
-
+<span style="font-size:40px;">💉</span>
 
 ## Directives !heading
 
@@ -53,7 +51,7 @@ this.realConsoleLog("LogToFile is not supported in this environment. ")
 ---
 
 
-### Directives to ignore code during the parsing, so it won't be converted by mistake.
+### Directives to ignore code during the parsing so it won't be converted by mistake.
 
 ```javascript
 /** to-esm-all: skip **/

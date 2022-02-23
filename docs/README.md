@@ -113,6 +113,12 @@ to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--targe
 
 <br><br>
 
+
+#include "./docs/ideas/writing-code-targeting-both-esm-and-cjs.md"
+
+
+<br><br>
+
 #include "./docs/ideas/create-hybrid-library-with-to-esm.md"
 
 
@@ -124,6 +130,12 @@ to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--targe
 #include "./docs/ideas/create-hybrid-library-with-to-esm-supporting-the-browser.md"
 
 
+
+<br/><br/>
+
+---
+
+#include "./docs/ideas/thoughts.md"
 
 <br/><br/>
 

@@ -1,6 +1,6 @@
 <span style="font-size:40px;">💡</span>
 
-## Create a Hybrid Library with to.esm supporting the browser
+## Create a Hybrid Library with to.esm supporting the browser !heading
 
 
 <br><br>
@@ -30,7 +30,7 @@
 
 
 
-### 2- Run to-esm against the entrypoint
+### 2- Run to-esm against the entry point
 
 ```shell
 $> to-esm --entrypoint index.cjs --output ./generated --update-all --target browser --bundle index.min.cjs
@@ -38,6 +38,13 @@ $> to-esm --entrypoint index.cjs --output ./generated --update-all --target brow
 
 > 🚫
 _If you are not targeting the browser, ignore --target and --bundle options_
+> ```shell
+> $> to-esm --entrypoint index.cjs --update-all
+> ```
+
+> 🚫
+_It is possible that the to-esm internal bundling sometimes fails. It's five hours of work, so it's likely
+> not perfect. You can use a different bundler like Rollup, for instance, to bundle your final work_
 > ```shell
 > $> to-esm --entrypoint index.cjs --update-all
 > ```

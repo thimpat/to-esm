@@ -58,7 +58,7 @@ The browser will automatically load the other files.
 
 > **demo.mjs** is the entrypoint.
 
-All of the connected files are automatically loaded by the browser.
+All of the related files are automatically loaded by the browser.
 <br/>
 
 </details>
@@ -102,7 +102,7 @@ const {COLOR_TABLE, SYSTEM} = require("./some-lib.js");
                          
 ```
 
-The two libraries used will be easily accessible by the system, and ease the bundling in production.
+The two libraries used will be easily accessible by the system and ease the bundling in production.
 See the importmap section to have a more modular approach.
 
 

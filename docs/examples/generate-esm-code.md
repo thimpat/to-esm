@@ -89,8 +89,8 @@ import hi  from "./example/code/library.mjs";
 hi();
 ```
 
-The file given as entrypoint will be converted inside the working
-directory. The others, will depend on the source location.
+to-esm will convert the entry point inside the working
+directory. The others will depend on the source location.
 
 </details>
 

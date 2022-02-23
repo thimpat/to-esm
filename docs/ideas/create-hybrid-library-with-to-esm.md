@@ -1,6 +1,6 @@
 <span style="font-size:40px;">💡</span>
 
-## Create a Hybrid Library with to.esm
+## Create a Hybrid Library with to.esm !heading
 
 <br><br>
 
@@ -27,7 +27,7 @@
 
 
 
-### 2- Run to-esm against the entrypoint
+### 2- Run to-esm against the entry point
 
 ```shell
 to-esm --entrypoint index.cjs --update-all
@@ -145,7 +145,7 @@ export default hi;
 
 ### 3- Your code is generated.
 
-To test it in NodeJs
+To test it in NodeJs.
 
 ```shell
 node index.mjs
