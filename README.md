@@ -1081,6 +1081,13 @@ _If you are not targeting the browser, ignore --target and --bundle options_
 > $> to-esm --entrypoint index.cjs --update-all
 > ```
 
+> 🚫
+_It is possible that the to-esm internal bundling sometimes fails. It's five hours of work, so it's likely
+> not perfect. You can use a different bundler like Rollup, for instance, to bundle your final work_
+> ```shell
+> $> to-esm --entrypoint index.cjs --update-all
+> ```
+
 ---
 
 
