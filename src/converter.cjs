@@ -812,6 +812,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error(`${toEsmPackageJson.name}: (1007)`, e.message);
     }
 
@@ -957,6 +958,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
                 }
                 catch (e)
                 {
+                    /* istanbul ignore next */
                     console.error(`${toEsmPackageJson.name}: (1008)`, e.message);
                 }
             },
@@ -990,6 +992,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
                 }
                 catch (e)
                 {
+                    /* istanbul ignore next */
                     console.error(`${toEsmPackageJson.name}: (1057)`, e.message);
                 }
             }
@@ -1870,6 +1873,7 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.info(`${toEsmPackageJson.name}: (1289) `, e.message);
         }
 
@@ -2009,7 +2013,7 @@ const minify = (cjsList, bundlePath) =>
 
             newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
 
-            const options = {toplevel: true, mangle: false, compress: true, warnings: true};
+            const options = {toplevel: true, mangle: true, compress: true, warnings: true};
             const result = UglifyJS.minify(newCode, options);
             newCode = normaliseString(result.code);
 
@@ -2039,8 +2043,7 @@ const minify = (cjsList, bundlePath) =>
         catch (e)
         {
             /* istanbul ignore next */
-            console.error(`${toEsmPackageJson.name}: (1387) Fail to bundle.`);
-            reject(e);
+            reject(`${toEsmPackageJson.name}: (1387) Fail to bundle.`);
         }
     });
 };
@@ -2229,6 +2232,7 @@ const convertCjsFiles = (list, {
         {
             /* istanbul ignore next */
             console.error(`${toEsmPackageJson.name}: (1011)`, e.message);
+            /* istanbul ignore next */
             if (!withreport)
             {
                 report = false;

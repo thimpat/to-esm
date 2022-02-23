@@ -29,6 +29,12 @@ describe("In the sandbox folder", function ()
             expect(code).to.equal(0);
         });
 
+        it("should successfully generate ESM files", function ()
+        {
+            const code = shell.exec("npm run build:esm:terminal").code;
+            expect(code).to.equal(0);
+        });
+
         // ...
 
     });
