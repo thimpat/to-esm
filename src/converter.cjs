@@ -812,6 +812,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error(`${toEsmPackageJson.name}: (1007)`, e.message);
     }
 
@@ -957,6 +958,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
                 }
                 catch (e)
                 {
+                    /* istanbul ignore next */
                     console.error(`${toEsmPackageJson.name}: (1008)`, e.message);
                 }
             },
@@ -990,6 +992,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
                 }
                 catch (e)
                 {
+                    /* istanbul ignore next */
                     console.error(`${toEsmPackageJson.name}: (1057)`, e.message);
                 }
             }
@@ -1870,6 +1873,7 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
         }
         catch (e)
         {
+            /* istanbul ignore next */
             console.info(`${toEsmPackageJson.name}: (1289) `, e.message);
         }
 
@@ -2228,6 +2232,7 @@ const convertCjsFiles = (list, {
         {
             /* istanbul ignore next */
             console.error(`${toEsmPackageJson.name}: (1011)`, e.message);
+            /* istanbul ignore next */
             if (!withreport)
             {
                 report = false;
