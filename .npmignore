@@ -78,3 +78,5 @@ example/esm/
 bump.js
 .babelrc
 .eslintrc.cjs
+build-docs/
+markdown.json
