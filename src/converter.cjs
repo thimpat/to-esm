@@ -2111,7 +2111,7 @@ const mergeCode = (codes) =>
     return newCode;
 };
 
-const minify = (cjsList, bundlePath) =>
+const minifyCode = (cjsList, bundlePath) =>
 {
     const code = {};
     let codes = [];
@@ -2188,7 +2188,7 @@ const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"
 
     if (target === TARGET.BROWSER || target === TARGET.ALL)
     {
-        await minify(cjsList, bundlePath);
+        await minifyCode(cjsList, bundlePath);
 
         console.log(`${toEsmPackageJson.name}: (1312) `);
         console.log(`${toEsmPackageJson.name}: (1314) ================================================================`);
