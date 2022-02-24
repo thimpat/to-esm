@@ -38,13 +38,13 @@ const DEBUG_DIR = "./debug/";
  */
 const AMBIGUOUS = [
     {
-        search : /\bmodule\b/gm,
-        replace: "❖❖❖❖❖❖",
+        search  : /\bmodule\b/gm,
+        replace : "❖❖❖❖❖❖",
         original: "module"
     },
     {
-        search : /\bexports\b/gm,
-        replace: "❉❉❉❉❉❉❉",
+        search  : /\bexports\b/gm,
+        replace : "❉❉❉❉❉❉❉",
         original: "exports"
     }
 ];
@@ -584,12 +584,13 @@ const reviewEsmImports = (text, list, {
                 if (followlinked)
                 {
                     addFileToConvertingList({
-                        source  : requiredPath,
-                        rootDir : workingDir,
+                        source           : requiredPath,
+                        rootDir          : workingDir,
                         outputDir,
                         workingDir,
                         followlinked,
-                        referrer: source
+                        referrer         : source,
+                        multiCsjExtension: true
                     });
                 }
 
@@ -677,6 +678,14 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
     });
 };
 
+/**
+ * Rename variables declared as exports
+ * @example
+ * let exports = ...
+ * @param converted
+ * @param ambiguousList
+ * @returns {*}
+ */
 const convertAmbiguous = (converted, ambiguousList) =>
 {
     const n = ambiguousList.length;
@@ -706,6 +715,13 @@ const convertAmbiguous = (converted, ambiguousList) =>
     return converted;
 };
 
+/**
+ * Put back original naming for ambiguous declarations
+ * like
+ * let exports = ...
+ * @param converted
+ * @returns {*}
+ */
 const putBackAmbiguous = (converted) =>
 {
     const n = AMBIGUOUS.length;
@@ -837,7 +853,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             return converted;
         }
 
-        const importList = [];
+        const importList = new Set();
         for (let i = extracted.length - 1; i >= 0; --i)
         {
             const prop = extracted[i];
@@ -868,7 +884,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
                 {
                     transformedLines = transformedLines + ";";
                 }
-                importList.push(transformedLines);
+                importList.add(transformedLines);
                 converted = converted.substring(0, prop.start) + converted.substring(prop.end);
             }
             catch (e)
@@ -877,7 +893,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             }
         }
 
-        converted = importList.reverse().join(EOL) + converted;
+        converted = [...importList].reverse().join(EOL) + converted;
     }
     catch (e)
     {
@@ -888,6 +904,13 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     return converted;
 };
 
+
+/**
+ * Given an identifier detected by AST, returns the block it belongs to.
+ * @param identifier
+ * @param previouses
+ * @returns {*|null|string|boolean|null}
+ */
 const findNearestBlock = (identifier, previouses) =>
 {
     const n = previouses.length;
@@ -1817,13 +1840,46 @@ const addFileToConvertingList = ({
                                      workingDir,
                                      notOnDisk,
                                      referrer = null,
-                                     entryPoint = false
+                                     entryPoint = false,
+                                     multiCsjExtension = false
                                  }) =>
 {
     if (!fs.existsSync(source))
     {
-        console.error(`${toEsmPackageJson.name}: (1141) Could not find the file [${source}]`);
-        return false;
+        if (!multiCsjExtension)
+        {
+            console.error(`${toEsmPackageJson.name}: (1141) Could not find the file [${source}]`);
+            return false;
+        }
+
+        const extension = path.parse(source).extname;
+        if (extension)
+        {
+            console.error(`${toEsmPackageJson.name}: (1143) Could not find the file [${source}]`);
+            return false;
+        }
+
+        let found = false;
+        let foundPath = "";
+        let possibleCjsExtensions = [".js", ".json", ".node"];
+        for (let i = 0; i < possibleCjsExtensions.length; ++i)
+        {
+            const extension = possibleCjsExtensions[i];
+            foundPath = path.join(source + extension);
+            if (fs.existsSync(foundPath))
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            console.error(`${toEsmPackageJson.name}: (1145) Could not find the file [${source}]`);
+            return false;
+        }
+
+        source = normalisePath(foundPath);
     }
 
     const entryReferer = findEntry(referrer) || {weight: 1};

@@ -1288,12 +1288,12 @@ IMO, there are considerable advantages to not using bundled code.
 
 
 
-###### ⭐ Benefits ↴
+#### ⭐ Benefits ↴
 
 
 ---
 
-##💊🔥🧨🔥💊💥 !heading
+## 💊🔥🧨🔥💊💥 !heading
 
 > **Benefits:**
 >
