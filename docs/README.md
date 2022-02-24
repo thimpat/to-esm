@@ -139,11 +139,6 @@ to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--targe
 
 <br/><br/>
 
-
-
-
-
-
-#### ⭐ Benefits ↴
+---
 
 #include "./docs/benefits/benefits.md"

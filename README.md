@@ -17,6 +17,7 @@
   1. [Create a Hybrid Library with to.esm](#create-a-hybrid-library-with-to-esm)
   1. [Create a Hybrid Library with to.esm supporting the browser](#create-a-hybrid-library-with-to-esm-supporting-the-browser)
     1. [Some thoughts](#some-thoughts)
+  1. [Plus](#plus)
 
 
 
@@ -1082,12 +1083,13 @@ _If you are not targeting the browser, ignore --target and --bundle options_
 > ```
 
 > 🚫
-_It is possible that the to-esm internal bundling sometimes fails. It's five hours of work, so it's likely
-> not perfect. You can use a different bundler like Rollup, for instance, to bundle your final work_
+_It is possible that my bundling implementation fails (I haven't seen it fail yet). It's five hours of work, so it's
+> likely
+> not perfect. You can use an external bundler like Rollup, for instance, to bundle your final work_
 > ```shell
-> $> to-esm --entrypoint index.cjs --update-all
+> $> rollup index.cjs --file index.min.js --format iife
 > ```
-
+> 
 ---
 
 
@@ -1283,17 +1285,12 @@ IMO, there are considerable advantages to not using bundled code.
 
 <br/><br/>
 
-
-
-
-
-
-#### ⭐ Benefits ↴
-
-
 ---
 
-## 💊🔥🧨🔥💊💥 !heading
+<span style="font-size:30px;">💊🔥🧨🔥💊💥 </span>
+---
+
+## Plus
 
 > **Benefits:**
 >
