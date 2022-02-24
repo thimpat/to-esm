@@ -893,7 +893,17 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             }
         }
 
-        converted = [...importList].reverse().join(EOL) + EOL + converted;
+        let imports = [...importList].reverse().join(EOL) + ";";
+        imports = imports.substring(0, imports.length - 1);
+        if (converted.startsWith(";"))
+        {
+            converted = converted.substring(1);
+        }
+        if (!(converted.startsWith(EOL)))
+        {
+            converted = EOL + converted;
+        }
+        converted = imports + converted;
     }
     catch (e)
     {
@@ -1051,14 +1061,13 @@ const convertRequiresToImportsWithAST = (converted, list, {
                         if (parent && parent.type === "CallExpression" && parent.callee && parent.callee.name === "require")
                         {
                             requirePath = node.value;
-                            end = parent ? parent.range[0] : node.range[0];
+                            end = parent.range[0];
 
-                            // previouses.pop();
                             for (let i = previouses.length - 2; i >= 0; --i)
                             {
                                 let previous = previouses[i];
 
-                                // Declaration without "kind" (=> const, let, var
+                                // Declaration without "kind" (const, let, var...)
                                 if (previous.parent.type === "AssignmentExpression")
                                 {
                                     if (previous.parent.left && previous.parent.left.type === "Identifier")
@@ -1076,7 +1085,6 @@ const convertRequiresToImportsWithAST = (converted, list, {
                             }
 
                         }
-
                     }
 
                     // Look for: exports
