@@ -949,6 +949,7 @@ const findNearestBlock = (identifier, previouses) =>
  * @param workingDir
  * @param followlinked
  * @param moreOptions
+ * @param debuginput
  * @returns {{converted, success: boolean}}
  */
 const convertRequiresToImportsWithAST = (converted, list, {
