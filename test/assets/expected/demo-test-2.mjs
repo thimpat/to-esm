@@ -11,6 +11,7 @@ import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 
 
 
+
 class Demo2
 {
     system = ""

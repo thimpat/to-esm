@@ -15,6 +15,7 @@ import {ipcMain}  from "electron";
 
 
 
+
 class WindowBridgeMain /*extends WindowBridgeCommon*/
 {
     static browserWindowTool = {};

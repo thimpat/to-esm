@@ -15,7 +15,8 @@ import INFO3  from './test/assets/given/dep-3.mjs';
 import INFO4  from "./test/assets/given/something.mjs";
 import INFO5  from "./test/assets/given/something.mjs";
 import path  from "path";
-import {DIRECTION, MESSAGE}  from "./test/assets/given/dep-1.mjs";/** const chalk001 = require("chalk-cjs"); **/
+import {DIRECTION, MESSAGE}  from "./test/assets/given/dep-1.mjs";
+/** const chalk001 = require("chalk-cjs"); **/
 
 const aa = "const chalk003 = require(\"chalk-cjs\");"
 

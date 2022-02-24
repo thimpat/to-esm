@@ -13,6 +13,7 @@ import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 
 
 
+
 const cc = `var QuickLog3 = require("../../src/cjs/quick-log.cjs")`;
 // const aa = "let QuickLog2 = require(\"../../src/cjs/quick-log.cjs\")";
 

@@ -15,7 +15,7 @@ describe("In the sandbox folder", function ()
         process.chdir(assetsFolder);
     });
 
-    describe("The sandbox project", function ()
+    describe("The Sandbox project", function ()
     {
         it("should successfully install to-esm", function ()
         {
