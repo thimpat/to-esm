@@ -30,6 +30,26 @@ const TARGET = {
 const ESM_EXTENSION = ".mjs";
 const COMMENT_MASK = "❖✎🔏❉";
 
+const DEBUG_DIR = "./debug/";
+
+/**
+ * module and exports can be redeclared in a block. They are not protected keywords.
+ * @type {[{search: RegExp, original: string, replace: string},{search: RegExp, original: string, replace: string}]}
+ */
+const AMBIGUOUS = [
+    {
+        search : /\bmodule\b/gm,
+        replace: "❖❖❖❖❖❖",
+        original: "module"
+    },
+    {
+        search : /\bexports\b/gm,
+        replace: "❉❉❉❉❉❉❉",
+        original: "exports"
+    }
+];
+const AMBIGUOUS_VAR_NAMES = ["module", "exports"];
+
 const nativeModules = Object.keys(process.binding("natives"));
 
 // The whole list of files to convert
@@ -503,7 +523,7 @@ const reviewEsmImports = (text, list, {
                     moduleName = nonHybridModuleMap[moduleName];
                 }
 
-                let requiredPath = getModuleEntryPointPath( moduleName, workingDir );
+                let requiredPath = getModuleEntryPointPath(moduleName, workingDir);
                 if (!requiredPath)
                 {
                     console.warn(`${toEsmPackageJson.name}: (1099) The module [${moduleName}] was not found in your node_modules directory. `
@@ -656,13 +676,61 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
     });
 };
 
+const convertAmbiguous = (converted, ambiguousList) =>
+{
+    const n = ambiguousList.length;
+    let extract = "";
+    for (let i = n - 1; i >= 0; --i)
+    {
+        let ambiguous = ambiguousList[i];
+        let block = ambiguous.block;
+
+        let start = block.start;
+        let end = block.end;
+
+        extract = converted.substring(start, end);
+
+        for (let ii = 0; ii < AMBIGUOUS.length; ++ii)
+        {
+            let ambiguousWord = AMBIGUOUS[ii];
+            let search = ambiguousWord.search;
+            let replace = ambiguousWord.replace;
+            extract = extract.replace(search, replace);
+        }
+
+        converted = converted.substring(0, start) + extract + converted.substring(end);
+
+    }
+
+    return converted;
+};
+
+const putBackAmbiguous = (converted) =>
+{
+    const n = AMBIGUOUS.length;
+    for (let i = 0; i < n; ++i)
+    {
+        let ambiguousWord = AMBIGUOUS[i];
+        let search = ambiguousWord.replace;
+        let replace = ambiguousWord.original;
+        converted = converted.replaceAll(search, replace);
+    }
+
+    return converted;
+};
+
+/**
+ * Will not work if a variable is named "exports"
+ * @param converted
+ * @returns {*}
+ */
 const convertModuleExportsToExport = (converted) =>
 {
     // Convert module.exports to export default
-    converted = converted.replace(/(?:module\.)?exports\s*=/gm, "export default");
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
 
     // Convert module.exports.something to export something
-    converted = converted.replace(/(?:module\.)?exports\./gm, "export const ");
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\./gm, "export const ");
 
     return converted;
 };
@@ -819,6 +887,21 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     return converted;
 };
 
+const findNearestBlock = (identifier, previouses) =>
+{
+    const n = previouses.length;
+    for (let i = n - 1; i >= 0; --i)
+    {
+        const previous = previouses[i].node;
+        if ("BlockStatement" === previous.type && identifier.start >= previous.start && identifier.end <= previous.end)
+        {
+            return previous;
+        }
+    }
+
+    return null;
+};
+
 /**
  * Extract information related to cjs imports and use them to do the transformation.
  * @param converted
@@ -841,11 +924,14 @@ const convertRequiresToImportsWithAST = (converted, list, {
     nonHybridModuleMap,
     workingDir,
     followlinked,
-    moreOptions
+    moreOptions,
+    debuginput
 }) =>
 {
     let success = true;
     const detectedExported = [];
+    const detectedAmbiguous = [];
+    const detectedBlockFunctions = [];
 
     try
     {
@@ -877,11 +963,52 @@ const convertRequiresToImportsWithAST = (converted, list, {
 
         const previouses = [];
 
+        let writeStream;
+        let readable;
+
+        if (debuginput)
+        {
+            const debugPath = path.join(DEBUG_DIR, source + ".json");
+            writeStream = fs.createWriteStream(debugPath);
+            readable = Readable.from([""]);
+            readable.pipe(writeStream);
+        }
+
+
         estraverse.traverse(ast, {
             enter: function (node, parent)
             {
                 try
                 {
+                    if (debuginput)
+                    {
+                        const myText = JSON.stringify(node, null, 2);
+                        readable.push(myText);
+                    }
+
+                    if ("FunctionDeclaration" === node.type || "FunctionExpression" === node.type || "ArrowFunctionExpression" === node.type || "MethodDefinition" === node.type)
+                    {
+                        detectedBlockFunctions.push({
+                            node
+                        });
+                    }
+
+                    // Look for: let exports, let modules,
+                    if ("VariableDeclarator" === node.type)
+                    {
+                        let identifier = node.id;
+                        if (identifier.type === "Identifier" && AMBIGUOUS_VAR_NAMES.includes(identifier.name))
+                        {
+                            let nearestBlock = findNearestBlock(identifier, previouses);
+                            if (nearestBlock)
+                            {
+                                detectedAmbiguous.push({
+                                    identifier, block: nearestBlock
+                                });
+                            }
+                        }
+                    }
+
                     const lastFound = extracted[extracted.length - 1];
                     if (lastFound)
                     {
@@ -893,15 +1020,16 @@ const convertRequiresToImportsWithAST = (converted, list, {
                         }
                     }
 
-                    if (node && node.type === "Literal")
+                    // Look for: require(...)
+                    if (node && "Literal" === node.type)
                     {
                         if (parent && parent.type === "CallExpression" && parent.callee && parent.callee.name === "require")
                         {
                             requirePath = node.value;
                             end = parent ? parent.range[0] : node.range[0];
 
-                            previouses.pop();
-                            for (let i = previouses.length - 1; i >= 0; --i)
+                            // previouses.pop();
+                            for (let i = previouses.length - 2; i >= 0; --i)
                             {
                                 let previous = previouses[i];
 
@@ -926,17 +1054,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
 
                     }
 
-                    // // parent.expression.left.object.property.name
-                    // if (parent && parent.expression && parent.expression.left)
-                    //     (parent.expression.left.type === "MemberExpression" &&
-                    //         parent.expression.left.object.property.name === "exports" &&
-                    //         parent.expression.left.object.object.name === "module" &&
-                    //         parent.expression.left.property.type = "Identifier" &&
-                    //         parent.expression.left.property.name === "fromRgb" &&
-                    //         parent.expression.right.type === "Identifier" &&
-                    //             parent.expression.right.name === "getAnsiFromRgb"
-                    //     )
-
+                    // Look for: exports
                     if (parent && parent.expression && parent.expression.left && parent.expression.left.type === "MemberExpression")
                     {
                         if (parent.expression.left.object && parent.expression.left.object.property && parent.expression.left.object.property.name === "exports")
@@ -998,6 +1116,11 @@ const convertRequiresToImportsWithAST = (converted, list, {
             }
         });
 
+        if (detectedAmbiguous.length)
+        {
+            converted = convertAmbiguous(converted, detectedAmbiguous);
+        }
+
         converted = applyExtractedASTToImports(converted, extracted, list, {
             source,
             outputDir,
@@ -1016,7 +1139,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         console.error(`${toEsmPackageJson.name}: (1009) [${source}] ->`, e.message);
     }
 
-    return {converted, success, detectedExported};
+    return {converted, success, detectedExported, detectedAmbiguous, detectedBlockFunctions};
 };
 
 /**
@@ -1921,13 +2044,15 @@ const buildExport = ({exported, id}) =>
 
 const mergeCode = (codes) =>
 {
-    let newCode = [`
+    let newCode = [
+        `
         // ====================================================================
         // Bundled with to-esm
         // --------------------------------------------------------------------
         
         const ESM = {};${EOL}    
-    `];
+    `
+    ];
     const n = codes.length;
     for (let i = 0; i < n; ++i)
     {
@@ -2018,13 +2143,13 @@ const minify = (cjsList, bundlePath) =>
             newCode = normaliseString(result.code);
 
             const readable = Readable.from([newCode]);
-            writeStream.on("finish", ()=>
+            writeStream.on("finish", () =>
             {
                 resolve(true);
             });
 
             /* istanbul ignore next */
-            writeStream.on("error", ()=>
+            writeStream.on("error", () =>
             {
                 /* istanbul ignore next */
                 console.error(`${toEsmPackageJson.name}: (1383) Fail to bundle. Write error.`);
@@ -2032,7 +2157,8 @@ const minify = (cjsList, bundlePath) =>
             });
 
             /* istanbul ignore next */
-            readable.on("error", (e)=>{
+            readable.on("error", (e) =>
+            {
                 /* istanbul ignore next */
                 console.error(`${toEsmPackageJson.name}: (1385) Fail to bundle. Read error.`);
                 reject(e);
@@ -2092,6 +2218,7 @@ const convertCjsFiles = (list, {
     withreport = false,
     importMaps = {},
     followlinked = true,
+    debuginput = "",
     moreOptions = {}
 } = {}) =>
 {
@@ -2132,7 +2259,8 @@ const convertCjsFiles = (list, {
                         nonHybridModuleMap,
                         workingDir,
                         followlinked,
-                        moreOptions
+                        moreOptions,
+                        debuginput
                     });
 
                 converted = result.converted;
@@ -2144,6 +2272,7 @@ const convertCjsFiles = (list, {
                 {
                     converted = convertNonTrivialExportsWithAST(converted, result.detectedExported);
                     converted = convertModuleExportsToExport(converted);
+                    converted = putBackAmbiguous(converted);
                 }
                 else
                 {
@@ -2363,6 +2492,12 @@ const convert = async (rawCliOptions = {}) =>
     const noheader = !!cliOptions.noheader;
     const withreport = !!cliOptions.withreport;
     const fallback = !!cliOptions.fallback;
+    const debuginput = cliOptions.debuginput || "";
+
+    if (debuginput)
+    {
+        buildTargetDir(DEBUG_DIR);
+    }
 
     let followlinked = !cliOptions.ignorelinked;
 
@@ -2392,7 +2527,8 @@ const convert = async (rawCliOptions = {}) =>
             importMaps,
             workingDir,
             fallback,
-            moreOptions
+            moreOptions,
+            debuginput
         });
 
     if (cliOptions.bundle)
