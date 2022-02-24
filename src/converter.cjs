@@ -38,13 +38,13 @@ const DEBUG_DIR = "./debug/";
  */
 const AMBIGUOUS = [
     {
-        search : /\bmodule\b/gm,
-        replace: "❖❖❖❖❖❖",
+        search  : /\bmodule\b/gm,
+        replace : "❖❖❖❖❖❖",
         original: "module"
     },
     {
-        search : /\bexports\b/gm,
-        replace: "❉❉❉❉❉❉❉",
+        search  : /\bexports\b/gm,
+        replace : "❉❉❉❉❉❉❉",
         original: "exports"
     }
 ];
@@ -677,6 +677,14 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
     });
 };
 
+/**
+ * Rename variables declared as exports
+ * @example
+ * let exports = ...
+ * @param converted
+ * @param ambiguousList
+ * @returns {*}
+ */
 const convertAmbiguous = (converted, ambiguousList) =>
 {
     const n = ambiguousList.length;
@@ -706,6 +714,13 @@ const convertAmbiguous = (converted, ambiguousList) =>
     return converted;
 };
 
+/**
+ * Put back original naming for ambiguous declarations
+ * like
+ * let exports = ...
+ * @param converted
+ * @returns {*}
+ */
 const putBackAmbiguous = (converted) =>
 {
     const n = AMBIGUOUS.length;
@@ -888,6 +903,13 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     return converted;
 };
 
+
+/**
+ * Given an identifier detected by AST, returns the block it belongs to.
+ * @param identifier
+ * @param previouses
+ * @returns {*|null|string|boolean|null}
+ */
 const findNearestBlock = (identifier, previouses) =>
 {
     const n = previouses.length;
