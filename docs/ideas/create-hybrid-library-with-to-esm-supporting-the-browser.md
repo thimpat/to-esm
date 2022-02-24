@@ -47,7 +47,8 @@ _It is possible that my bundling implementation fails (I haven't seen it fail ye
 > likely
 > not perfect. You can use an external bundler like Rollup, for instance, to bundle your final work_
 > ```shell
-> $> rollup index.cjs --file index.min.js --format iife
+> $> npm install rollup -g
+> $> rollup ./generated/index.cjs --file index.min.js --format iife
 > ```
 > 
 ---
