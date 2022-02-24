@@ -66,7 +66,7 @@ describe("converter.cjs", function ()
      */
     describe("#validateSyntax()", function ()
     {
-        it("should return true when the input is js compatible", function ()
+        it("should return true when the input is ESM compatible", function ()
         {
 
             // Arrange
@@ -78,10 +78,21 @@ describe("converter.cjs", function ()
             expect(result).to.be.true;
         });
 
+        it("should return true when the input is CJS compatible", function ()
+        {
+            // Arrange
+            const input = "require(\"my.file\")";
+
+            // Act
+            const result = validateSyntax(input, "commonjs");
+
+            expect(result).to.be.true;
+        });
+
         /**
          * @link validateSyntax
          */
-        it("should return false when the input is not js compatible", function ()
+        it("should return false when the input is not ESM valid", function ()
         {
 
             // Arrange

@@ -596,6 +596,7 @@ const reviewEsmImports = (text, list, {
                 return match.replace(regexRequiredPath, projectedRequiredPath);
             }
 
+            /* istanbul ignore next */
             return match;
         }
         catch (e)
@@ -899,6 +900,7 @@ const findNearestBlock = (identifier, previouses) =>
         }
     }
 
+    /* istanbul ignore next */
     return null;
 };
 
