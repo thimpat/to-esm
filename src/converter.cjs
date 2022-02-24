@@ -893,7 +893,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             }
         }
 
-        converted = [...importList].reverse().join(EOL) + converted;
+        converted = [...importList].reverse().join(EOL) + EOL + converted;
     }
     catch (e)
     {
