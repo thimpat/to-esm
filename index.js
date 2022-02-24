@@ -7,6 +7,11 @@ const {convert} = require("./src/converter.cjs");
 (async () =>
 {
     const cliOptions = minimist(process.argv.slice(2));
+    if (cliOptions.version || cliOptions.v)
+    {
+        console.log(`v${packageJson.version}`);
+        return;
+    }
     await convert(cliOptions);
 })()
     .catch(err =>
