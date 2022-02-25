@@ -5,8 +5,8 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
-const {hideText, restoreText, beforeReplace} = require("before-replace");
-const {stripComments, clearStrings} = require("strip-comments-strings");
+const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
+const {stripStrings, stripComments, clearStrings} = require("strip-comments-strings");
 const beautify = require("js-beautify").js;
 const {Readable} = require("stream");
 
@@ -29,8 +29,12 @@ const TARGET = {
 };
 const ESM_EXTENSION = ".mjs";
 const COMMENT_MASK = "❖✎🔏❉";
+const STRING_MASK_START = "❖✎❉";
+const STRING_MASK_END = "❉✎❖";
 
 const DEBUG_DIR = "./debug/";
+
+let indexGeneratedTempVariable = 1;
 
 /**
  * module and exports can be redeclared in a block. They are not protected keywords.
@@ -223,7 +227,7 @@ const calculateRelativePath = (source, requiredPath) =>
 };
 
 /**
- * Third Party Module path starting with ./node_modules/ + relative path to the entry point
+ * Third-Party Module path starting with ./node_modules/ + relative path to the entry point
  * @param moduleName
  * @param targetDir
  * @returns {string|null}
@@ -755,6 +759,8 @@ const convertModuleExportsToExport = (converted) =>
 /**
  * Parse the given test and use regex to transform requires into imports.
  * @note This function is used with both parser (AST or Regex)
+ * When use via AST, the transformation is applied on lines.
+ * When use with the regex fallback, the transformation is done on the whole source.
  * @param converted
  * @returns {*}
  */
@@ -777,6 +783,72 @@ const convertRequiresToImport = (converted) =>
     converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
     return converted;
+};
+
+const stripMasked = (str, limit, {
+    COMMENT_MASK_START = COMMENT_MASK,
+    COMMENT_MASK_END = COMMENT_MASK
+} = {}) =>
+{
+    for (let i = 0; i < limit; ++i)
+    {
+        const maskedComment = COMMENT_MASK_START + i + COMMENT_MASK_END;
+        str = str.replace(maskedComment, "");
+    }
+
+    return str;
+};
+
+const convertComplexRequiresToSimpleRequires = (converted) =>
+{
+    try
+    {
+        const commentMasks = {
+            COMMENT_MASK_START: "🥽👕🧥",
+            COMMENT_MASK_END  : "🥾👑🩳",
+        };
+
+        const extractedComments = [];
+        converted = stripCodeComments(converted, extractedComments, commentMasks);
+
+        const extractedStrings = [];
+        converted = stripCodeStrings(converted, extractedStrings);
+
+        converted = beforeReplace(/(const|let|var)\s+([^=]+)\s*=\s*(require\(["'`]([^"'`]+)["'`]\))(.+);?/g, converted, function (found, wholeText, index, match)
+        {
+            if (match.length < 6)
+            {
+                return match[0];
+            }
+
+            if (match[5].trim() === ";")
+            {
+                return match[0];
+            }
+
+            let unmasked = stripMasked(match[5], extractedComments.length, commentMasks);
+            if (unmasked.trim() === ";")
+            {
+                return match[0];
+            }
+
+            let intermediaryVariableName = "_toesmTemp" + indexGeneratedTempVariable++;
+
+            const line1 = `let ${intermediaryVariableName} = ${match[3]};`;
+            const line2 = `${match[1]} ${match[2]} = ${intermediaryVariableName}${match[5]}`;
+            return line1 + EOL + line2 + EOL;
+        });
+
+        converted = putBackStrings(converted, extractedStrings);
+        converted = putBackComments(converted, extractedComments, commentMasks);
+
+        return converted;
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error(`${toEsmPackageJson.name}: (1203)`, e.message);
+    }
 };
 
 /**
@@ -1180,9 +1252,14 @@ const convertRequiresToImportsWithAST = (converted, list, {
  * Remove comments from code
  * @param code
  * @param {[]} extracted If not null, comments are replaced instead of removed.
+ * @param COMMENT_MASK_START
+ * @param COMMENT_MASK_END
  * @returns {*}
  */
-const stripCodeComments = (code, extracted = null) =>
+const stripCodeComments = (code, extracted = null, {
+    COMMENT_MASK_START = COMMENT_MASK,
+    COMMENT_MASK_END = COMMENT_MASK
+} = {}) =>
 {
     const commentProps = extractComments(code, {}, null);
 
@@ -1206,7 +1283,7 @@ const stripCodeComments = (code, extracted = null) =>
         extracted[commentIndexer] = code.substring(indexCommentStart, indexCommentEnd);
         code =
             code.substring(0, indexCommentStart) +
-            COMMENT_MASK + commentIndexer + COMMENT_MASK +
+            COMMENT_MASK_START + commentIndexer + COMMENT_MASK_END +
             code.substring(indexCommentEnd);
 
         ++commentIndexer;
@@ -1215,7 +1292,10 @@ const stripCodeComments = (code, extracted = null) =>
     return code;
 };
 
-const putBackComments = (str, extracted) =>
+const putBackComments = (str, extracted, {
+    COMMENT_MASK_START = COMMENT_MASK,
+    COMMENT_MASK_END = COMMENT_MASK
+} = {}) =>
 {
     if (!extracted.length)
     {
@@ -1224,7 +1304,37 @@ const putBackComments = (str, extracted) =>
 
     for (let i = 0; i < extracted.length; ++i)
     {
-        str = str.replace(COMMENT_MASK + i + COMMENT_MASK, extracted[i]);
+        str = str.replace(COMMENT_MASK_START + i + COMMENT_MASK_END, extracted[i]);
+    }
+
+    return str;
+};
+
+/**
+ * Remove comments from code
+ * @param code
+ * @param {[]} extracted If not null, comments are replaced instead of removed.
+ * @returns {*}
+ */
+const stripCodeStrings = (code, extracted = []) =>
+{
+    let index = -1;
+    code = stripStrings(code, function (info)
+    {
+        ++index;
+        extracted[index] = info.content;
+        return STRING_MASK_START + index + STRING_MASK_END;
+    }, {includeDelimiter: false});
+
+    return code;
+};
+
+const putBackStrings = (str, extracted) =>
+{
+    for (let i = 0; i < extracted.length; ++i)
+    {
+        let mask = STRING_MASK_START + i + STRING_MASK_END;
+        str = str.replace(mask, extracted[i]);
     }
 
     return str;
@@ -1240,17 +1350,22 @@ const applyDirectives = (converted, {target = "all"} = {}) =>
 {
     let regexp;
 
-    // Hide/skip => to-esm-browser: skip
-    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
-    converted = hideText(regexp, converted);
+    const targets = target === "all" ? ["browser", "esm", "all"] : [target, "all"];
 
-    // Remove => to-esm-browser: remove
-    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
-    converted = converted.replace(regexp, "");
+    targets.forEach((target) =>
+    {
+        // Remove => to-esm-browser: remove
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
 
-    // Insert => to-esm-browser: add
-    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*$([\\s\\S]*?)^.*\\*\\*\\/`, "gm");
-    converted = converted.replace(regexp, "$1");
+        // Insert => to-esm-browser: add
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*$([\\s\\S]*?)^.*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "$1");
+
+        // Hide/skip => to-esm-browser: skip
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
+        converted = hideText(regexp, converted);
+    });
 
     return converted;
 };
@@ -1498,7 +1613,8 @@ const convertToESMWithRegex = (converted, list, {
     importMaps,
     workingDir,
     followlinked,
-    moreOptions
+    moreOptions,
+    nonHybridModuleMap
 } = {}) =>
 {
     try
@@ -1518,7 +1634,7 @@ const convertToESMWithRegex = (converted, list, {
         converted = reviewEsmImports(converted, list,
             {
                 source, outputDir, rootDir,
-                importMaps, workingDir, followlinked, moreOptions
+                importMaps, workingDir, followlinked, moreOptions, nonHybridModuleMap
             });
 
         converted = putBackComments(converted, extractedComments);
@@ -1839,6 +1955,7 @@ const findEntry = (source, propertyName = "source") =>
  * @param notOnDisk
  * @param referrer
  * @param entryPoint
+ * @param multiCsjExtension
  * @returns {{outputDir: string, targetAbs: *, sourceAbs: string, subDir: *, sourceNoExt: string, rootDir, source:
  *     string, subPath: *, target: string}|{boolean}}
  */
@@ -2308,11 +2425,15 @@ const convertCjsFiles = (list, {
             console.log(`${toEsmPackageJson.name}: (1132) Processing: ${source}`);
             console.log(`${toEsmPackageJson.name}: (1134) ----------------------------------------------------------------`);
 
+            resetAll();
+
             let converted = fs.readFileSync(source, "utf-8");
 
             converted = applyDirectives(converted, moreOptions);
 
             converted = applyReplaceFromConfig(converted, replaceStart);
+
+            converted = convertComplexRequiresToSimpleRequires(converted);
 
             if (isCjsCompatible(source, converted))
             {
@@ -2354,7 +2475,8 @@ const convertCjsFiles = (list, {
                             importMaps,
                             nonHybridModuleMap,
                             workingDir,
-                            followlinked
+                            followlinked,
+                            moreOptions
                         });
                 }
             }
@@ -2472,7 +2594,7 @@ const convert = async (rawCliOptions = {}) =>
         confFileOptions.replaceEnd = regexifySearchList(confFileOptions.replaceEnd);
 
         // Install special npm modules based on config
-        nonHybridModuleMap = await installNonHybridModules(confFileOptions);
+        nonHybridModuleMap = await installNonHybridModules(confFileOptions) || {};
     }
 
     // Input Files

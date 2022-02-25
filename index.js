@@ -43,15 +43,20 @@ Examples:
     const cliOptions = minimist(process.argv.slice(2));
     if (cliOptions.version || cliOptions.v)
     {
+        // Tested with integration-cli but cannot be detected
+        /* istanbul ignore next */
         console.log(`v${packageJson.version}`);
         return;
     }
 
     if (cliOptions.help || cliOptions.h)
     {
+        // Tested with integration-cli but cannot be detected
+        /* istanbul ignore next */
         console.log(getHelp());
         return;
     }
+
     await convert(cliOptions);
 })()
     .catch(err =>
