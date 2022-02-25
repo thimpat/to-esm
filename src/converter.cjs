@@ -9,6 +9,7 @@ const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace
 const {stripStrings, stripComments, clearStrings} = require("strip-comments-strings");
 const beautify = require("js-beautify").js;
 const {Readable} = require("stream");
+const toAnsi = require("to-ansi");
 
 const {findPackageEntryPoint} = require("find-entry-point");
 
@@ -2601,6 +2602,23 @@ const convert = async (rawCliOptions = {}) =>
     let inputFileMaskArr = [];
     if (rawCliOptions._ && rawCliOptions._.length)
     {
+        if (rawCliOptions._.length > 1)
+        {
+            console.log(`${toEsmPackageJson.name}: (1307) Bad arguments.
+            Here are some examples of invoking "to-esm":
+            ------------------------------------------------------
+            $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} filepath --output outputdir`, {fg: "#FF00FF"})} 
+            ------------------------------------------------------
+            $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} --entrypoint filepath --output outputdir`, {fg: "#FFFF00"})} 
+            ------------------------------------------------------            
+            $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} --input filepath1 --input filepath2`, {fg: "#AA55DD"})}
+            ------------------------------------------------------
+            For more info go to: 
+            ${toAnsi.getTextFromHex("https://www.npmjs.com/package/to-esm", {fg: "#00FF00"})} 
+             
+            `);
+            return;
+        }
         inputFileMaskArr.push(...rawCliOptions._);
     }
 
