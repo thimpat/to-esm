@@ -831,7 +831,9 @@ With ESM and its static approach, loading both modules is necessary.
 
 
 <span style="font-size:40px;">💡</span>
-## Write code for CommonJs and ES Modules
+## Some conventions to write code for both CommonJs and ES Modules
+
+Here are a few guides to writing code easily convertible.
 
 
 ### Use named exports
@@ -859,7 +861,7 @@ module.exports.TABLE2 = ...;
 module.exports.otherKey = ...;
 ```
 
-Or, providing a default export too:
+Or, if you want to provide a default export too:
 
 ```javascript
 // Default export
@@ -872,6 +874,35 @@ module.exports.TABLE1 = ...;
 module.exports.TABLE2 = ...;
 module.exports.otherKey = ...;
 ```
+
+
+### Use simple "require"
+
+Rather than using requires like below (or more complex forms)
+
+🤏 ↴
+```javascript
+const Something = require("electron-data-exchanger").myThing;
+const anything = require("electron-data-exchanger")(...);
+```
+
+Which may introduce temporary variables (_toesmTemp1)
+
+```javascript
+import _toesmTemp1  from "electron-data-exchanger";
+const Something = _toesmTemp1.myThing;
+```
+
+It is best to have them uncomplicated, so the conversion is straightforward
+
+<span style="font-size:18px;">👍</span> ↴
+```javascript
+const MySomething = require("electron-data-exchanger");
+const myAnything = require("electron-data-exchanger");
+
+// ... The code that uses what was required
+```
+
 
 
 
@@ -1087,7 +1118,8 @@ _It is possible that my bundling implementation fails (I haven't seen it fail ye
 > likely
 > not perfect. You can use an external bundler like Rollup, for instance, to bundle your final work_
 > ```shell
-> $> rollup index.cjs --file index.min.js --format iife
+> $> npm install rollup -g
+> $> rollup ./generated/index.cjs --file index.min.js --format iife
 > ```
 > 
 ---

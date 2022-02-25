@@ -114,7 +114,7 @@ to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--targe
 <br><br>
 
 
-#include "./docs/ideas/writing-code-targeting-both-esm-and-cjs.md"
+#include "./docs/ideas/conventions-for-writing-code-for-both-esm-and-cjs.md"
 
 
 <br><br>
