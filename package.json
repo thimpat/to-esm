@@ -34,7 +34,7 @@
     "url": "https://github.com/thimpat/to-esm.git"
   },
   "dependencies": {
-    "before-replace": "^1.0.2",
+    "before-replace": "^1.0.5",
     "commondir": "^1.0.1",
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",
@@ -46,7 +46,7 @@
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
     "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
-    "strip-comments-strings": "^1.1.4",
+    "strip-comments-strings": "^1.1.5",
     "uglify-js": "^3.15.1"
   },
   "devDependencies": {
