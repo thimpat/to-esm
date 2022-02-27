@@ -9,6 +9,7 @@ const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace
 const {stripStrings, stripComments, clearStrings} = require("strip-comments-strings");
 const beautify = require("js-beautify").js;
 const {Readable} = require("stream");
+const toAnsi = require("to-ansi");
 
 const {findPackageEntryPoint} = require("find-entry-point");
 
@@ -110,7 +111,7 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
     {
         const item = detectedExported[i];
 
-        const regexSentence = `(class|function|const|var|let)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
+        const regexSentence = `(class|const|var|let|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
@@ -1604,6 +1605,7 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
  * @param workingDir
  * @param followlinked
  * @param moreOptions
+ * @param nonHybridModuleMap
  * @returns {*}
  */
 const convertToESMWithRegex = (converted, list, {
@@ -2264,7 +2266,7 @@ const mergeCode = (codes) =>
     ${EOL}${EOL}${EOL}    
         `;
 
-        content = content.replace(/export\s+(const|let|var|function)/gm, "$1");
+        content = content.replace(/export\s+(const|let|var|function\s*\*?)/gm, "$1");
         content = content.replace(/export\s+default/gm, `ESM["${entry.id}"].default = `);
 
         content = beforeReplace(/import.*?from\s*(["']([^"']+)["'])/gi, content, function (found, wholeText, index, match)
@@ -2518,8 +2520,10 @@ const convertCjsFiles = (list, {
                 let e = parsingResult.error;
                 // console.error(`${toEsmPackageJson.name}: (1173) ❌ FAULTY: ESM: Parsing failed on [${filepath}]`,
                 // parsingResult.error.message); Failed even with fallback
-                console.error(`${toEsmPackageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
-                    ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
+                console.error(`${toEsmPackageJson.name}: (1055) ` + toAnsi.getTextFromHex("ERROR: Conversion" +
+                    " may have failed even with fallback processing on" +
+                    ` [${targetFilepath}]`, {fg: "#FF0000"}));
+                console.error(`${toEsmPackageJson.name}: (1057) ` + toAnsi.getTextFromHex(`LINE:${e.lineNumber} COLUMN:${e.column}: ${e.message}`, {fg: "#FF2000"}));
                 reportSuccess = "❌ FAILED";
                 console.log(`${toEsmPackageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
             }
@@ -2601,6 +2605,23 @@ const convert = async (rawCliOptions = {}) =>
     let inputFileMaskArr = [];
     if (rawCliOptions._ && rawCliOptions._.length)
     {
+        if (rawCliOptions._.length > 1)
+        {
+            console.log(`${toEsmPackageJson.name}: (1307) Bad arguments.
+            Here are some examples of invoking "to-esm":
+            ------------------------------------------------------
+            $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} filepath --output outputdir`, {fg: "#FF00FF"})} 
+            ------------------------------------------------------
+            $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} --entrypoint filepath --output outputdir`, {fg: "#FFFF00"})} 
+            ------------------------------------------------------            
+            $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} --input filepath1 --input filepath2`, {fg: "#AA55DD"})}
+            ------------------------------------------------------
+            For more info go to: 
+            ${toAnsi.getTextFromHex("https://www.npmjs.com/package/to-esm", {fg: "#00FF00"})} 
+             
+            `);
+            return;
+        }
         inputFileMaskArr.push(...rawCliOptions._);
     }
 
@@ -2654,6 +2675,12 @@ const convert = async (rawCliOptions = {}) =>
             rootDir = path.join(workingDir, path.dirname(list[0]));
         }
 
+        if (!i && list.length === 1)
+        {
+            cliOptions.entrypoint = list[0];
+            break;
+        }
+
         list.forEach((source) =>
         {
             addFileToConvertingList({source, rootDir, outputDir, workingDir});
@@ -2666,6 +2693,7 @@ const convert = async (rawCliOptions = {}) =>
     if (cliOptions.entrypoint)
     {
         const entrypointPath = normalisePath(cliOptions.entrypoint);
+        console.log(toAnsi.getTextFromHex(`${toEsmPackageJson.name}: (1402)              Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
         entryPoint = addFileToConvertingList({

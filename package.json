@@ -10,7 +10,7 @@
   },
   "scripts": {
     "docs": "markdown-include markdown.json",
-    "demo1": "node src/converter.cjs example/cjs/demo-1.cjs --output=example/esm/",
+    "demo1": "node index.js example/cjs/demo-1.cjs --output=example/esm/",
     "demo2": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
     "demo3": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
     "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
@@ -39,7 +39,7 @@
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",
     "extract-comments": "^1.1.0",
-    "find-entry-point": "^1.1.2",
+    "find-entry-point": "^1.1.4",
     "glob": "^7.2.0",
     "js-beautify": "^1.14.0",
     "markdown-include": "^0.4.3",
@@ -47,6 +47,7 @@
     "rgb-hex": "^4.0.0",
     "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
     "strip-comments-strings": "^1.1.5",
+    "to-ansi": "^1.0.5",
     "uglify-js": "^3.15.1"
   },
   "devDependencies": {

@@ -4,7 +4,7 @@
  * [./test/assets/given/demo-test-18.cjs]{@link ./test/assets/given/demo-test-18.cjs}
  * 
  **/
-import toAnsi  from "to-ansi";
+import toAnsi  from "./node_modules/to-ansi/index.mjs";
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 import {app, BrowserWindow}  from "electron";
