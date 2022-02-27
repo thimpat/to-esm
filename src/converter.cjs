@@ -2520,8 +2520,10 @@ const convertCjsFiles = (list, {
                 let e = parsingResult.error;
                 // console.error(`${toEsmPackageJson.name}: (1173) ❌ FAULTY: ESM: Parsing failed on [${filepath}]`,
                 // parsingResult.error.message); Failed even with fallback
-                console.error(`${toEsmPackageJson.name}: (1054) ❌ FAILED: ESM: Conversion may have failed even with fallback processing on` +
-                    ` [${targetFilepath}] ------- LINE:${e.lineNumber} COLUMN:${e.column}`, e.message);
+                console.error(`${toEsmPackageJson.name}: (1055) ` + toAnsi.getTextFromHex("ERROR: Conversion" +
+                    " may have failed even with fallback processing on" +
+                    ` [${targetFilepath}]`, {fg: "#FF0000"}));
+                console.error(`${toEsmPackageJson.name}: (1057) ` + toAnsi.getTextFromHex(`LINE:${e.lineNumber} COLUMN:${e.column}: ${e.message}`, {fg: "#FF2000"}));
                 reportSuccess = "❌ FAILED";
                 console.log(`${toEsmPackageJson.name}: (1075) Note that the file is still generated to allow error checking and manual updates.`);
             }
