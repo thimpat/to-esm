@@ -2673,6 +2673,12 @@ const convert = async (rawCliOptions = {}) =>
             rootDir = path.join(workingDir, path.dirname(list[0]));
         }
 
+        if (!i && list.length === 1)
+        {
+            cliOptions.entrypoint = list[0];
+            break;
+        }
+
         list.forEach((source) =>
         {
             addFileToConvertingList({source, rootDir, outputDir, workingDir});
@@ -2685,6 +2691,7 @@ const convert = async (rawCliOptions = {}) =>
     if (cliOptions.entrypoint)
     {
         const entrypointPath = normalisePath(cliOptions.entrypoint);
+        console.log(toAnsi.getTextFromHex(`${toEsmPackageJson.name}: (1402)              Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
         entryPoint = addFileToConvertingList({
