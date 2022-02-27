@@ -111,7 +111,7 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
     {
         const item = detectedExported[i];
 
-        const regexSentence = `(class|function|const|var|let)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
+        const regexSentence = `(class|const|var|let|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
@@ -1605,6 +1605,7 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
  * @param workingDir
  * @param followlinked
  * @param moreOptions
+ * @param nonHybridModuleMap
  * @returns {*}
  */
 const convertToESMWithRegex = (converted, list, {
@@ -2265,7 +2266,7 @@ const mergeCode = (codes) =>
     ${EOL}${EOL}${EOL}    
         `;
 
-        content = content.replace(/export\s+(const|let|var|function)/gm, "$1");
+        content = content.replace(/export\s+(const|let|var|function\s*\*?)/gm, "$1");
         content = content.replace(/export\s+default/gm, `ESM["${entry.id}"].default = `);
 
         content = beforeReplace(/import.*?from\s*(["']([^"']+)["'])/gi, content, function (found, wholeText, index, match)
