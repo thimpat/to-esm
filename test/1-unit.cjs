@@ -25,8 +25,17 @@ const {
     regexifySearchList,
 } = require("../src/converter.cjs");
 
+const {anaLogger} = require("analogger");
+
 describe("converter.cjs", function ()
 {
+
+    beforeEach(function ()
+    {
+        anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
+        anaLogger.overrideConsole();
+        anaLogger.overrideError();
+    });
 
     /**
      * @link stripComments
@@ -36,7 +45,6 @@ describe("converter.cjs", function ()
 
         it("should strip comments from strings", function ()
         {
-
             // Arrange
             const input = `const cc = /* tttk k[gr */ \`var QuickLog3 = require("../../src/cjs/quick-log.cjs")\`;       // -------------
 // const aa = "let QuickLog2 = require(\\"../../src/cjs/quick-log.cjs\\")";`;

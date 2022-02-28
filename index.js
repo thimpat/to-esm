@@ -3,6 +3,10 @@
 const packageJson = require("./package.json");
 const minimist = require("minimist");
 const {convert} = require("./src/converter.cjs");
+const {anaLogger}  = require("analogger");
+
+const LOG_CONTEXTS = {STANDARD: null, TEST: {color: "#B18904"}, C1: null, C2: null, C3: null, DEFAULT: {color: "#FF9999"}};
+
 
 const getHelp = () =>
 {
@@ -38,6 +42,15 @@ Examples:
 `;
 };
 
+const setupConsole = () =>
+{
+    anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
+    anaLogger.overrideConsole();
+    anaLogger.overrideError();
+
+    console.log({lid: 1300}, "Console is set up");
+};
+
 (async () =>
 {
     const cliOptions = minimist(process.argv.slice(2));
@@ -56,6 +69,8 @@ Examples:
         console.log(getHelp());
         return;
     }
+
+    setupConsole();
 
     await convert(cliOptions);
 })()

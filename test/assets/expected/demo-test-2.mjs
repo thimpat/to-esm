@@ -4,8 +4,8 @@
  * [./test/assets/given/demo-test-2.cjs]{@link ./test/assets/given/demo-test-2.cjs}
  * 
  **/
-import chalk  from "chalk-cjs";
-import colorConvert  from "color-convert-cjs";
+import chalk  from "./node_modules/chalk-cjs/source.mjs";
+import colorConvert  from "./node_modules/color-convert-cjs/index.mjs";
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 
