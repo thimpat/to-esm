@@ -34,6 +34,7 @@
     "url": "https://github.com/thimpat/to-esm.git"
   },
   "dependencies": {
+    "analogger": "^1.8.5",
     "before-replace": "^1.0.5",
     "commondir": "^1.0.1",
     "espree": "^9.3.0",
