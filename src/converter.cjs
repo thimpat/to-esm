@@ -748,6 +748,10 @@ const putBackAmbiguous = (converted) =>
  */
 const convertModuleExportsToExport = (converted) =>
 {
+    converted = converted.replace(
+        /\b(const|let|var|function)\s+\b(\w+)\b([\s\S]*?)(\bmodule\b\.)?\bexports\b\.\2\s*=\s*\2.*/gm,
+        "export $1 $2 $3");
+
     // Convert module.exports to export default
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
 
