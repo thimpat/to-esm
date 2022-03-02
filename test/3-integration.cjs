@@ -389,6 +389,24 @@ describe("The converter tool", function ()
             }
         );
 
+        it("should convert indirect requires", async function ()
+            {
+                const input = "./test/assets/given/demo-test-19.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "esm"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-19.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-19.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
         it("should apply directives correctly when the target is all", async function ()
             {
                 const input = "./test/assets/given/demo-test-13.cjs";
