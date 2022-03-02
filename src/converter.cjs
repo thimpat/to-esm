@@ -757,7 +757,7 @@ const convertModuleExportsToExport = (converted) =>
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
 
     // Convert module.exports.something to export something
-    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\./gm, "export const ");
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
 
     return converted;
 };
@@ -2048,6 +2048,7 @@ const addFileToConvertingList = ({
 const resetFileList = () =>
 {
     cjsList = [];
+    indexGeneratedTempVariable = 1;
 };
 
 const getIndent = async (str) =>
