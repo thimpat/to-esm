@@ -2156,23 +2156,35 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
         if (!json.exports)
         {
             /* istanbul ignore next */
-            json.exports = {
-                ".": {...entry}
-            };
-        }
-        else if (!json.exports["."])
-        {
-            /* istanbul ignore next */
-            json.exports["."] = entry;
-        }
-        else if (typeof json.exports["."] === "object" && !Array.isArray(json.exports["."]))
-        {
-            json.exports["."] = Object.assign({}, json.exports["."], entry);
+            json.exports = entry;
         }
         else
         {
-            /* istanbul ignore next */
-            json.exports["."] = entry;
+            // Cannot update
+            if (Array.isArray(json.exports["."]))
+            {
+                console.log({lid: 1419}, "Cannot update package.json. Expecting exports key to be an object.");
+                return false;
+            }
+
+            if (Object.keys(json.exports).length <= 0)
+            {
+                json.exports = entry;
+            }
+            else if (json.exports.hasOwnProperty("import") || json.exports.hasOwnProperty("require"))
+            {
+                json.exports.import = entry.import;
+                json.exports.require = entry.require;
+            }
+            else if (typeof json.exports["."] === "object")
+            {
+                json.exports["."] = Object.assign({}, json.exports["."], entry);
+            }
+            else
+            {
+                /* istanbul ignore next */
+                json.exports["."] = entry;
+            }
         }
 
         let indent = 2;
