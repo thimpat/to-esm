@@ -753,6 +753,17 @@ const convertModuleExportsToExport = (converted) =>
         /\b(const|let|var|class|function\s*\*)\s+\b(\w+)\b([\s\S]*?)(\bmodule\b\.)?\bexports\b\.\2\s*=\s*\2.*/gm,
         "export $1 $2 $3");
 
+    let converted0;
+    do
+    {
+        converted0 = converted;
+        // Convert module.exports.something ... function something
+        converted = converted.replaceAll(
+            /\b(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=\s*\1.*([\s\S]*)(\bfunction\s*\*?\1)/sgm,
+            "$2 export $3");
+    }
+    while (converted !== converted0);
+
     // Convert module.exports to export default
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
 
