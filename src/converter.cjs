@@ -111,7 +111,8 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
     {
         const item = detectedExported[i];
 
-        const regexSentence = `(class|const|var|let|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
+        const regexSentence =
+            `(class|const|let|var|class|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
@@ -133,12 +134,12 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
 const convertNonTrivial = (converted) =>
 {
     let converted0;
-    let regex = /((?<!export\s+)(?:const|let|var)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
+    let regex = /((?<!export\s+)(?:const|let|var|class|function\s*\*?)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
     let subst = "export $1$2$3";
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
 
-    regex = /(?:const|let|var)\s+([\w]+)([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
+    regex = /(?:const|let|var|class|function\s*\*?)\s+([\w]+)([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
     subst = "import $1 from $3$2";
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
@@ -749,7 +750,7 @@ const putBackAmbiguous = (converted) =>
 const convertModuleExportsToExport = (converted) =>
 {
     converted = converted.replace(
-        /\b(const|let|var|function)\s+\b(\w+)\b([\s\S]*?)(\bmodule\b\.)?\bexports\b\.\2\s*=\s*\2.*/gm,
+        /\b(const|let|var|class|function\s*\*)\s+\b(\w+)\b([\s\S]*?)(\bmodule\b\.)?\bexports\b\.\2\s*=\s*\2.*/gm,
         "export $1 $2 $3");
 
     // Convert module.exports to export default
@@ -774,18 +775,18 @@ const convertRequiresToImport = (converted) =>
     converted = stripCodeComments(converted);
 
     // convert require with .json file to import
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
 
     // convert require with .js or .cjs extension to import
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+\.c?js)([^)])\)/gm, "import $1" +
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+\.c?js)([^)])\)/gm, "import $1" +
         " from" +
         " $2$3");
 
     // convert require without extension to import without extension
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
     // convert require with non-relative path to import (Third Party libraries)
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
     return converted;
 };
@@ -819,7 +820,7 @@ const convertComplexRequiresToSimpleRequires = (converted) =>
         const extractedStrings = [];
         converted = stripCodeStrings(converted, extractedStrings);
 
-        converted = beforeReplace(/(const|let|var)\s+([^=]+)\s*=\s*(require\(["'`]([^"'`]+)["'`]\))(.+);?/g, converted, function (found, wholeText, index, match)
+        converted = beforeReplace(/(const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*(require\(["'`]([^"'`]+)["'`]\))(.+);?/g, converted, function (found, wholeText, index, match)
         {
             if (match.length < 6)
             {
@@ -2282,7 +2283,7 @@ const mergeCode = (codes) =>
     ${EOL}${EOL}${EOL}    
         `;
 
-        content = content.replace(/export\s+(const|let|var|function\s*\*?)/gm, "$1");
+        content = content.replace(/export\s+(const|let|var|class|function\s*\*?)/gm, "$1");
         content = content.replace(/export\s+default/gm, `ESM["${entry.id}"].default = `);
 
         content = beforeReplace(/import.*?from\s*(["']([^"']+)["'])/gi, content, function (found, wholeText, index, match)
