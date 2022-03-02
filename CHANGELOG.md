@@ -1,3 +1,5 @@
+## [2.7.1](https://github.com/thimpat/to-esm/compare/v2.7.0...v2.7.1) (2022-03-02)
+
 # [2.7.0](https://github.com/thimpat/to-esm/compare/v2.6.0...v2.7.0) (2022-02-28)
 
 # [2.6.0](https://github.com/thimpat/to-esm/compare/v2.5.1...v2.6.0) (2022-02-27)
