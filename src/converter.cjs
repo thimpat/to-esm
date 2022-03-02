@@ -111,7 +111,8 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
     {
         const item = detectedExported[i];
 
-        const regexSentence = `(class|const|var|let|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
+        const regexSentence =
+            `(class|const|let|var|class|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
@@ -133,12 +134,12 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
 const convertNonTrivial = (converted) =>
 {
     let converted0;
-    let regex = /((?<!export\s+)(?:const|let|var)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
+    let regex = /((?<!export\s+)(?:const|let|var|class|function\s*\*?)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
     let subst = "export $1$2$3";
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
 
-    regex = /(?:const|let|var)\s+([\w]+)([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
+    regex = /(?:const|let|var|class|function\s*\*?)\s+([\w]+)([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
     subst = "import $1 from $3$2";
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
@@ -748,11 +749,26 @@ const putBackAmbiguous = (converted) =>
  */
 const convertModuleExportsToExport = (converted) =>
 {
+    converted = converted.replace(
+        /\b(const|let|var|class|function\s*\*)\s+\b(\w+)\b([\s\S]*?)(\bmodule\b\.)?\bexports\b\.\2\s*=\s*\2.*/gm,
+        "export $1 $2 $3");
+
+    let converted0;
+    do
+    {
+        converted0 = converted;
+        // Convert module.exports.something ... function something
+        converted = converted.replaceAll(
+            /\b(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=\s*\1.*([\s\S]*)(\bfunction\s*\*?\1)/sgm,
+            "$2 export $3");
+    }
+    while (converted !== converted0);
+
     // Convert module.exports to export default
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
 
     // Convert module.exports.something to export something
-    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\./gm, "export const ");
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
 
     return converted;
 };
@@ -770,18 +786,18 @@ const convertRequiresToImport = (converted) =>
     converted = stripCodeComments(converted);
 
     // convert require with .json file to import
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
 
     // convert require with .js or .cjs extension to import
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(([^)]+\.c?js)([^)])\)/gm, "import $1" +
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+\.c?js)([^)])\)/gm, "import $1" +
         " from" +
         " $2$3");
 
     // convert require without extension to import without extension
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
     // convert require with non-relative path to import (Third Party libraries)
-    converted = converted.replace(/(?:const|let|var)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
 
     return converted;
 };
@@ -815,7 +831,7 @@ const convertComplexRequiresToSimpleRequires = (converted) =>
         const extractedStrings = [];
         converted = stripCodeStrings(converted, extractedStrings);
 
-        converted = beforeReplace(/(const|let|var)\s+([^=]+)\s*=\s*(require\(["'`]([^"'`]+)["'`]\))(.+);?/g, converted, function (found, wholeText, index, match)
+        converted = beforeReplace(/(const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*(require\(["'`]([^"'`]+)["'`]\))(.+);?/g, converted, function (found, wholeText, index, match)
         {
             if (match.length < 6)
             {
@@ -2043,6 +2059,7 @@ const addFileToConvertingList = ({
 const resetFileList = () =>
 {
     cjsList = [];
+    indexGeneratedTempVariable = 1;
 };
 
 const getIndent = async (str) =>
@@ -2156,23 +2173,35 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
         if (!json.exports)
         {
             /* istanbul ignore next */
-            json.exports = {
-                ".": {...entry}
-            };
-        }
-        else if (!json.exports["."])
-        {
-            /* istanbul ignore next */
-            json.exports["."] = entry;
-        }
-        else if (typeof json.exports["."] === "object" && !Array.isArray(json.exports["."]))
-        {
-            json.exports["."] = Object.assign({}, json.exports["."], entry);
+            json.exports = entry;
         }
         else
         {
-            /* istanbul ignore next */
-            json.exports["."] = entry;
+            // Cannot update
+            if (Array.isArray(json.exports["."]))
+            {
+                console.log({lid: 1419}, "Cannot update package.json. Expecting exports key to be an object.");
+                return false;
+            }
+
+            if (Object.keys(json.exports).length <= 0)
+            {
+                json.exports = entry;
+            }
+            else if (json.exports.hasOwnProperty("import") || json.exports.hasOwnProperty("require"))
+            {
+                json.exports.import = entry.import;
+                json.exports.require = entry.require;
+            }
+            else if (typeof json.exports["."] === "object")
+            {
+                json.exports["."] = Object.assign({}, json.exports["."], entry);
+            }
+            else
+            {
+                /* istanbul ignore next */
+                json.exports["."] = entry;
+            }
         }
 
         let indent = 2;
@@ -2266,7 +2295,7 @@ const mergeCode = (codes) =>
     ${EOL}${EOL}${EOL}    
         `;
 
-        content = content.replace(/export\s+(const|let|var|function\s*\*?)/gm, "$1");
+        content = content.replace(/export\s+(const|let|var|class|function\s*\*?)/gm, "$1");
         content = content.replace(/export\s+default/gm, `ESM["${entry.id}"].default = `);
 
         content = beforeReplace(/import.*?from\s*(["']([^"']+)["'])/gi, content, function (found, wholeText, index, match)
