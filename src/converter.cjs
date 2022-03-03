@@ -22,6 +22,10 @@ const UglifyJS = require("uglify-js");
 
 const toEsmPackageJson = require("../package.json");
 
+let dumpCounter = 0;
+let DEBUG_MODE = false;
+
+
 const TARGET = {
     BROWSER: "browser",
     ESM    : "esm",
@@ -264,6 +268,21 @@ const getModuleEntryPointPath = (moduleName, targetDir = "") =>
 // ---------------------------------------------------
 // NEW STUFF
 // ---------------------------------------------------
+
+const dumpData = (converted, source, title = "") =>
+{
+    if (!DEBUG_MODE)
+    {
+        return;
+    }
+    ++dumpCounter;
+    const name = path.parse(source).name;
+    if (title)
+    {
+        title = "-" + title;
+    }
+    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${dumpCounter}${title}.js`), converted,  "utf-8");
+};
 
 /**
  * Transform a given path following some conventions.
@@ -827,10 +846,13 @@ const convertComplexRequiresToSimpleRequires = (converted) =>
 
         const extractedComments = [];
         converted = stripCodeComments(converted, extractedComments, commentMasks);
+        dumpData(converted, source, "stripCodeComments");
 
         const extractedStrings = [];
         converted = stripCodeStrings(converted, extractedStrings);
+        dumpData(converted, source, "stripCodeStrings");
 
+        // Introduce temporary variables (_toesm) for tricky require
         converted = beforeReplace(/(const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*(require\(["'`]([^"'`]+)["'`]\))(.+);?/g, converted, function (found, wholeText, index, match)
         {
             if (match.length < 6)
@@ -855,9 +877,14 @@ const convertComplexRequiresToSimpleRequires = (converted) =>
             const line2 = `${match[1]} ${match[2]} = ${intermediaryVariableName}${match[5]}`;
             return line1 + EOL + line2 + EOL;
         });
+        dumpData(converted, source, "add-extra-toesm-variable-for-tricky-requires");
 
         converted = putBackStrings(converted, extractedStrings);
+        dumpData(converted, source, "putBackStrings");
+
+        commentMasks.source = source;
         converted = putBackComments(converted, extractedComments, commentMasks);
+        dumpData(converted, source, "putBackComments");
 
         return converted;
     }
@@ -907,6 +934,7 @@ const removeDeclarationForAST = (converted, extracted) =>
 
     return converted;
 };
+
 
 /**
  * Convert "requires" to imports and move them to the top of the file.
@@ -1387,6 +1415,7 @@ const applyDirectives = (converted, {target = "all"} = {}) =>
     return converted;
 };
 
+
 /**
  * Generate an object describing a file to convert
  * @param source
@@ -1446,7 +1475,6 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
         console.error({lid: 1011}, "", e.message);
     }
 };
-
 
 const hasImportmap = (content) =>
 {
@@ -1752,8 +1780,8 @@ const getLibraryInfo = (modulePackname) =>
     }
     return info;
 };
-
 /* istanbul ignore next */
+
 /**
  * Install npm packages on the users project.
  * Ignore for the tests as it requires some End to End testing.
@@ -2459,12 +2487,16 @@ const convertCjsFiles = (list, {
             resetAll();
 
             let converted = fs.readFileSync(source, "utf-8");
-
+            dumpData(converted, source, "read-file");
+            
             converted = applyDirectives(converted, moreOptions);
+            dumpData(converted, source, "apply-directives");
 
             converted = applyReplaceFromConfig(converted, replaceStart);
+            dumpData(converted, source, "replace-from-config-file");
 
-            converted = convertComplexRequiresToSimpleRequires(converted);
+            converted = convertComplexRequiresToSimpleRequires(converted, source);
+            dumpData(converted, source, "convert-complex-requires-to-simple-requires");
 
             if (isCjsCompatible(source, converted))
             {
@@ -2485,13 +2517,18 @@ const convertCjsFiles = (list, {
                 converted = result.converted;
                 success = result.success;
 
+                dumpData(converted, source);
+                
                 list[dynamicIndex].exported = result.detectedExported;
 
                 if (success)
                 {
                     converted = convertNonTrivialExportsWithAST(converted, result.detectedExported);
+                    dumpData(converted, source);
                     converted = convertModuleExportsToExport(converted);
+                    dumpData(converted, source);
                     converted = putBackAmbiguous(converted);
+                    dumpData(converted, source);
                 }
                 else
                 {
@@ -2509,15 +2546,29 @@ const convertCjsFiles = (list, {
                             followlinked,
                             moreOptions
                         });
+                    dumpData(converted, source);
                 }
+            }
+            else {
+                converted = reviewEsmImports(converted, list,
+                    {
+                        source, outputDir, rootDir, importMaps,
+                        nonHybridModuleMap, workingDir, followlinked, moreOptions
+                    });
+                dumpData(converted, source);
             }
 
             converted = restoreText(converted);
+            dumpData(converted, source);
 
             converted = insertHeader(converted, source, {noHeader: noheader});
+            dumpData(converted, source);
 
             converted = applyReplaceFromConfig(converted, replaceEnd);
+            dumpData(converted, source);
+            
             converted = normaliseString(converted);
+            dumpData(converted, source);
 
             // ******************************************
             const targetFile = path.basename(source, path.extname(source));
@@ -2744,6 +2795,8 @@ const convert = async (rawCliOptions = {}) =>
     {
         buildTargetDir(DEBUG_DIR);
     }
+
+    DEBUG_MODE = !!debuginput;
 
     let followlinked = !cliOptions.ignorelinked;
 
