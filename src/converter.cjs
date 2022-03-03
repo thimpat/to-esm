@@ -1337,6 +1337,11 @@ const stripCodeComments = (code, extracted = null, {
     return code;
 };
 
+const escapeDollar = (text) =>
+{
+    return text.split("$").join("$$");
+};
+
 const putBackComments = (str, extracted, {
     COMMENT_MASK_START = COMMENT_MASK,
     COMMENT_MASK_END = COMMENT_MASK
@@ -1349,7 +1354,8 @@ const putBackComments = (str, extracted, {
 
     for (let i = 0; i < extracted.length; ++i)
     {
-        str = str.replace(COMMENT_MASK_START + i + COMMENT_MASK_END, extracted[i]);
+        let escaped = escapeDollar(extracted[i]);
+        str = str.replace(COMMENT_MASK_START + i + COMMENT_MASK_END, escaped);
     }
 
     return str;
