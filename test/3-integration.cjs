@@ -407,7 +407,7 @@ describe("The converter tool", function ()
             }
         );
 
-        it("should convert not convert some special cases of exports", async function ()
+        it("should not convert some special cases of exports", async function ()
             {
                 const input = "./test/assets/given/demo-test-20.cjs";
                 const options = {
@@ -420,6 +420,42 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-20.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-20.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should move imports to top level", async function ()
+            {
+                const input = "./test/assets/given/demo-test-21.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "esm"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-21.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-21.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should convert source when comments or strings contain dollar signs", async function ()
+            {
+                const input = "./test/assets/given/demo-test-22.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "esm"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-22.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-22.mjs"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }
