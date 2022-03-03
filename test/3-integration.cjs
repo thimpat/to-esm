@@ -425,7 +425,7 @@ describe("The converter tool", function ()
             }
         );
 
-        it.skip("should move imports to top level", async function ()
+        it("should move imports to top level", async function ()
             {
                 const input = "./test/assets/given/demo-test-21.cjs";
                 const options = {
