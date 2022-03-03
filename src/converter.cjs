@@ -2498,6 +2498,7 @@ const markBlocks = str =>
         let char = str.charAt(i);
         if (!regexOn && char === "/")
         {
+            /* istanbul ignore next */
             if (i > 0 && str.charAt(i - 1) === "\\")
             {
                 continue;
@@ -2519,6 +2520,7 @@ const markBlocks = str =>
 
         if (char === "{")
         {
+            /* istanbul ignore next */
             if (i > 0 && str.charAt(i - 1) === "\\")
             {
                 continue;
@@ -2530,6 +2532,7 @@ const markBlocks = str =>
         }
         else if (char === "}")
         {
+            /* istanbul ignore next */
             if (i > 0 && str.charAt(i - 1) === "\\")
             {
                 continue;
