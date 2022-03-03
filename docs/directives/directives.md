@@ -51,10 +51,23 @@ this.realConsoleLog("LogToFile is not supported in this environment. ")
 ---
 
 
-### Directives to ignore code during the parsing so it won't be converted by mistake.
+### Directives to ignore code during the parsing, so it won't be converted by mistake.
 
 ```javascript
 /** to-esm-all: skip **/
 console.log("Skip this");
 /** to-esm-all: end-skip **/
 ```
+
+<br>
+
+---
+
+
+### Directives to keep the target file as it is.
+
+```javascript
+/** to-esm-all: do-not-overwrite **/
+```
+
+If the .mjs file already exists and contains this directive, it will not be overwritten.
