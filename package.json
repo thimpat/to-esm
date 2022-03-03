@@ -47,7 +47,7 @@
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
     "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
-    "strip-comments-strings": "^1.1.5",
+    "strip-comments-strings": "^1.1.7",
     "to-ansi": "^1.0.5",
     "uglify-js": "^3.15.1"
   },
