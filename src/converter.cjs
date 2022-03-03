@@ -2781,7 +2781,22 @@ const convertCjsFiles = (list, {
 
             if (!notOnDisk)
             {
-                fs.writeFileSync(targetFilepath, converted, "utf-8");
+                let overwrite = true;
+                if (fs.existsSync(targetFilepath))
+                {
+                    const content = fs.readFileSync(targetFilepath, "utf-8");
+                    const regexp = new RegExp("\\/\\*\\*\\s*to-esm-\\w+:\\s*do-not-overwrite", "gm");
+                    if (regexp.test(content))
+                    {
+                        overwrite = false;
+                        console.log({lid: 1600, color: "#00FF00"}, ` [${source}] contain the directive "do-not-overwrite". Skipping.`);
+                    }
+                }
+
+                if (overwrite)
+                {
+                    fs.writeFileSync(targetFilepath, converted, "utf-8");
+                }
             }
 
             if (withreport)
