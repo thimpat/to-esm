@@ -22,6 +22,18 @@ const UglifyJS = require("uglify-js");
 
 const toEsmPackageJson = require("../package.json");
 
+// Value for parsable code
+let commentMasks = {
+    COMMENT_MASK_START: "🥽👕🧥",
+    COMMENT_MASK_END  : "🥾👑🩳",
+};
+let sourceExtractedComments = [];
+let sourceExtractedStrings = [];
+
+const blockMaskIn = "👉";
+const blockMaskOut = "👈";
+
+
 let dumpCounter = 0;
 let DEBUG_MODE = false;
 
@@ -36,6 +48,10 @@ const ESM_EXTENSION = ".mjs";
 const COMMENT_MASK = "❖✎🔏❉";
 const STRING_MASK_START = "❖✎❉";
 const STRING_MASK_END = "❉✎❖";
+
+const EOL = require("os").EOL;
+const IMPORT_MASK_START = EOL + "/** to-esm: import-start **/" + EOL;
+const IMPORT_MASK_END = EOL + "/** to-esm: import-end **/" + EOL;
 
 const DEBUG_DIR = "./debug/";
 
@@ -63,8 +79,6 @@ const nativeModules = Object.keys(process.binding("natives"));
 
 // The whole list of files to convert
 let cjsList = [];
-
-const EOL = require("os").EOL;
 
 const normaliseString = (content) =>
 {
@@ -777,6 +791,7 @@ const convertModuleExportsToExport = (converted) =>
     {
         converted0 = converted;
         // Convert module.exports.something ... function something
+        // to import something
         converted = converted.replaceAll(
             /\b(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=\s*\1.*([\s\S]*)(\bfunction\s*\*?\1)/sgm,
             "$2 export $3");
@@ -835,15 +850,16 @@ const stripMasked = (str, limit, {
     return str;
 };
 
-const convertComplexRequiresToSimpleRequires = (converted) =>
+/**
+ *
+ * @param converted
+ * @param source Only for debuggin
+ * @returns {*}
+ */
+const convertComplexRequiresToSimpleRequires = (converted, source = "") =>
 {
     try
     {
-        const commentMasks = {
-            COMMENT_MASK_START: "🥽👕🧥",
-            COMMENT_MASK_END  : "🥾👑🩳",
-        };
-
         const extractedComments = [];
         converted = stripCodeComments(converted, extractedComments, commentMasks);
         dumpData(converted, source, "stripCodeComments");
@@ -1020,6 +1036,8 @@ const applyExtractedASTToImports = (converted, extracted, list, {
         {
             converted = EOL + converted;
         }
+
+        imports = IMPORT_MASK_START + imports + IMPORT_MASK_END;
         converted = imports + converted;
     }
     catch (e)
@@ -1030,7 +1048,6 @@ const applyExtractedASTToImports = (converted, extracted, list, {
 
     return converted;
 };
-
 
 /**
  * Given an identifier detected by AST, returns the block it belongs to.
@@ -1908,6 +1925,7 @@ const installNonHybridModules = async (config = []) =>
     return nonHybridModules;
 };
 
+
 const parseEsm = (filepath, content, {
     range = false,
     loc = false,
@@ -1946,7 +1964,6 @@ const parseEsm = (filepath, content, {
 
     return {success: true};
 };
-
 
 /**
  * Check whether a file is CommonJs
@@ -2360,6 +2377,7 @@ const mergeCode = (codes) =>
     return newCode;
 };
 
+
 const minifyCode = (cjsList, bundlePath) =>
 {
     const code = {};
@@ -2423,7 +2441,6 @@ const minifyCode = (cjsList, bundlePath) =>
     });
 };
 
-
 /**
  * Bundle generated ESM code into o minified bundle
  * @param cjsList
@@ -2451,6 +2468,132 @@ const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"
     }
 
 };
+
+const hideKeyElementCode = (str)=>
+{
+    sourceExtractedComments = [];
+    sourceExtractedStrings = [];
+    str = stripCodeComments(str, sourceExtractedComments, commentMasks);
+    str = stripCodeStrings(str, sourceExtractedStrings);
+    return str;
+};
+
+const restoreKeyElementCode = (str)=>
+{
+    str = putBackStrings(str, sourceExtractedStrings);
+    str = putBackComments(str, sourceExtractedComments, commentMasks);
+    return str;
+};
+
+const markBlocks = str =>
+{
+    const n = str.length;
+    let blockLevel = -1;
+    let modifiedSource = "";
+    let lastPos = 0;
+    let max = 0;
+    let regexOn = false;
+    for (let i = 0; i < n; ++i)
+    {
+        let char = str.charAt(i);
+        if (!regexOn && char === "/")
+        {
+            if (i > 0 && str.charAt(i - 1) === "\\")
+            {
+                continue;
+            }
+            regexOn = true;
+            continue;
+        }
+
+        if (regexOn && char === "/")
+        {
+            regexOn = false;
+            continue;
+        }
+
+        if (regexOn)
+        {
+            continue;
+        }
+
+        if (char === "{")
+        {
+            if (i > 0 && str.charAt(i - 1) === "\\")
+            {
+                continue;
+            }
+            ++blockLevel;
+            max = Math.max(max, blockLevel);
+            modifiedSource += str.substring(lastPos, i) + blockMaskIn + blockLevel;
+            lastPos = i + 1;
+        }
+        else if (char === "}")
+        {
+            if (i > 0 && str.charAt(i - 1) === "\\")
+            {
+                continue;
+            }
+            modifiedSource += str.substring(lastPos, i) + blockMaskOut + blockLevel;
+            lastPos = i + 1;
+            --blockLevel;
+        }
+    }
+
+    modifiedSource += str.substring(lastPos);
+    return {modifiedSource, max};
+};
+
+const removeResidue = (str) =>
+{
+    str = str.replace(IMPORT_MASK_START, "");
+    str = str.replace(IMPORT_MASK_END, "");
+    return str;
+};
+
+function moveEmbeddedImportsToTop(str)
+{
+    str = hideKeyElementCode(str);
+    let {modifiedSource} = markBlocks(str);
+    const regex = new RegExp(`\\bexport\\s+default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\s*;?`, "gm");
+    const exportDefault = [];
+    str = beforeReplace(regex, modifiedSource, function (found, wholeText, index, match)
+    {
+        exportDefault.push(match[0]);
+        return "";
+    });
+
+    str = restoreKeyElementCode(str);
+
+    if (exportDefault.length)
+    {
+        // Only 1 export default is allowed
+        if (exportDefault.length > 1)
+        {
+            console.log({lid: 1080, color: "#333333"}, " More than one default detected. Only the first one" +
+                " will be" +
+                " converted.");
+        }
+
+        if (str.indexOf(IMPORT_MASK_END) > -1)
+        {
+            const escaped = escapeDollar(exportDefault[exportDefault.length - 1] + EOL);
+            str = str.replace(IMPORT_MASK_END, EOL + escaped + EOL);
+        }
+        else
+        {
+            str = exportDefault[exportDefault.length - 1] + EOL + str;
+        }
+    }
+
+    const regexMaskIn = new RegExp(`${blockMaskIn}(\\d+)`, "gm");
+    str = str.replaceAll(regexMaskIn, "{");
+
+    const regexMaskOut = new RegExp(`${blockMaskOut}(\\d+)`, "gm");
+    str = str.replaceAll(regexMaskOut, "}");
+
+    return str;
+}
 
 /**
  * Convert cjs file into esm
@@ -2564,6 +2707,8 @@ const convertCjsFiles = (list, {
                 dumpData(converted, source);
             }
 
+            converted = moveEmbeddedImportsToTop(converted);
+
             converted = restoreText(converted);
             dumpData(converted, source);
 
@@ -2575,6 +2720,8 @@ const convertCjsFiles = (list, {
             
             converted = normaliseString(converted);
             dumpData(converted, source);
+
+            converted = removeResidue(converted);
 
             // ******************************************
             const targetFile = path.basename(source, path.extname(source));
