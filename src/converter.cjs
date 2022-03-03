@@ -258,6 +258,12 @@ const getModuleEntryPointPath = (moduleName, targetDir = "") =>
     {
         let entryPoint;
         entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs: false, useNativeResolve: false});
+        /* istanbul ignore next */
+        if (entryPoint === null)
+        {
+            console.log({lid: 1149}, ` Could not find entry point for module ${moduleName}.`);
+            return null;
+        }
         entryPoint = normalisePath(entryPoint);
 
         const nodeModulesPos = entryPoint.indexOf("node_modules");
@@ -273,7 +279,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "") =>
     }
     catch (e)
     {
-        console.info({lid: 1140}, ` Checking [${moduleName}] package.json`, e.message);
+        console.info({lid: 1147}, ` Checking [${moduleName}] package.json`, e.message);
     }
 
     return null;
@@ -565,7 +571,7 @@ const reviewEsmImports = (text, list, {
                 let requiredPath = getModuleEntryPointPath(moduleName, workingDir);
                 if (!requiredPath)
                 {
-                    console.warn({lid: 1099}, ` The module [${moduleName}] was not found in your node_modules directory. `
+                    console.warn({lid: 1099, color: "#FF0000"}, ` The module [${moduleName}] was not found in your node_modules directory. `
                         + "Skipping.");
                     return match;
                 }
@@ -1842,9 +1848,9 @@ const installPackage =
 
         const environment = isCjs ? "CommonJs modules" : "ES Modules";
 
-        console.info(`${packageJson.name}: (1142) Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
+        console.info({lid: 1142}, `Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
-        console.info(`${packageJson.name}: (1144) ✔ Success`);
+        console.info({lid: 1142},"✔ Success");
     };
 
 /**
@@ -2269,7 +2275,7 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
         let str = normaliseString(JSON.stringify(json, null, indent));
         fs.writeFileSync(packageJsonLocation, str, "utf8");
 
-        console.log({lid: 1412}, {lid: 1412}, " ");
+        console.log({lid: 1412}, " ");
         console.log({lid: 1414}, " ================================================================");
         console.log({lid: 1416}, " package.json updated");
         console.log({lid: 1418}, " ----------------------------------------------------------------");
@@ -2622,7 +2628,7 @@ const convertCjsFiles = (list, {
 
     if (!list || !list.length)
     {
-        console.info(`${toEsmPackageJson.name} (1010): No file to convert.`);
+        console.info({lid: 1010}, "No file to convert.");
         return false;
     }
 
@@ -2929,7 +2935,7 @@ const convert = async (rawCliOptions = {}) =>
     if (cliOptions.entrypoint)
     {
         const entrypointPath = normalisePath(cliOptions.entrypoint);
-        console.log(toAnsi.getTextFromHex({lid: 1402}, `              Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
+        console.log({lid: 1402}, toAnsi.getTextFromHex( `Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
         entryPoint = addFileToConvertingList({
