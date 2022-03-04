@@ -304,7 +304,7 @@ const dumpData = (converted, source, title = "") =>
     }
 
     const indexCounter = dumpCounter.toString().padStart(4, "0");
-    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${indexCounter}${title}.js`), converted,  "utf-8");
+    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${indexCounter}${title}.js`), converted, "utf-8");
 };
 
 /**
@@ -574,7 +574,10 @@ const reviewEsmImports = (text, list, {
                 let requiredPath = getModuleEntryPointPath(moduleName, workingDir);
                 if (!requiredPath)
                 {
-                    console.warn({lid: 1099, color: "#FF0000"}, ` The module [${moduleName}] was not found in your node_modules directory. `
+                    console.warn({
+                        lid  : 1099,
+                        color: "#FF0000"
+                    }, ` The module [${moduleName}] was not found in your node_modules directory. `
                         + "Skipping.");
                     return match;
                 }
@@ -1148,6 +1151,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         if (debuginput)
         {
             const debugPath = path.join(DEBUG_DIR, source + ".json");
+            buildTargetDir(path.parse(debugPath).dir);
             writeStream = fs.createWriteStream(debugPath);
             readable = Readable.from([""]);
             readable.pipe(writeStream);
@@ -1853,7 +1857,7 @@ const installPackage =
 
         console.info({lid: 1142}, `Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
-        console.info({lid: 1142},"✔ Success");
+        console.info({lid: 1142}, "✔ Success");
     };
 
 /**
@@ -3006,7 +3010,7 @@ const convert = async (rawCliOptions = {}) =>
     {
         if (fs.existsSync(DEBUG_DIR))
         {
-            fs.rmSync(DEBUG_DIR, { recursive: true, force: true });
+            fs.rmSync(DEBUG_DIR, {recursive: true, force: true});
         }
         buildTargetDir(DEBUG_DIR);
     }
@@ -3107,3 +3111,4 @@ module.exports.putBackComments = putBackComments;
 module.exports.regexifySearchList = regexifySearchList;
 module.exports.getImportMapFromPage = getImportMapFromPage;
 module.exports.resetFileList = resetFileList;
+module.exports.DEBUG_DIR = DEBUG_DIR;
