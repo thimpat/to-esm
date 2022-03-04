@@ -2603,7 +2603,6 @@ function moveEmbeddedImportsToTop(str, source)
     dumpData(str, source, "moveEmbeddedImportsToTop - hideKeyElementCode");
 
     // Export default
-    // let regex = new RegExp(`\\bexport.*\\s+default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\s*;?`, "gm");
     let regex = new RegExp(`\\bexport.*default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\\s*;?`, "gm");
     const exportDefault = [];
     str = beforeReplace(regex, str, function (found, wholeText, index, match)
@@ -2614,7 +2613,7 @@ function moveEmbeddedImportsToTop(str, source)
     dumpData(str, source, "moveEmbeddedImportsToTop - Transform export default");
 
     // module.exports
-    regex = new RegExp(`\\bexport${EXPORT_KEYWORD_MASK}([0-9]*[1-9])\\s+default\\s+.*;?`, "gm");
+    regex = new RegExp(`\\bexport${EXPORT_KEYWORD_MASK}(\\d*)\\s+default\\s+.*;?`, "gm");
     str = beforeReplace(regex, str, function (found, wholeText, index, match)
     {
         exportDefault.push(match[0]);
