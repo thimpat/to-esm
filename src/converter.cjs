@@ -2675,18 +2675,16 @@ const convertCjsFiles = (list, {
                 converted = result.converted;
                 success = result.success;
 
-                dumpData(converted, source);
+                dumpData(converted, source, "convertRequiresToImportsWithAST");
                 
                 list[dynamicIndex].exported = result.detectedExported;
 
                 if (success)
                 {
                     converted = convertNonTrivialExportsWithAST(converted, result.detectedExported);
-                    dumpData(converted, source);
+                    dumpData(converted, source, "convertNonTrivialExportsWithAST");
                     converted = convertModuleExportsToExport(converted);
-                    dumpData(converted, source);
-                    converted = putBackAmbiguous(converted);
-                    dumpData(converted, source);
+                    dumpData(converted, source, "convertModuleExportsToExport");
                 }
                 else
                 {
@@ -2704,7 +2702,7 @@ const convertCjsFiles = (list, {
                             followlinked,
                             moreOptions
                         });
-                    dumpData(converted, source);
+                    dumpData(converted, source, "convertToESMWithRegex");
                 }
             }
             else {
@@ -2713,24 +2711,29 @@ const convertCjsFiles = (list, {
                         source, outputDir, rootDir, importMaps,
                         nonHybridModuleMap, workingDir, followlinked, moreOptions
                     });
-                dumpData(converted, source);
+                dumpData(converted, source, "reviewEsmImports");
             }
 
             converted = moveEmbeddedImportsToTop(converted);
+            dumpData(converted, source, "moveEmbeddedImportsToTop");
+
+            converted = putBackAmbiguous(converted);
+            dumpData(converted, source, "putBackAmbiguous");
 
             converted = restoreText(converted);
-            dumpData(converted, source);
+            dumpData(converted, source, "restoreText");
 
             converted = insertHeader(converted, source, {noHeader: noheader});
-            dumpData(converted, source);
+            dumpData(converted, source, "insertHeader");
 
             converted = applyReplaceFromConfig(converted, replaceEnd);
-            dumpData(converted, source);
+            dumpData(converted, source, "applyReplaceFromConfig");
             
             converted = normaliseString(converted);
-            dumpData(converted, source);
+            dumpData(converted, source, "normaliseString");
 
             converted = removeResidue(converted);
+            dumpData(converted, source, "removeResidue");
 
             // ******************************************
             const targetFile = path.basename(source, path.extname(source));
@@ -2966,10 +2969,15 @@ const convert = async (rawCliOptions = {}) =>
     const noheader = !!cliOptions.noheader;
     const withreport = !!cliOptions.withreport;
     const fallback = !!cliOptions.fallback;
-    const debuginput = cliOptions.debuginput || "";
+    const debug = cliOptions.debug || false;
+    const debuginput = debug || cliOptions.debuginput || "";
 
     if (debuginput)
     {
+        if (fs.existsSync(DEBUG_DIR))
+        {
+            fs.rmSync(DEBUG_DIR, { recursive: true, force: true });
+        }
         buildTargetDir(DEBUG_DIR);
     }
 
