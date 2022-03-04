@@ -6,6 +6,8 @@
  **/
 import { EMPTY_BUFFER }  from "./test/assets/given/constants.mjs";
 import _toesmTemp1  from "node-gyp-build";
+export default _toesmTemp1(__dirname);
+
 /**
  * Some code extract from module to use with test only
  */
@@ -53,9 +55,7 @@ function toBuffer(data) {
     return buf;
 }
 
-try {export
-    export default _toesmTemp1(__dirname);
+try { 
 
-} catch (e) {export
-    export default require('./fallback');
+} catch (e) { 
 }
