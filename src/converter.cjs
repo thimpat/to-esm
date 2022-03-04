@@ -1827,7 +1827,7 @@ const getLibraryInfo = (modulePackname) =>
  * @param packageJson
  */
 const installPackage =
-    ({name, version, isDevDependencies, moduleName, isCjs, packageJson} = {}) =>
+    ({name, version, isDevDependencies, moduleName, isCjs} = {}) =>
     {
         try
         {
@@ -2678,7 +2678,8 @@ const convertCjsFiles = (list, {
     importMaps = {},
     followlinked = true,
     debuginput = "",
-    moreOptions = {}
+    moreOptions = {},
+    keepexisting = false
 } = {}) =>
 {
     let report;
@@ -2856,7 +2857,7 @@ const convertCjsFiles = (list, {
                     }
                 }
 
-                if (overwrite)
+                if (overwrite && !keepexisting)
                 {
                     fs.writeFileSync(targetFilepath, converted, "utf-8");
                 }
@@ -3029,6 +3030,7 @@ const convert = async (rawCliOptions = {}) =>
     const noheader = !!cliOptions.noheader;
     const withreport = !!cliOptions.withreport;
     const fallback = !!cliOptions.fallback;
+    const keepexisting = !!cliOptions.keepexisting;
     const debug = cliOptions.debug || false;
     const debuginput = debug || cliOptions.debuginput || "";
 
@@ -3072,7 +3074,8 @@ const convert = async (rawCliOptions = {}) =>
             workingDir,
             fallback,
             moreOptions,
-            debuginput
+            debuginput,
+            keepexisting
         });
 
     if (cliOptions.bundle)
