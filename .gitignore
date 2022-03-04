@@ -79,3 +79,4 @@ dist
 test/assets/package.json
 /test/sandbox/generated/
 /test/sandbox/node_modules/
+/debug/
