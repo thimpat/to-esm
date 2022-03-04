@@ -20,7 +20,6 @@ export default {
         }
     };
 
-
 /**
  * Some code extract from module to use with test only
  */
@@ -67,8 +66,10 @@ function toBuffer(data) {
     return buf;
 }
 
-try {
+try {export 
      
-} catch (e) /* istanbul ignore next */ {
+} catch (e) /* istanbul ignore next */ {export
     
 }
+
+
