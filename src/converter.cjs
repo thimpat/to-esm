@@ -52,6 +52,7 @@ const STRING_MASK_END = "❉✎❖";
 const EOL = require("os").EOL;
 const IMPORT_MASK_START = EOL + "/** to-esm: import-start **/" + EOL;
 const IMPORT_MASK_END = EOL + "/** to-esm: import-end **/" + EOL;
+const EXPORT_KEYWORD_MASK = "🦊";
 
 const DEBUG_DIR = "./debug/";
 
@@ -301,7 +302,9 @@ const dumpData = (converted, source, title = "") =>
     {
         title = "-" + title;
     }
-    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${dumpCounter}${title}.js`), converted,  "utf-8");
+
+    const indexCounter = dumpCounter.toString().padStart(4, "0");
+    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${indexCounter}${title}.js`), converted,  "utf-8");
 };
 
 /**
@@ -2481,6 +2484,8 @@ const hideKeyElementCode = (str)=>
     sourceExtractedStrings = [];
     str = stripCodeComments(str, sourceExtractedComments, commentMasks);
     str = stripCodeStrings(str, sourceExtractedStrings);
+    str = markBlocks(str).modifiedSource;
+
     return str;
 };
 
@@ -2489,6 +2494,11 @@ const restoreKeyElementCode = (str)=>
     str = putBackStrings(str, sourceExtractedStrings);
     str = putBackComments(str, sourceExtractedComments, commentMasks);
     return str;
+};
+
+const hasWord = (word, str) =>
+{
+    return str.indexOf(word) === 0;
 };
 
 const markBlocks = str =>
@@ -2524,6 +2534,16 @@ const markBlocks = str =>
             continue;
         }
 
+        if ("export".charAt(0) === char)
+        {
+            if (hasWord("export", str.substring(i)))
+            {
+                if (blockLevel >= 0)
+                {
+                    modifiedSource += "export" + EXPORT_KEYWORD_MASK + blockLevel + str.substring(lastPos + "export".length, i);
+                }
+            }
+        }
         if (char === "{")
         {
             /* istanbul ignore next */
@@ -2563,10 +2583,19 @@ const removeResidue = (str) =>
 function moveEmbeddedImportsToTop(str)
 {
     str = hideKeyElementCode(str);
-    let {modifiedSource} = markBlocks(str);
-    const regex = new RegExp(`\\bexport\\s+default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\s*;?`, "gm");
+
+    // Export default
+    let regex = new RegExp(`\\bexport\\s+default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\s*;?`, "gm");
     const exportDefault = [];
-    str = beforeReplace(regex, modifiedSource, function (found, wholeText, index, match)
+    str = beforeReplace(regex, str, function (found, wholeText, index, match)
+    {
+        exportDefault.push(match[0]);
+        return "";
+    });
+
+    // module.exports
+    regex = new RegExp(`\\bexport${EXPORT_KEYWORD_MASK}([0-9]*[1-9])\\s+default\\s+.*;?`, "gm");
+    str = beforeReplace(regex, str, function (found, wholeText, index, match)
     {
         exportDefault.push(match[0]);
         return "";
@@ -2587,7 +2616,7 @@ function moveEmbeddedImportsToTop(str)
         if (str.indexOf(IMPORT_MASK_END) > -1)
         {
             const escaped = escapeDollar(exportDefault[exportDefault.length - 1] + EOL);
-            str = str.replace(IMPORT_MASK_END, EOL + escaped + EOL);
+            str = str.replace(IMPORT_MASK_END, IMPORT_MASK_END + EOL + escaped);
         }
         else
         {
@@ -2600,6 +2629,9 @@ function moveEmbeddedImportsToTop(str)
 
     const regexMaskOut = new RegExp(`${blockMaskOut}(\\d+)`, "gm");
     str = str.replaceAll(regexMaskOut, "}");
+
+    const exportDefaultMask = new RegExp(`${EXPORT_KEYWORD_MASK}(\\d+)`, "gm");
+    str = str.replaceAll(exportDefaultMask, "");
 
     return str;
 }
@@ -2763,8 +2795,6 @@ const convertCjsFiles = (list, {
             if (!parsingResult.success)
             {
                 let e = parsingResult.error;
-                // console.error({lid: 1173}, ` ❌ FAULTY: ESM: Parsing failed on [${filepath}]`,
-                // parsingResult.error.message); Failed even with fallback
                 console.error({lid: 1055}, " " + toAnsi.getTextFromHex("ERROR: Conversion" +
                     " may have failed even with fallback processing on" +
                     ` [${targetFilepath}]`, {fg: "#FF0000"}));
