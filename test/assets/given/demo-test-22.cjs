@@ -1,24 +1,52 @@
+/**
+ * Some code extract from module to use with test only
+ */
 'use strict';
 
-//
-// Allowed token characters:
-//
-// '!', '#', '$', '%', '&', ''', '*', '+', '-',
-// '.', 0-9, A-Z, '^', '_', '`', a-z, '|', '~'
-//
-// tokenChars[32] === 0 // ' '
-// tokenChars[33] === 1 // '!'
-// tokenChars[34] === 0 // '"'
-// ...
-//
-// prettier-ignore
+const { EMPTY_BUFFER } = require('./constants');
 
-const isValidUTF8 = require('utf-8-validate');
-module.exports = {
-    isValidStatusCode,
-    isValidUTF8(buf)
-    {
-        return buf.length < 150 ? _isValidUTF8(buf) : isValidUTF8(buf);
-    },
-    tokenChars
-};
+function concat(list, totalLength) {
+}
+
+/**
+ * Some comment
+ *
+ */
+function _mask(source, mask, output, offset, length) {
+    for (let i = 0; i < length; i++) {
+        output[offset + i] = source[i] ^ mask[i & 3];
+    }
+}
+
+function _unmask(buffer, mask) {
+    for (let i = 0; i < buffer.length; i++) {
+        buffer[i] ^= mask[i & 3];
+    }
+}
+
+function toArrayBuffer(buf) {
+    if (buf.byteLength === buf.buffer.byteLength) {
+        return buf.buffer;
+    }
+
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
+
+/**
+ * Converts `data` to a `Buffer`.
+ *
+ * @param {*} data The data to convert
+ * @return {Buffer} The buffer
+ * @throws {TypeError}
+ * @public
+ */
+function toBuffer(data) {
+
+    return buf;
+}
+
+try {
+    module.exports = require('node-gyp-build')(__dirname);
+} catch (e) {
+    module.exports = require('./fallback');
+}
