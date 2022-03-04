@@ -2482,7 +2482,7 @@ const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"
 
 };
 
-const hideKeyElementCode = (str)=>
+const hideKeyElementCode = (str) =>
 {
     sourceExtractedComments = [];
     sourceExtractedStrings = [];
@@ -2493,7 +2493,7 @@ const hideKeyElementCode = (str)=>
     return str;
 };
 
-const restoreKeyElementCode = (str)=>
+const restoreKeyElementCode = (str) =>
 {
     str = putBackStrings(str, sourceExtractedStrings);
     str = putBackComments(str, sourceExtractedComments, commentMasks);
@@ -2682,7 +2682,7 @@ const convertCjsFiles = (list, {
 
             let converted = fs.readFileSync(source, "utf-8");
             dumpData(converted, source, "read-file");
-            
+
             converted = applyDirectives(converted, moreOptions);
             dumpData(converted, source, "apply-directives");
 
@@ -2712,7 +2712,7 @@ const convertCjsFiles = (list, {
                 success = result.success;
 
                 dumpData(converted, source, "convertRequiresToImportsWithAST");
-                
+
                 list[dynamicIndex].exported = result.detectedExported;
 
                 if (success)
@@ -2741,7 +2741,8 @@ const convertCjsFiles = (list, {
                     dumpData(converted, source, "convertToESMWithRegex");
                 }
             }
-            else {
+            else
+            {
                 converted = reviewEsmImports(converted, list,
                     {
                         source, outputDir, rootDir, importMaps,
@@ -2764,7 +2765,7 @@ const convertCjsFiles = (list, {
 
             converted = applyReplaceFromConfig(converted, replaceEnd);
             dumpData(converted, source, "applyReplaceFromConfig");
-            
+
             converted = normaliseString(converted);
             dumpData(converted, source, "normaliseString");
 
@@ -2826,7 +2827,10 @@ const convertCjsFiles = (list, {
                     if (regexp.test(content))
                     {
                         overwrite = false;
-                        console.log({lid: 1600, color: "#00FF00"}, ` [${source}] contain the directive "do-not-overwrite". Skipping.`);
+                        console.log({
+                            lid  : 1600,
+                            color: "#00FF00"
+                        }, ` [${source}] contain the directive "do-not-overwrite". Skipping.`);
                     }
                 }
 
@@ -2987,7 +2991,7 @@ const convert = async (rawCliOptions = {}) =>
     if (cliOptions.entrypoint)
     {
         const entrypointPath = normalisePath(cliOptions.entrypoint);
-        console.log({lid: 1402}, toAnsi.getTextFromHex( `Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
+        console.log({lid: 1402}, toAnsi.getTextFromHex(`Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
         entryPoint = addFileToConvertingList({
