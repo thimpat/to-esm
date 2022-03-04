@@ -1,0 +1,12 @@
+diff a/src/converter.cjs b/src/converter.cjs	(rejected hunks)
+@@ -1353,7 +1353,9 @@
+ 
+     for (let i = 0; i < extracted.length; ++i)
+     {
+-        str = str.replace(COMMENT_MASK_START + i + COMMENT_MASK_END, extracted[i]);
++        let escaped = escapeDollar(extracted[i]);
++        str = str.replace(COMMENT_MASK_START + i + COMMENT_MASK_END, escaped);
++        dumpData(str, source, `(i = ${i}) - putBackComments`);
+     }
+ 
+     return str;

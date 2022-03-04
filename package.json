@@ -39,7 +39,6 @@
     "commondir": "^1.0.1",
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",
-    "extract-comments": "^1.1.0",
     "find-entry-point": "^1.1.4",
     "glob": "^7.2.0",
     "js-beautify": "^1.14.0",
@@ -47,7 +46,7 @@
     "minimist": "^1.2.5",
     "rgb-hex": "^4.0.0",
     "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
-    "strip-comments-strings": "^1.1.7",
+    "strip-comments-strings": "^1.1.8",
     "to-ansi": "^1.0.5",
     "uglify-js": "^3.15.1"
   },

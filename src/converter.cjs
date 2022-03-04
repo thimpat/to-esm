@@ -6,14 +6,12 @@ const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
-const {stripStrings, stripComments, clearStrings} = require("strip-comments-strings");
+const {stripStrings, stripComments, clearStrings, parseString} = require("strip-comments-strings");
 const beautify = require("js-beautify").js;
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
 
 const {findPackageEntryPoint} = require("find-entry-point");
-
-const extractComments = require("extract-comments");
 
 const espree = require("espree");
 const estraverse = require("estraverse");
@@ -52,6 +50,7 @@ const STRING_MASK_END = "❉✎❖";
 const EOL = require("os").EOL;
 const IMPORT_MASK_START = EOL + "/** to-esm: import-start **/" + EOL;
 const IMPORT_MASK_END = EOL + "/** to-esm: import-end **/" + EOL;
+const EXPORT_KEYWORD_MASK = "🦊";
 
 const DEBUG_DIR = "./debug/";
 
@@ -301,7 +300,9 @@ const dumpData = (converted, source, title = "") =>
     {
         title = "-" + title;
     }
-    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${dumpCounter}${title}.js`), converted,  "utf-8");
+
+    const indexCounter = dumpCounter.toString().padStart(4, "0");
+    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${indexCounter}${title}.js`), converted, "utf-8");
 };
 
 /**
@@ -571,7 +572,10 @@ const reviewEsmImports = (text, list, {
                 let requiredPath = getModuleEntryPointPath(moduleName, workingDir);
                 if (!requiredPath)
                 {
-                    console.warn({lid: 1099, color: "#FF0000"}, ` The module [${moduleName}] was not found in your node_modules directory. `
+                    console.warn({
+                        lid  : 1099,
+                        color: "#FF0000"
+                    }, ` The module [${moduleName}] was not found in your node_modules directory. `
                         + "Skipping.");
                     return match;
                 }
@@ -1145,6 +1149,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
         if (debuginput)
         {
             const debugPath = path.join(DEBUG_DIR, source + ".json");
+            buildTargetDir(path.parse(debugPath).dir);
             writeStream = fs.createWriteStream(debugPath);
             readable = Readable.from([""]);
             readable.pipe(writeStream);
@@ -1329,7 +1334,7 @@ const stripCodeComments = (code, extracted = null, {
     COMMENT_MASK_END = COMMENT_MASK
 } = {}) =>
 {
-    const commentProps = extractComments(code, {}, null);
+    const commentProps = parseString(code).comments;
 
     if (!commentProps.length)
     {
@@ -1340,8 +1345,8 @@ const stripCodeComments = (code, extracted = null, {
     for (let i = commentProps.length - 1; i >= 0; --i)
     {
         const commentProp = commentProps[i];
-        const indexCommentStart = commentProp.range[0];
-        const indexCommentEnd = commentProp.range[1];
+        const indexCommentStart = commentProp.index;
+        const indexCommentEnd = commentProp.indexEnd;
         if (!extracted)
         {
             code = code.substring(0, indexCommentStart) + code.substring(indexCommentEnd);
@@ -1822,7 +1827,7 @@ const getLibraryInfo = (modulePackname) =>
  * @param packageJson
  */
 const installPackage =
-    ({name, version, isDevDependencies, moduleName, isCjs, packageJson} = {}) =>
+    ({name, version, isDevDependencies, moduleName, isCjs} = {}) =>
     {
         try
         {
@@ -1850,7 +1855,7 @@ const installPackage =
 
         console.info({lid: 1142}, `Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
-        console.info({lid: 1142},"✔ Success");
+        console.info({lid: 1142}, "✔ Success");
     };
 
 /**
@@ -2475,20 +2480,30 @@ const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"
 
 };
 
-const hideKeyElementCode = (str)=>
+const hideKeyElementCode = (str, source) =>
 {
     sourceExtractedComments = [];
     sourceExtractedStrings = [];
     str = stripCodeComments(str, sourceExtractedComments, commentMasks);
+    dumpData(str, source, "hideKeyElementCode - stripCodeComments");
     str = stripCodeStrings(str, sourceExtractedStrings);
+    dumpData(str, source, "hideKeyElementCode - stripCodeStrings");
+    str = markBlocks(str).modifiedSource;
+    dumpData(str, source, "hideKeyElementCode - markBlocks");
+
     return str;
 };
 
-const restoreKeyElementCode = (str)=>
+const restoreKeyElementCode = (str) =>
 {
     str = putBackStrings(str, sourceExtractedStrings);
     str = putBackComments(str, sourceExtractedComments, commentMasks);
     return str;
+};
+
+const hasWord = (word, str) =>
+{
+    return str.indexOf(word) === 0;
 };
 
 const markBlocks = str =>
@@ -2499,6 +2514,7 @@ const markBlocks = str =>
     let lastPos = 0;
     let max = 0;
     let regexOn = false;
+    const lookFor = "export";
     for (let i = 0; i < n; ++i)
     {
         let char = str.charAt(i);
@@ -2513,7 +2529,7 @@ const markBlocks = str =>
             continue;
         }
 
-        if (regexOn && char === "/")
+        if (regexOn && (char === "/" || char === "\n"))
         {
             regexOn = false;
             continue;
@@ -2524,6 +2540,27 @@ const markBlocks = str =>
             continue;
         }
 
+        if (lookFor.charAt(0) === char)
+        {
+            let currentPart = str.substring(i);
+            if (hasWord(lookFor, currentPart))
+            {
+                const nextChar = currentPart.charAt(lookFor.length);
+                if (!(/\s+/.test(nextChar)))
+                {
+                    continue;
+                }
+
+                if (blockLevel >= 0)
+                {
+                    const exportString = " " + lookFor + EXPORT_KEYWORD_MASK + blockLevel;
+                    modifiedSource += exportString;
+                    i = i + lookFor.length;
+                    lastPos = i;
+                    continue;
+                }
+            }
+        }
         if (char === "{")
         {
             /* istanbul ignore next */
@@ -2560,19 +2597,32 @@ const removeResidue = (str) =>
     return str;
 };
 
-function moveEmbeddedImportsToTop(str)
+function moveEmbeddedImportsToTop(str, source)
 {
-    str = hideKeyElementCode(str);
-    let {modifiedSource} = markBlocks(str);
-    const regex = new RegExp(`\\bexport\\s+default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\s*;?`, "gm");
+    str = hideKeyElementCode(str, source);
+    dumpData(str, source, "moveEmbeddedImportsToTop - hideKeyElementCode");
+
+    // Export default
+    let regex = new RegExp(`\\bexport.*default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\\s*;?`, "gm");
     const exportDefault = [];
-    str = beforeReplace(regex, modifiedSource, function (found, wholeText, index, match)
+    str = beforeReplace(regex, str, function (found, wholeText, index, match)
     {
         exportDefault.push(match[0]);
         return "";
     });
+    dumpData(str, source, "moveEmbeddedImportsToTop - Transform export default");
+
+    // module.exports
+    regex = new RegExp(`\\bexport${EXPORT_KEYWORD_MASK}(\\d*)\\s+default\\s+.*;?`, "gm");
+    str = beforeReplace(regex, str, function (found, wholeText, index, match)
+    {
+        exportDefault.push(match[0]);
+        return "";
+    });
+    dumpData(str, source, "moveEmbeddedImportsToTop - Transform module.exports");
 
     str = restoreKeyElementCode(str);
+    dumpData(str, source, "moveEmbeddedImportsToTop - restoreKeyElementCode");
 
     if (exportDefault.length)
     {
@@ -2587,20 +2637,28 @@ function moveEmbeddedImportsToTop(str)
         if (str.indexOf(IMPORT_MASK_END) > -1)
         {
             const escaped = escapeDollar(exportDefault[exportDefault.length - 1] + EOL);
-            str = str.replace(IMPORT_MASK_END, EOL + escaped + EOL);
+            str = str.replace(IMPORT_MASK_END, IMPORT_MASK_END + EOL + escaped);
         }
         else
         {
             str = exportDefault[exportDefault.length - 1] + EOL + str;
         }
+
+        dumpData(str, source, "moveEmbeddedImportsToTop - restore 0");
     }
 
     const regexMaskIn = new RegExp(`${blockMaskIn}(\\d+)`, "gm");
     str = str.replaceAll(regexMaskIn, "{");
+    dumpData(str, source, "moveEmbeddedImportsToTop - restore {");
 
     const regexMaskOut = new RegExp(`${blockMaskOut}(\\d+)`, "gm");
     str = str.replaceAll(regexMaskOut, "}");
+    dumpData(str, source, "moveEmbeddedImportsToTop - restore }");
 
+    const exportDefaultMask = new RegExp(`${EXPORT_KEYWORD_MASK}(\\d+)`, "gm");
+    str = str.replaceAll(exportDefaultMask, "");
+    dumpData(str, source, "moveEmbeddedImportsToTop - restore 4");
+    
     return str;
 }
 
@@ -2620,7 +2678,8 @@ const convertCjsFiles = (list, {
     importMaps = {},
     followlinked = true,
     debuginput = "",
-    moreOptions = {}
+    moreOptions = {},
+    keepexisting = false
 } = {}) =>
 {
     let report;
@@ -2646,7 +2705,7 @@ const convertCjsFiles = (list, {
 
             let converted = fs.readFileSync(source, "utf-8");
             dumpData(converted, source, "read-file");
-            
+
             converted = applyDirectives(converted, moreOptions);
             dumpData(converted, source, "apply-directives");
 
@@ -2675,18 +2734,16 @@ const convertCjsFiles = (list, {
                 converted = result.converted;
                 success = result.success;
 
-                dumpData(converted, source);
-                
+                dumpData(converted, source, "convertRequiresToImportsWithAST");
+
                 list[dynamicIndex].exported = result.detectedExported;
 
                 if (success)
                 {
                     converted = convertNonTrivialExportsWithAST(converted, result.detectedExported);
-                    dumpData(converted, source);
+                    dumpData(converted, source, "convertNonTrivialExportsWithAST");
                     converted = convertModuleExportsToExport(converted);
-                    dumpData(converted, source);
-                    converted = putBackAmbiguous(converted);
-                    dumpData(converted, source);
+                    dumpData(converted, source, "convertModuleExportsToExport");
                 }
                 else
                 {
@@ -2704,33 +2761,39 @@ const convertCjsFiles = (list, {
                             followlinked,
                             moreOptions
                         });
-                    dumpData(converted, source);
+                    dumpData(converted, source, "convertToESMWithRegex");
                 }
             }
-            else {
+            else
+            {
                 converted = reviewEsmImports(converted, list,
                     {
                         source, outputDir, rootDir, importMaps,
                         nonHybridModuleMap, workingDir, followlinked, moreOptions
                     });
-                dumpData(converted, source);
+                dumpData(converted, source, "reviewEsmImports");
             }
 
-            converted = moveEmbeddedImportsToTop(converted);
+            converted = moveEmbeddedImportsToTop(converted, source);
+            dumpData(converted, source, "moveEmbeddedImportsToTop");
+
+            converted = putBackAmbiguous(converted);
+            dumpData(converted, source, "putBackAmbiguous");
 
             converted = restoreText(converted);
-            dumpData(converted, source);
+            dumpData(converted, source, "restoreText");
 
             converted = insertHeader(converted, source, {noHeader: noheader});
-            dumpData(converted, source);
+            dumpData(converted, source, "insertHeader");
 
             converted = applyReplaceFromConfig(converted, replaceEnd);
-            dumpData(converted, source);
-            
+            dumpData(converted, source, "applyReplaceFromConfig");
+
             converted = normaliseString(converted);
-            dumpData(converted, source);
+            dumpData(converted, source, "normaliseString");
 
             converted = removeResidue(converted);
+            dumpData(converted, source, "removeResidue");
 
             // ******************************************
             const targetFile = path.basename(source, path.extname(source));
@@ -2760,8 +2823,6 @@ const convertCjsFiles = (list, {
             if (!parsingResult.success)
             {
                 let e = parsingResult.error;
-                // console.error({lid: 1173}, ` ❌ FAULTY: ESM: Parsing failed on [${filepath}]`,
-                // parsingResult.error.message); Failed even with fallback
                 console.error({lid: 1055}, " " + toAnsi.getTextFromHex("ERROR: Conversion" +
                     " may have failed even with fallback processing on" +
                     ` [${targetFilepath}]`, {fg: "#FF0000"}));
@@ -2789,11 +2850,14 @@ const convertCjsFiles = (list, {
                     if (regexp.test(content))
                     {
                         overwrite = false;
-                        console.log({lid: 1600, color: "#00FF00"}, ` [${source}] contain the directive "do-not-overwrite". Skipping.`);
+                        console.log({
+                            lid  : 1600,
+                            color: "#00FF00"
+                        }, ` [${source}] contain the directive "do-not-overwrite". Skipping.`);
                     }
                 }
 
-                if (overwrite)
+                if (overwrite && !keepexisting)
                 {
                     fs.writeFileSync(targetFilepath, converted, "utf-8");
                 }
@@ -2950,7 +3014,7 @@ const convert = async (rawCliOptions = {}) =>
     if (cliOptions.entrypoint)
     {
         const entrypointPath = normalisePath(cliOptions.entrypoint);
-        console.log({lid: 1402}, toAnsi.getTextFromHex( `Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
+        console.log({lid: 1402}, toAnsi.getTextFromHex(`Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
         entryPoint = addFileToConvertingList({
@@ -2966,10 +3030,16 @@ const convert = async (rawCliOptions = {}) =>
     const noheader = !!cliOptions.noheader;
     const withreport = !!cliOptions.withreport;
     const fallback = !!cliOptions.fallback;
-    const debuginput = cliOptions.debuginput || "";
+    const keepexisting = !!cliOptions.keepexisting;
+    const debug = cliOptions.debug || false;
+    const debuginput = debug || cliOptions.debuginput || "";
 
     if (debuginput)
     {
+        if (fs.existsSync(DEBUG_DIR))
+        {
+            fs.rmSync(DEBUG_DIR, {recursive: true, force: true});
+        }
         buildTargetDir(DEBUG_DIR);
     }
 
@@ -3004,7 +3074,8 @@ const convert = async (rawCliOptions = {}) =>
             workingDir,
             fallback,
             moreOptions,
-            debuginput
+            debuginput,
+            keepexisting
         });
 
     if (cliOptions.bundle)
@@ -3069,3 +3140,4 @@ module.exports.putBackComments = putBackComments;
 module.exports.regexifySearchList = regexifySearchList;
 module.exports.getImportMapFromPage = getImportMapFromPage;
 module.exports.resetFileList = resetFileList;
+module.exports.DEBUG_DIR = DEBUG_DIR;

@@ -515,16 +515,17 @@ $> to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
 ## Options (via command line)
 
 
-| **Options**  | **Description**                                         | **Expect**               |
-|--------------|---------------------------------------------------------|--------------------------|
-| filepath     | _File or pattern to convert_                            | **Only required option** |
-| --output     | _Output directory_                                      | directory path           |
-| --html       | _html files to receive importmaps_                      | glob                     |
-| --noHeader   | _Options to not generate automatic header_              |                          |
-| --target     | _Setting the targeted environment_                      | all / esm / browser      |  
-| --bundle     | _Generate minified bundle for browser environment_      | file path                |  
-| --entrypoint | _Path to .js entrypoint_                                | file path                |  
-| --update-all | _Automatically update package.json to set entry points_ |                          |  
+| **Options**    | **Description**                                         | **Expect**               |
+|----------------|---------------------------------------------------------|--------------------------|
+| filepath       | _File or pattern to convert_                            | **Only required option** |
+| --output       | _Output directory_                                      | directory path           |
+| --html         | _html files to receive importmaps_                      | glob                     |
+| --noHeader     | _Options to not generate automatic header_              |                          |
+| --keepExisting | _Options to skip already converted files_               |                          |
+| --target       | _Setting the targeted environment_                      | all / esm / browser      |  
+| --bundle       | _Generate minified bundle for browser environment_      | file path                |  
+| --entrypoint   | _Path to .js entrypoint_                                | file path                |  
+| --update-all   | _Automatically update package.json to set entry points_ |                          |  
 
 
 
@@ -781,13 +782,26 @@ this.realConsoleLog("LogToFile is not supported in this environment. ")
 ---
 
 
-### Directives to ignore code during the parsing so it won't be converted by mistake.
+### Directives to ignore code during the parsing, so it won't be converted by mistake.
 
 ```javascript
 /** to-esm-all: skip **/
 console.log("Skip this");
 /** to-esm-all: end-skip **/
 ```
+
+<br>
+
+---
+
+
+### Directives to keep the target file as it is.
+
+```javascript
+/** to-esm-all: do-not-overwrite **/
+```
+
+If the .mjs file already exists and contains this directive, it will not be overwritten.
 
 
 <br><br>
