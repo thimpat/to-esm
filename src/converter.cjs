@@ -6,14 +6,12 @@ const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
-const {stripStrings, stripComments, clearStrings} = require("strip-comments-strings");
+const {stripStrings, stripComments, clearStrings, parseString} = require("strip-comments-strings");
 const beautify = require("js-beautify").js;
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
 
 const {findPackageEntryPoint} = require("find-entry-point");
-
-const extractComments = require("extract-comments");
 
 const espree = require("espree");
 const estraverse = require("estraverse");
@@ -1336,7 +1334,7 @@ const stripCodeComments = (code, extracted = null, {
     COMMENT_MASK_END = COMMENT_MASK
 } = {}) =>
 {
-    const commentProps = extractComments(code, {}, null);
+    const commentProps = parseString(code).comments;
 
     if (!commentProps.length)
     {
@@ -1347,8 +1345,8 @@ const stripCodeComments = (code, extracted = null, {
     for (let i = commentProps.length - 1; i >= 0; --i)
     {
         const commentProp = commentProps[i];
-        const indexCommentStart = commentProp.range[0];
-        const indexCommentEnd = commentProp.range[1];
+        const indexCommentStart = commentProp.index;
+        const indexCommentEnd = commentProp.indexEnd;
         if (!extracted)
         {
             code = code.substring(0, indexCommentStart) + code.substring(indexCommentEnd);
