@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Code Coverage" type="JavascriptDebugType" uri="http://localhost:63342/to-esm/coverage/lcov-report/index.html" useBuiltInWebServerPort="true">
+    <method v="2" />
+  </configuration>
+</component>
