@@ -2514,6 +2514,7 @@ const markBlocks = str =>
     let lastPos = 0;
     let max = 0;
     let regexOn = false;
+    const lookFor = "export";
     for (let i = 0; i < n; ++i)
     {
         let char = str.charAt(i);
@@ -2528,7 +2529,7 @@ const markBlocks = str =>
             continue;
         }
 
-        if (regexOn && char === "/")
+        if (regexOn && (char === "/" || char === "\n"))
         {
             regexOn = false;
             continue;
@@ -2539,13 +2540,24 @@ const markBlocks = str =>
             continue;
         }
 
-        if ("export".charAt(0) === char)
+        if (lookFor.charAt(0) === char)
         {
-            if (hasWord("export", str.substring(i)))
+            let currentPart = str.substring(i);
+            if (hasWord(lookFor, currentPart))
             {
+                const nextChar = currentPart.charAt(lookFor.length);
+                if (!(/\s+/.test(nextChar)))
+                {
+                    continue;
+                }
+
                 if (blockLevel >= 0)
                 {
-                    modifiedSource += "export" + EXPORT_KEYWORD_MASK + blockLevel + str.substring(lastPos + "export".length, i);
+                    const exportString = " " + lookFor + EXPORT_KEYWORD_MASK + blockLevel;
+                    modifiedSource += exportString;
+                    i = i + lookFor.length;
+                    lastPos = i;
+                    continue;
                 }
             }
         }
@@ -2585,18 +2597,21 @@ const removeResidue = (str) =>
     return str;
 };
 
-function moveEmbeddedImportsToTop(str)
+function moveEmbeddedImportsToTop(str, source)
 {
-    str = hideKeyElementCode(str);
+    str = hideKeyElementCode(str, source);
+    dumpData(str, source, "moveEmbeddedImportsToTop - hideKeyElementCode");
 
     // Export default
-    let regex = new RegExp(`\\bexport\\s+default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\s*;?`, "gm");
+    // let regex = new RegExp(`\\bexport.*\\s+default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\s*;?`, "gm");
+    let regex = new RegExp(`\\bexport.*default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\\s*;?`, "gm");
     const exportDefault = [];
     str = beforeReplace(regex, str, function (found, wholeText, index, match)
     {
         exportDefault.push(match[0]);
         return "";
     });
+    dumpData(str, source, "moveEmbeddedImportsToTop - Transform export default");
 
     // module.exports
     regex = new RegExp(`\\bexport${EXPORT_KEYWORD_MASK}([0-9]*[1-9])\\s+default\\s+.*;?`, "gm");
@@ -2759,7 +2774,7 @@ const convertCjsFiles = (list, {
                 dumpData(converted, source, "reviewEsmImports");
             }
 
-            converted = moveEmbeddedImportsToTop(converted);
+            converted = moveEmbeddedImportsToTop(converted, source);
             dumpData(converted, source, "moveEmbeddedImportsToTop");
 
             converted = putBackAmbiguous(converted);
