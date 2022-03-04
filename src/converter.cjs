@@ -2480,13 +2480,16 @@ const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"
 
 };
 
-const hideKeyElementCode = (str) =>
+const hideKeyElementCode = (str, source) =>
 {
     sourceExtractedComments = [];
     sourceExtractedStrings = [];
     str = stripCodeComments(str, sourceExtractedComments, commentMasks);
+    dumpData(str, source, "hideKeyElementCode - stripCodeComments");
     str = stripCodeStrings(str, sourceExtractedStrings);
+    dumpData(str, source, "hideKeyElementCode - stripCodeStrings");
     str = markBlocks(str).modifiedSource;
+    dumpData(str, source, "hideKeyElementCode - markBlocks");
 
     return str;
 };
@@ -2602,8 +2605,10 @@ function moveEmbeddedImportsToTop(str)
         exportDefault.push(match[0]);
         return "";
     });
+    dumpData(str, source, "moveEmbeddedImportsToTop - Transform module.exports");
 
     str = restoreKeyElementCode(str);
+    dumpData(str, source, "moveEmbeddedImportsToTop - restoreKeyElementCode");
 
     if (exportDefault.length)
     {
@@ -2624,17 +2629,22 @@ function moveEmbeddedImportsToTop(str)
         {
             str = exportDefault[exportDefault.length - 1] + EOL + str;
         }
+
+        dumpData(str, source, "moveEmbeddedImportsToTop - restore 0");
     }
 
     const regexMaskIn = new RegExp(`${blockMaskIn}(\\d+)`, "gm");
     str = str.replaceAll(regexMaskIn, "{");
+    dumpData(str, source, "moveEmbeddedImportsToTop - restore {");
 
     const regexMaskOut = new RegExp(`${blockMaskOut}(\\d+)`, "gm");
     str = str.replaceAll(regexMaskOut, "}");
+    dumpData(str, source, "moveEmbeddedImportsToTop - restore }");
 
     const exportDefaultMask = new RegExp(`${EXPORT_KEYWORD_MASK}(\\d+)`, "gm");
     str = str.replaceAll(exportDefaultMask, "");
-
+    dumpData(str, source, "moveEmbeddedImportsToTop - restore 4");
+    
     return str;
 }
 
