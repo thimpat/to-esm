@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Get to-esm version" type="NodeJSConfigurationType" application-parameters="--version" path-to-js-file="index.js" working-dir="$PROJECT_DIR$">
+    <method v="2" />
+  </configuration>
+</component>
