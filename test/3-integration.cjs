@@ -518,6 +518,25 @@ describe("The converter tool", function ()
             }
         );
 
+        it("should convert string with regexes correctly", async function ()
+            {
+                const input = "./test/assets/given/demo-test-26.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "esm",
+                    debug: true
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-26.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-26.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
         it("should convert analogger", async function ()
             {
                 const input = "./test/assets/given/ana-logger.cjs";
