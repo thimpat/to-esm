@@ -16,15 +16,15 @@ const {COLOR_TABLE, SYSTEM} = require("./constants.cjs");
 
 /** to-esm-all: add
  console.log("1- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
 /** to-esm-esm: add
  console.log("2- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
 /** to-esm-browser: add
  console.log("3- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
 const EOL =`
 `;

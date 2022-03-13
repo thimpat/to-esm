@@ -31,15 +31,15 @@ class Example
 
 /** to-esm-all: add
  console.log("1- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
 /** to-esm-browser: add
  console.log("2- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
 /** to-esm-esm: add
  console.log("3- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
 module.exports = new Example();
 module.exports.anaLogger = new Example();

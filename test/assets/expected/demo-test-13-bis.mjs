@@ -17,17 +17,15 @@ console.log("Skip this 1");
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 
-
- console.log("1- LogToFile is not supported in this environment. ")
-
+console.log("1- LogToFile is not supported in this environment. ")
+ 
 
 /** to-esm-esm: add
  console.log("2- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
-
- console.log("3- LogToFile is not supported in this environment. ")
-
+console.log("3- LogToFile is not supported in this environment. ")
+ 
 
 const EOL =`
 `;

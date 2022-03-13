@@ -494,7 +494,7 @@ describe("The converter tool", function ()
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-demo-test-removeResidue.js"), "utf8");
                 await convert(options);
-                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-demo-test-24-0029-removeResidue.js"), "utf8");
+                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0029-demo-test-24--removeResidue.js"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }
@@ -526,12 +526,68 @@ describe("The converter tool", function ()
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
                     "target"  : "esm",
-                    debug: true
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-26.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-26.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should convert exports = module.exports correctly", async function ()
+            {
+                const input = "./test/assets/given/demo-test-27.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "esm",
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-27.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-27.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should convert the to-ansi module", async function ()
+            {
+                const input = "./test/assets/given/demo-test-28.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "esm",
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-28.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-28.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should bundle correctly", async function ()
+            {
+                process.chdir(path.join(__dirname, ".."));
+                const input = "./test/assets/given/demo-test-29.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": false,
+                    "target"  : "browser",
+                    bundle      : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
+                    debug: true
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-0033-bundled1--prettify.js"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0033-bundled1--prettify.js"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }
@@ -562,7 +618,8 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "all"
+                    "target"  : "all",
+                    "debug": true
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-13.mjs"), "utf8");
