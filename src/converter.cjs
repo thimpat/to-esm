@@ -1529,7 +1529,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 
         let id = require("crypto")
             .createHash("sha256")
-            .update(target)
+            .update(source)
             .digest("hex");
 
         return {
@@ -2401,7 +2401,7 @@ const mergeCode = (codes) =>
         content = `
         
         // ====================================================================
-        // ${entry.target}$
+        // ${entry.source}$
         // --------------------------------------------------------------------
         
 (function ()
