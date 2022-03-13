@@ -218,9 +218,8 @@ class AnaLogger
                 
             }
 
-            
-             this.realConsoleLog("LogToFile is not supported in this environment. ")
-
+            this.realConsoleLog("LogToFile is not supported in this environment. ")
+             
 
         }
 

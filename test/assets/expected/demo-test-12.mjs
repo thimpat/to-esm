@@ -31,17 +31,15 @@ class Example
 }
 
 
+console.log("1- LogToFile is not supported in this environment. ")
+ 
 
- console.log("1- LogToFile is not supported in this environment. ")
-
-
-
- console.log("2- LogToFile is not supported in this environment. ")
-
+console.log("2- LogToFile is not supported in this environment. ")
+ 
 
 /** to-esm-esm: add
  console.log("3- LogToFile is not supported in this environment. ")
- * **/
+ **/
 
 export default new Example();
 export const anaLogger = new Example();

@@ -36,7 +36,7 @@ It is also possible to add code.
 ```javascript
 /** to-esm-browser: add
     this.realConsoleLog("LogToFile is not supported in this environment. ")
-* **/
+ **/
 ```
 
 In this example, after conversion, the above code will become this:

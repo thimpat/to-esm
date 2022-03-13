@@ -221,7 +221,7 @@ class AnaLogger
 
             /** to-esm-browser: add
              this.realConsoleLog("LogToFile is not supported in this environment. ")
-             * **/
+             **/
 
         }
 
