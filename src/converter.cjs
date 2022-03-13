@@ -146,20 +146,23 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
+ * @param source
  * @returns {*}
  */
-const convertNonTrivial = (converted) =>
+const convertNonTrivial = (converted, source) =>
 {
     let converted0;
     let regex = /((?<!export\s+)(?:const|let|var|class|function\s*\*?)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
     let subst = "export $1$2$3";
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
+    dumpData(converted, source, "convertNonTrivial - p1");
 
-    regex = /(?:const|let|var|class|function\s*\*?)\s+([\w]+)([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
+    regex = /(?:const|let|var|class|function\s*\*?)\b\s+\b([\w]+)\b([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
     subst = "import $1 from $3$2";
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
+    dumpData(converted, source, "convertNonTrivial - p2");
 
     return converted;
 
@@ -256,7 +259,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "") =>
     try
     {
         let entryPoint;
-        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs: false, useNativeResolve: false});
+        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs: true, useNativeResolve: false});
         /* istanbul ignore next */
         if (entryPoint === null)
         {
@@ -302,7 +305,7 @@ const dumpData = (converted, source, title = "") =>
     }
 
     const indexCounter = dumpCounter.toString().padStart(4, "0");
-    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${name}-${indexCounter}${title}.js`), converted, "utf-8");
+    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
 };
 
 /**
@@ -792,6 +795,9 @@ const putBackAmbiguous = (converted) =>
  */
 const convertModuleExportsToExport = (converted) =>
 {
+    converted = converted.replace(/\bexports\b\s*=\s*module.exports\s*=/, "module.exports =");
+    converted = converted.replace(/\bmodule\.exports\b\s*=\s*exports\s*=/, "module.exports =");
+
     converted = converted.replace(
         /\b(const|let|var|class|function\s*\*)\s+\b(\w+)\b([\s\S]*?)(\bmodule\b\.)?\bexports\b\.\2\s*=\s*\2.*/gm,
         "export $1 $2 $3");
@@ -1190,6 +1196,13 @@ const convertRequiresToImportsWithAST = (converted, list, {
                         }
                     }
 
+                    if (node.type === "Identifier" && node.name === "exports")
+                    {
+                        if (parent && parent.type === "MemberExpression")
+                        {
+                        }
+                    }
+
                     const lastFound = extracted[extracted.length - 1];
                     if (lastFound)
                     {
@@ -1233,19 +1246,38 @@ const convertRequiresToImportsWithAST = (converted, list, {
                         }
                     }
 
-                    // Look for: exports
-                    if (parent && parent.expression && parent.expression.left && parent.expression.left.type === "MemberExpression")
+                    /**
+                     * NOTE: As much as I wanted to avoid using optional chaining, this is getting annoying not to
+                     * use them in this logic.
+                     */
+                    if (parent?.type === "ExpressionStatement" && node?.left?.object?.name === "exports" && node?.left?.property?.name && node?.right?.name)
                     {
-                        if (parent.expression.left.object && parent.expression.left.object.property && parent.expression.left.object.property.name === "exports")
-                        {
-                            const namedExport = parent.expression.left.property.name;
-                            const funcname = parent.expression.right.name;
+                        const namedExport = node.left.property.name;
+                        const funcname = node.right.name;
 
-                            detectedExported.push({
-                                namedExport, funcname, source
-                            });
-                        }
+                        detectedExported.push({
+                            namedExport, funcname, source
+                        });
+                    }
 
+                    if (parent?.type === "MemberExpression" && parent?.object?.property?.name === "exports" && parent?.property?.name)
+                    {
+                        const namedExport = parent.property.name;
+
+                        detectedExported.push({
+                            namedExport, source
+                        });
+                    }
+
+                    // Look for: exports
+                    if (parent?.expression?.left?.object?.property?.name === "exports" && parent?.expression?.left?.type === "MemberExpression" && parent?.expression?.right?.name)
+                    {
+                        const namedExport = parent.expression.left.property.name;
+                        const funcname = parent.expression.right.name;
+
+                        detectedExported.push({
+                            namedExport, funcname, source
+                        });
                     }
 
                     previouses.push({
@@ -1438,7 +1470,7 @@ const applyDirectives = (converted, {target = "all"} = {}) =>
         converted = converted.replace(regexp, "");
 
         // Insert => to-esm-browser: add
-        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*$([\\s\\S]*?)^.*\\*\\*\\/`, "gm");
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "$1");
 
         // Hide/skip => to-esm-browser: skip
@@ -1702,24 +1734,29 @@ const convertToESMWithRegex = (converted, list, {
         const extractedComments = [];
 
         converted = stripCodeComments(converted, extractedComments);
+        dumpData(converted, source, "stripCodeComments");
 
         converted = parseImportWithRegex(converted, list, {source, outputDir, rootDir}, workingDir);
+        dumpData(converted, source, "parseImportWithRegex");
 
-        converted = convertNonTrivial(converted);
+        converted = convertNonTrivial(converted, source);
+        dumpData(converted, source, "convertNonTrivial");
 
         converted = convertModuleExportsToExport(converted);
+        dumpData(converted, source, "convertModuleExportsToExport");
 
         converted = convertRequiresToImport(converted);
+        dumpData(converted, source, "convertRequiresToImport");
 
         converted = reviewEsmImports(converted, list,
             {
                 source, outputDir, rootDir,
                 importMaps, workingDir, followlinked, moreOptions, nonHybridModuleMap
             });
+        dumpData(converted, source, "reviewEsmImports");
 
         converted = putBackComments(converted, extractedComments);
-
-
+        dumpData(converted, source, "putBackComments");
     }
     catch (e)
     {
@@ -2122,6 +2159,7 @@ const resetFileList = () =>
 {
     cjsList = [];
     indexGeneratedTempVariable = 1;
+    dumpCounter = 0;
 };
 
 const getIndent = async (str) =>
@@ -2303,7 +2341,14 @@ const reorderImportListByWeight = (cjsList) =>
     });
 };
 
-const buildExport = ({exported, id}) =>
+/**
+ * Generate table of exported entities
+ * @param exported
+ * @param id
+ * @param source
+ * @returns {string}
+ */
+const buildStrExport = ({exported, id}) =>
 {
     let str = "";
     if (!exported)
@@ -2334,10 +2379,13 @@ const mergeCode = (codes) =>
     for (let i = 0; i < n; ++i)
     {
         let {content, entry} = codes[i];
-        const exportTable = buildExport(entry);
+        const exportTable = buildStrExport(entry);
 
         content = normaliseString(content);
+        dumpData(content, entry.source, "[mergeCode]normaliseString");
+
         content = stripComments(content);
+        dumpData(content, entry.source, "[mergeCode]stripComments");
 
         content = `
         
@@ -2380,6 +2428,7 @@ const mergeCode = (codes) =>
 
             return found;
         });
+        dumpData(content, entry.source, "[mergeCode]beforeReplace");
 
         newCode.push(content);
     }
@@ -2415,10 +2464,31 @@ const minifyCode = (cjsList, bundlePath) =>
             let newCode = mergeCode(codes);
 
             newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
+            dumpData(newCode, "bundled1", "prettify");
 
-            const options = {toplevel: true, mangle: true, compress: true, warnings: true};
+            let options;
+            if (DEBUG_MODE)
+            {
+                const options =  {toplevel: true, mangle: false, compress: false, warnings: true};
+                const result = UglifyJS.minify(newCode, options);
+                if (result.error)
+                {
+                    console.error({lid: 1289}, result.error);
+                }
+
+                dumpData(result.code, "bundled2", "minify-with-no-mangling");
+            }
+
+            options =  {toplevel: true, mangle: true, compress: true, warnings: true};
             const result = UglifyJS.minify(newCode, options);
+            if (result.error)
+            {
+                console.error({lid: 1287}, result.error);
+            }
+
+            dumpData(result.code, "bundled3", "minify");
             newCode = normaliseString(result.code);
+            dumpData(newCode, "bundled4", "normaliseString");
 
             const readable = Readable.from([newCode]);
             writeStream.on("finish", () =>
@@ -3038,7 +3108,14 @@ const convert = async (rawCliOptions = {}) =>
     {
         if (fs.existsSync(DEBUG_DIR))
         {
-            fs.rmSync(DEBUG_DIR, {recursive: true, force: true});
+            try
+            {
+                fs.rmSync(DEBUG_DIR, {recursive: true, force: true});
+            }
+            catch (e)
+            {
+                console.error({lid: 1095}, "", e.message);
+            }
         }
         buildTargetDir(DEBUG_DIR);
     }
