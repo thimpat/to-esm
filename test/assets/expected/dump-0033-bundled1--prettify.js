@@ -8,11 +8,11 @@ const ESM = {};
 
 
 // ====================================================================
-// C:/projects/to-esm/test/assets/actual/demo-test-29.mjs$
+// ./test/assets/given/demo-test-29.cjs$
 // --------------------------------------------------------------------
 
 (function() {
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"] = {};
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"] = {};
 
 
   'use strict';
@@ -132,7 +132,7 @@ const ESM = {};
   const fromJSON = any => parse($stringify(any));
 
 
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"].default = {
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"].default = {
     aa: 1,
     bb: 2
   }
@@ -143,16 +143,16 @@ const ESM = {};
 
 
 
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["parse"] = parse;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["stringify"] = stringify;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["toJSON"] = toJSON;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["fromJSON"] = fromJSON;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["SOMETHING"] = SOMETHING;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["SOMETHING"] = SOMETHING;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["ANYTHING"] = ANYTHING;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["ANYTHING"] = ANYTHING;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["SOMETHING2"] = SOMETHING2;
-  ESM["437b625fba577c021cde1abffcd6a022be1ec83965eb764f16a1fa74c19032b8"]["SOMETHING2"] = SOMETHING2;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["parse"] = parse;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["stringify"] = stringify;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["toJSON"] = toJSON;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["fromJSON"] = fromJSON;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["SOMETHING"] = SOMETHING;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["SOMETHING"] = SOMETHING;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["ANYTHING"] = ANYTHING;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["ANYTHING"] = ANYTHING;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["SOMETHING2"] = SOMETHING2;
+  ESM["6e40d16e4a2ea7e78090603a537d1afa88589e4364d005ca93aba490eca58ba1"]["SOMETHING2"] = SOMETHING2;
 
 
 }());

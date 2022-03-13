@@ -6,7 +6,7 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {buildTargetDir, convert, DEBUG_DIR} = require("../src/converter.cjs");
+const {buildTargetDir, convert, normaliseString, DEBUG_DIR} = require("../src/converter.cjs");
 
 
 
@@ -585,9 +585,14 @@ describe("The converter tool", function ()
                     debug: true
                 };
 
-                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-0033-bundled1--prettify.js"), "utf8");
+                let expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-0033-bundled1--prettify.js"), "utf8");
+                expectedConversion = normaliseString(expectedConversion);
+
                 await convert(options);
-                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0033-bundled1--prettify.js"), "utf8");
+                let converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0033-bundled1--prettify.js"), "utf8");
+                converted = normaliseString(converted);
+
+
 
                 expect(converted).to.equal(expectedConversion);
             }

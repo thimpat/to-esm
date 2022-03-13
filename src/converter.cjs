@@ -3228,4 +3228,5 @@ module.exports.putBackComments = putBackComments;
 module.exports.regexifySearchList = regexifySearchList;
 module.exports.getImportMapFromPage = getImportMapFromPage;
 module.exports.resetFileList = resetFileList;
+module.exports.normaliseString = normaliseString;
 module.exports.DEBUG_DIR = DEBUG_DIR;
