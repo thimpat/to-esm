@@ -254,12 +254,12 @@ const calculateRelativePath = (source, requiredPath) =>
  * @param targetDir
  * @returns {string|null}
  */
-const getModuleEntryPointPath = (moduleName, targetDir = "") =>
+const getModuleEntryPointPath = (moduleName, targetDir = "", isCjs = true) =>
 {
     try
     {
         let entryPoint;
-        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs: true, useNativeResolve: false});
+        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, useNativeResolve: false});
         /* istanbul ignore next */
         if (entryPoint === null)
         {
@@ -285,6 +285,16 @@ const getModuleEntryPointPath = (moduleName, targetDir = "") =>
     }
 
     return null;
+};
+
+const getCJSModuleEntryPath = (moduleName, targetDir = "") =>
+{
+    return getModuleEntryPointPath(moduleName, targetDir, true);
+};
+
+const getESMModuleEntryPath = (moduleName, targetDir = "") =>
+{
+    return getModuleEntryPointPath(moduleName, targetDir, false);
 };
 
 // ---------------------------------------------------
@@ -572,7 +582,8 @@ const reviewEsmImports = (text, list, {
                     moduleName = nonHybridModuleMap[moduleName];
                 }
 
-                let requiredPath = getModuleEntryPointPath(moduleName, workingDir);
+                // Hack
+                let requiredPath = moreOptions.useImportMaps ? getESMModuleEntryPath(moduleName, workingDir) : getCJSModuleEntryPath(moduleName, workingDir);
                 if (!requiredPath)
                 {
                     console.warn({
@@ -2469,7 +2480,7 @@ const minifyCode = (cjsList, bundlePath) =>
             let options;
             if (DEBUG_MODE)
             {
-                const options =  {toplevel: true, mangle: false, compress: false, warnings: true};
+                const options = {toplevel: true, mangle: false, compress: false, warnings: true};
                 const result = UglifyJS.minify(newCode, options);
                 if (result.error)
                 {
@@ -2479,7 +2490,7 @@ const minifyCode = (cjsList, bundlePath) =>
                 dumpData(result.code, "bundled2", "minify-with-no-mangling");
             }
 
-            options =  {toplevel: true, mangle: true, compress: true, warnings: true};
+            options = {toplevel: true, mangle: true, compress: true, warnings: true};
             const result = UglifyJS.minify(newCode, options);
             if (result.error)
             {
@@ -2728,7 +2739,7 @@ function moveEmbeddedImportsToTop(str, source)
     const exportDefaultMask = new RegExp(`${EXPORT_KEYWORD_MASK}(\\d+)`, "gm");
     str = str.replaceAll(exportDefaultMask, "");
     dumpData(str, source, "moveEmbeddedImportsToTop - restore 4");
-    
+
     return str;
 }
 

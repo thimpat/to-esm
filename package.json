@@ -11,9 +11,9 @@
   "scripts": {
     "docs": "markdown-include markdown.json",
     "demo1": "node index.js example/cjs/demo-1.cjs --output=example/esm/",
-    "demo2": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/",
-    "demo3": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output=example/esm/ --config=\"example/.toesm.cjs\" --target=browser",
-    "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
+    "demo2": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output example/esm/",
+    "demo3": "to-esm --input=\"example/cjs/**/*.?(c)js\" --output example/esm/ --config example/.toesm.cjs --target=browser",
+    "demo4": "to-esm  --input=\"example/cjs/**/*.?(c)js\" --output example/browser/ --config example/.toesm.cjs --html=\"example/**/*.html\"",
     "demo5": "node src/converter.cjs --input=\"example/cjs/demo-directives.cjs\" --output=example/browser/ --config=\"example/.toesm.cjs\" --html=\"example/**/*.html\"",
     "demo-docs": "node src/converter.cjs --input=example/plus/simple.js --output=./here",
     "demo": "npm run demo3 && npm run demo4",
