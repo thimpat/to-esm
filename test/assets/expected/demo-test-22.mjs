@@ -4,6 +4,9 @@
  * [./test/assets/given/demo-test-22.cjs]{@link ./test/assets/given/demo-test-22.cjs}
  * 
  **/
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import { EMPTY_BUFFER }  from "./test/assets/given/constants.mjs";
 import _toesmTemp1  from "node-gyp-build";
 export default _toesmTemp1(__dirname);

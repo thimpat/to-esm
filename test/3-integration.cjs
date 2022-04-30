@@ -494,7 +494,10 @@ describe("The converter tool", function ()
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-demo-test-removeResidue.js"), "utf8");
                 await convert(options);
-                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0029-demo-test-24--removeResidue.js"), "utf8");
+
+                // To have the correct dump, you need to add a breakpoint to the test case that use it,
+                // Start all of the tests from the beginning. The last dumped file is the one to use for the comparison.
+                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0030-demo-test-24--removeResidue.js"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }
@@ -589,10 +592,8 @@ describe("The converter tool", function ()
                 expectedConversion = normaliseString(expectedConversion);
 
                 await convert(options);
-                let converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0033-bundled1--prettify.js"), "utf8");
+                let converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0034-bundled1--prettify.js"), "utf8");
                 converted = normaliseString(converted);
-
-
 
                 expect(converted).to.equal(expectedConversion);
             }
