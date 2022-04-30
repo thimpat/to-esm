@@ -252,6 +252,7 @@ const calculateRelativePath = (source, requiredPath) =>
  * Third-Party Module path starting with ./node_modules/ + relative path to the entry point
  * @param moduleName
  * @param targetDir
+ * @param isCjs
  * @returns {string|null}
  */
 const getModuleEntryPointPath = (moduleName, targetDir = "", isCjs = true) =>
@@ -2210,6 +2211,41 @@ const applyReplaceFromConfig = (converted, replace) =>
     return converted;
 };
 
+const insertDirname = (converted) =>
+{
+    try
+    {
+        let insertion = "";
+
+        if (converted.indexOf("__dirname") > -1)
+        {
+            insertion += insertion + `import { dirname } from 'path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+`;
+        }
+
+        if (converted.indexOf("__filename") > -1)
+        {
+            insertion += insertion + `import { __filename } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+`;
+        }
+
+        if (insertion)
+        {
+            insertion = `import { fileURLToPath } from 'url';
+` + insertion;
+            converted = insertion + converted;
+        }
+    }
+    catch (e)
+    {
+        console.error({lid: 1381}, "", e.message);
+    }
+
+    return converted;
+};
+
 /**
  * Insert header to source
  * @param converted
@@ -2863,6 +2899,9 @@ const convertCjsFiles = (list, {
 
             converted = restoreText(converted);
             dumpData(converted, source, "restoreText");
+
+            converted = insertDirname(converted);
+            dumpData(converted, source, "insertDirname");
 
             converted = insertHeader(converted, source, {noHeader: noheader});
             dumpData(converted, source, "insertHeader");
