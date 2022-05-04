@@ -588,11 +588,11 @@ describe("The converter tool", function ()
                     debug: true
                 };
 
-                let expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-0033-bundled1--prettify.js"), "utf8");
+                let expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-29.min.mjs"), "utf8");
                 expectedConversion = normaliseString(expectedConversion);
 
                 await convert(options);
-                let converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0034-bundled1--prettify.js"), "utf8");
+                let converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-29.min.mjs"), "utf8");
                 converted = normaliseString(converted);
 
                 expect(converted).to.equal(expectedConversion);
