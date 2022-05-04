@@ -1354,14 +1354,15 @@ const convertRequiresToImportsWithAST = (converted, list, {
             moreOptions
         });
         converted = removeDeclarationForAST(converted, extracted);
+        return {converted, success, detectedExported, detectedAmbiguous, detectedBlockFunctions};
     }
     catch (e)
     {
-        success = false;
+        /* istanbul ignore next */
         console.error({lid: 1009}, ` [${source}] ->`, e.message);
     }
 
-    return {converted, success, detectedExported, detectedAmbiguous, detectedBlockFunctions};
+    return {converted, success: false, detectedExported, detectedAmbiguous, detectedBlockFunctions};
 };
 
 /**
@@ -2380,7 +2381,7 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
 };
 
 /**
- *
+ * Bundle and minify
  * @param entryPointPath
  * @param bundlePath Generated build File path
  * @returns {Promise<unknown>}
@@ -2408,10 +2409,12 @@ const minifyCode = (entryPointPath, bundlePath) =>
             {
                 resolve(true);
             }).catch((e) =>
-            {
-                console.error({lid: 3617}, e.message);
-                resolve(false);
-            });
+                {
+                    /* istanbul ignore next */
+                    console.error({lid: 3617}, e.message);
+                    /* istanbul ignore next */
+                    resolve(false);
+                });
         }
         catch (e)
         {
@@ -2952,7 +2955,7 @@ const convert = async (rawCliOptions = {}) =>
         if (!list.length)
         {
             console.error({lid: 1151}, " The pattern did not match any file.");
-            return;
+            return false;
         }
 
         let rootDir;
