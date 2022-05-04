@@ -2386,42 +2386,36 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
  * @param bundlePath Generated build File path
  * @returns {Promise<unknown>}
  */
-const minifyCode = (entryPointPath, bundlePath) =>
+const minifyCode = async (entryPointPath, bundlePath) =>
 {
-    return new Promise(function (resolve, reject)
+    try
     {
-        try
-        {
-            const minifyDir = path.parse(bundlePath).dir;
-            buildTargetDir(minifyDir);
+        const minifyDir = path.parse(bundlePath).dir;
+        buildTargetDir(minifyDir);
 
-            entryPointPath = path.resolve(entryPointPath);
-            bundlePath = path.resolve(bundlePath);
-            esbuild.build({
-                entryPoints  : [entryPointPath],
-                bundle       : true,
-                outfile      : bundlePath,
-                format       : "esm",
-                target       : "es6",
-                minify       : true,
-                legalComments: "eof"
-            }).then(() =>
-            {
-                resolve(true);
-            }).catch((e) =>
-                {
-                    /* istanbul ignore next */
-                    console.error({lid: 3617}, e.message);
-                    /* istanbul ignore next */
-                    resolve(false);
-                });
-        }
-        catch (e)
-        {
-            /* istanbul ignore next */
-            reject({lid: 1387}, " Fail to bundle.");
-        }
-    });
+        entryPointPath = path.resolve(entryPointPath);
+        bundlePath = path.resolve(bundlePath);
+
+        await esbuild.build({
+            entryPoints  : [entryPointPath],
+            bundle       : true,
+            outfile      : bundlePath,
+            format       : "esm",
+            target       : "es6",
+            minify       : true,
+            legalComments: "eof",
+        });
+
+        let content = fs.readFileSync(bundlePath, "utf-8");
+        content = content.replace(/\/\*! [^*]+\*\//g, "");
+        fs.writeFileSync(bundlePath, content);
+
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error({lid: 1387}, " Fail to bundle.");
+    }
 };
 
 /**
