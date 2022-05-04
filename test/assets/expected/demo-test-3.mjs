@@ -5,7 +5,6 @@
  * 
  **/
 import chalk000  from "./node_modules/chalk-cjs/source.mjs";
-import colorConvert  from "./node_modules/color-convert-cjs/index.mjs";
 import magnimus  from "mama-magnimus";
 import magnimus2  from "mama-magnimus-cjs";
 import rgbhex  from "./node_modules/rgb-hex-cjs/index.mjs";
@@ -19,7 +18,6 @@ import {DIRECTION, MESSAGE}  from "./test/assets/given/dep-1.mjs";
 /** const chalk001 = require("chalk-cjs"); **/
 
 const aa = "const chalk003 = require(\"chalk-cjs\");"
-
 
 
 

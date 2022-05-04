@@ -5,10 +5,8 @@
  * 
  **/
 import chalk  from "./node_modules/chalk-cjs/source.mjs";
-import colorConvert  from "./node_modules/color-convert-cjs/index.mjs";
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
-
 
 
 
@@ -294,13 +292,6 @@ class Demo2
         if (converted.color.toLowerCase().indexOf("rgb") > -1)
         {
             converted.color = "#" + rgbHex(converted.color)
-        }
-        else if (converted.color.indexOf("#") === -1)
-        {
-            if (colorConvert)
-            {
-                converted.color = "#" + colorConvert.keyword.hex(converted.color)
-            }
         }
 
         return converted;

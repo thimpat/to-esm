@@ -5,7 +5,6 @@ const os = require("os");
 /** to-esm-browser: end-remove **/
 
 const toAnsi = require("to-ansi");
-const rgbHex = require("rgb-hex-cjs");
 const {COLOR_TABLE, SYSTEM} = require("./constants.cjs");
 
 const EOL =`
@@ -403,15 +402,8 @@ class AnaLogger
 
         if (converted.color.toLowerCase().indexOf("rgb") > -1)
         {
+            const rgbHex = require("rgb-hex-cjs");
             converted.color = "#" + rgbHex(converted.color);
-        }
-        else if (converted.color.indexOf("#") === -1)
-        {
-            const colorConvert = require("color-convert-cjs");
-            if (colorConvert)
-            {
-                converted.color = "#" + colorConvert.keyword.hex(converted.color);
-            }
         }
 
         return converted;
