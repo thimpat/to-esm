@@ -11,6 +11,18 @@
             "replace": "// --------- mama-magnimus was replaced ----------------"
         }
     ],
+    "replaceModules":
+    {
+        "color-convert": {
+            "cjs": {
+                "name": "color-convert-cjs",
+                "version": "@^3.0.0"
+            },
+            "esm": {
+                "version": "@latest"
+            }
+        }
+    },
     "html":
     {
         "importmap": {

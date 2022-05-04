@@ -34,7 +34,7 @@
     "url": "https://github.com/thimpat/to-esm.git"
   },
   "dependencies": {
-    "analogger": "^1.8.5",
+    "analogger": "^1.12.3",
     "before-replace": "^1.0.5",
     "commondir": "^1.0.1",
     "esbuild": "^0.14.38",

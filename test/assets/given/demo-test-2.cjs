@@ -1,5 +1,4 @@
 const chalk = require("chalk-cjs");
-const colorConvert = require('color-convert-cjs');
 const rgbHex = require('rgb-hex-cjs');
 
 const {COLOR_TABLE, SYSTEM} = require("./constants.cjs");
@@ -286,13 +285,6 @@ class Demo2
         if (converted.color.toLowerCase().indexOf("rgb") > -1)
         {
             converted.color = "#" + rgbHex(converted.color)
-        }
-        else if (converted.color.indexOf("#") === -1)
-        {
-            if (colorConvert)
-            {
-                converted.color = "#" + colorConvert.keyword.hex(converted.color)
-            }
         }
 
         return converted;

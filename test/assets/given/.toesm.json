@@ -11,18 +11,6 @@
             "replace": "// --------- mama-magnimus was replaced ----------------"
         }
     ],
-    "replaceModules":
-        {
-            "rgb-hex": {
-                "cjs": {
-                    "name": "rgb-hex-cjs",
-                    "version": "@^3.0.0"
-                },
-                "esm": {
-                    "version": "@latest"
-                }
-            }
-        },
     "html"          :
     {
         "importmap"       : {
