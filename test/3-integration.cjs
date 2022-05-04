@@ -821,6 +821,24 @@ describe("The converter tool", function ()
             }
         );
 
+        it("should not generate headers", async function ()
+            {
+                const input = "./test/assets/given/demo-test-31.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": true,
+                    "target"  : "browser"
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-31.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-31.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
         it("should modify entry points in the package-3.json", async function ()
             {
                 const packageJsonPath = path.join(rootDir, "package.json");
@@ -871,6 +889,35 @@ describe("The converter tool", function ()
             }
         );
 
+        it("should not generate anything", async function ()
+            {
+                const input = "";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": true,
+                    "target"  : "browser"
+                };
+
+                const result = await convert(options);
+                expect(result).to.be.false;
+            }
+        );
+
+        it("should not generate anything when given files are an array of missing .js", async function ()
+            {
+                const input = ["aaa.js"];
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": true,
+                    "target"  : "browser"
+                };
+
+                const result = await convert(options);
+                expect(result).to.be.false;
+            }
+        );
 
     });
 

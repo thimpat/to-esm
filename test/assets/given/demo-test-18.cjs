@@ -61,6 +61,8 @@ async function createWindow()
         }
     });
 
+    const t = __filename;
+
     // MenuKit.loadOptions(mainWindow, {
     //     iconPath : path.join(__dirname, "images/files.svg"),
     //     title    : "MenuKit Test with Dark Mode enabled",
