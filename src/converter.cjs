@@ -7,7 +7,6 @@ const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, clearStrings, parseString} = require("strip-comments-strings");
-const beautify = require("js-beautify").js;
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
 
@@ -16,7 +15,7 @@ const {findPackageEntryPoint} = require("find-entry-point");
 const espree = require("espree");
 const estraverse = require("estraverse");
 
-const UglifyJS = require("uglify-js");
+const esbuild = require("esbuild");
 
 const toEsmPackageJson = require("../package.json");
 
@@ -1355,14 +1354,15 @@ const convertRequiresToImportsWithAST = (converted, list, {
             moreOptions
         });
         converted = removeDeclarationForAST(converted, extracted);
+        return {converted, success, detectedExported, detectedAmbiguous, detectedBlockFunctions};
     }
     catch (e)
     {
-        success = false;
+        /* istanbul ignore next */
         console.error({lid: 1009}, ` [${source}] ->`, e.message);
     }
 
-    return {converted, success, detectedExported, detectedAmbiguous, detectedBlockFunctions};
+    return {converted, success: false, detectedExported, detectedAmbiguous, detectedBlockFunctions};
 };
 
 /**
@@ -2380,115 +2380,14 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
     return true;
 };
 
-const reorderImportListByWeight = (cjsList) =>
-{
-    cjsList.sort((entry0, entry1) =>
-    {
-        return entry1.weight - entry0.weight;
-    });
-};
-
 /**
- * Generate table of exported entities
- * @param exported
- * @param id
- * @param source
- * @returns {string}
+ * Bundle and minify
+ * @param entryPointPath
+ * @param bundlePath Generated build File path
+ * @returns {Promise<unknown>}
  */
-const buildStrExport = ({exported, id}) =>
+const minifyCode = (entryPointPath, bundlePath) =>
 {
-    let str = "";
-    if (!exported)
-    {
-        return str;
-    }
-
-    for (let i = 0; i < exported.length; ++i)
-    {
-        const current = exported[i];
-        str += `ESM["${id}"]["${current.namedExport}"] = ${current.namedExport};${EOL}`;
-    }
-    return str;
-};
-
-const mergeCode = (codes) =>
-{
-    let newCode = [
-        `
-        // ====================================================================
-        // Bundled with to-esm
-        // --------------------------------------------------------------------
-        
-        const ESM = {};${EOL}    
-    `
-    ];
-    const n = codes.length;
-    for (let i = 0; i < n; ++i)
-    {
-        let {content, entry} = codes[i];
-        const exportTable = buildStrExport(entry);
-
-        content = normaliseString(content);
-        dumpData(content, entry.source, "[mergeCode]normaliseString");
-
-        content = stripComments(content);
-        dumpData(content, entry.source, "[mergeCode]stripComments");
-
-        content = `
-        
-        // ====================================================================
-        // ${entry.source}$
-        // --------------------------------------------------------------------
-        
-(function ()
-{
-    ESM["${entry.id}"] = {};
-
-    ${content}
-    
-    ${exportTable}
-        
-}());
-    ${EOL}${EOL}${EOL}    
-        `;
-
-        content = content.replace(/export\s+(const|let|var|class|function\s*\*?)/gm, "$1");
-        content = content.replace(/export\s+default/gm, `ESM["${entry.id}"].default = `);
-
-        content = beforeReplace(/import.*?from\s*(["']([^"']+)["'])/gi, content, function (found, wholeText, index, match)
-        {
-            let requiredPath = concatenatePaths(entry.target, match[2]);
-            const item = findEntry(requiredPath, "target");
-            if (item)
-            {
-                found = found.replace("import", "let");
-                found = found.replace("from", "=");
-
-                found = found.replace(match[1], `ESM["${item.id}"]`);
-                if (found.indexOf("{") === -1)
-                {
-                    found = found + ".default";
-                }
-
-                found = found + ";";
-            }
-
-            return found;
-        });
-        dumpData(content, entry.source, "[mergeCode]beforeReplace");
-
-        newCode.push(content);
-    }
-
-    newCode = newCode.join(EOL);
-    return newCode;
-};
-
-
-const minifyCode = (cjsList, bundlePath) =>
-{
-    const code = {};
-    let codes = [];
     return new Promise(function (resolve, reject)
     {
         try
@@ -2496,70 +2395,26 @@ const minifyCode = (cjsList, bundlePath) =>
             const minifyDir = path.parse(bundlePath).dir;
             buildTargetDir(minifyDir);
 
-            const writeStream = fs.createWriteStream(bundlePath);
-
-            cjsList.forEach(function (entry)
-            {
-                code[entry.target] = entry.converted;
-                codes.push({
-                    entry,
-                    content: entry.converted
-                });
-
-            });
-
-            let newCode = mergeCode(codes);
-
-            newCode = beautify(newCode, {indent_size: 2, space_in_empty_paren: true});
-            dumpData(newCode, "bundled1", "prettify");
-
-            let options;
-            if (DEBUG_MODE)
-            {
-                const options = {toplevel: true, mangle: false, compress: false, warnings: true};
-                const result = UglifyJS.minify(newCode, options);
-                if (result.error)
-                {
-                    console.error({lid: 1289}, result.error);
-                }
-
-                dumpData(result.code, "bundled2", "minify-with-no-mangling");
-            }
-
-            options = {toplevel: true, mangle: true, compress: true, warnings: true};
-            const result = UglifyJS.minify(newCode, options);
-            if (result.error)
-            {
-                console.error({lid: 1287}, result.error);
-            }
-
-            dumpData(result.code, "bundled3", "minify");
-            newCode = normaliseString(result.code);
-            dumpData(newCode, "bundled4", "normaliseString");
-
-            const readable = Readable.from([newCode]);
-            writeStream.on("finish", () =>
+            entryPointPath = path.resolve(entryPointPath);
+            bundlePath = path.resolve(bundlePath);
+            esbuild.build({
+                entryPoints  : [entryPointPath],
+                bundle       : true,
+                outfile      : bundlePath,
+                format       : "esm",
+                target       : "es6",
+                minify       : true,
+                legalComments: "eof"
+            }).then(() =>
             {
                 resolve(true);
-            });
-
-            /* istanbul ignore next */
-            writeStream.on("error", () =>
-            {
-                /* istanbul ignore next */
-                console.error({lid: 1383}, " Fail to bundle. Write error.");
-                resolve(false);
-            });
-
-            /* istanbul ignore next */
-            readable.on("error", (e) =>
-            {
-                /* istanbul ignore next */
-                console.error({lid: 1385}, " Fail to bundle. Read error.");
-                reject(e);
-            });
-
-            readable.pipe(writeStream);
+            }).catch((e) =>
+                {
+                    /* istanbul ignore next */
+                    console.error({lid: 3617}, e.message);
+                    /* istanbul ignore next */
+                    resolve(false);
+                });
         }
         catch (e)
         {
@@ -2570,19 +2425,17 @@ const minifyCode = (cjsList, bundlePath) =>
 };
 
 /**
- * Bundle generated ESM code into o minified bundle
+ * Bundle generated ESM code into minified bundle
  * @param cjsList
+ * @param entryPointPath
  * @param target
  * @param bundlePath
  */
-const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"}) =>
+const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 {
-
-    reorderImportListByWeight(cjsList);
-
     if (target === TARGET.BROWSER || target === TARGET.ALL)
     {
-        await minifyCode(cjsList, bundlePath);
+        await minifyCode(entryPointPath, bundlePath);
 
         console.log({lid: 1312}, " ");
         console.log({lid: 1314}, " ================================================================");
@@ -2594,7 +2447,6 @@ const bundleResult = async (cjsList, {target = TARGET.BROWSER, bundlePath = "./"
         console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
         console.log({lid: 1328}, " from your html code to load it in the browser.");
     }
-
 };
 
 const hideKeyElementCode = (str, source) =>
@@ -3049,7 +2901,7 @@ const convert = async (rawCliOptions = {}) =>
         if (rawCliOptions._.length > 1)
         {
             console.log({lid: 1307}, ` Bad arguments.
-            Here are some examples of invoking "to-esm":
+            Here are some examples for invoking "to-esm":
             ------------------------------------------------------
             $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} filepath --output outputdir`, {fg: "#FF00FF"})} 
             ------------------------------------------------------
@@ -3103,7 +2955,7 @@ const convert = async (rawCliOptions = {}) =>
         if (!list.length)
         {
             console.error({lid: 1151}, " The pattern did not match any file.");
-            return;
+            return false;
         }
 
         let rootDir;
@@ -3130,14 +2982,15 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     // Note: The multi directory options may complicate things. Consider making it obsolete.
-    let entryPoint;
+    let entryPointList;
+    let entrypointPath = null;
     if (cliOptions.entrypoint)
     {
-        const entrypointPath = normalisePath(cliOptions.entrypoint);
+        entrypointPath = normalisePath(cliOptions.entrypoint);
         console.log({lid: 1402}, toAnsi.getTextFromHex(`Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
         let rootDir = path.parse(entrypointPath).dir;
         rootDir = path.resolve(rootDir);
-        entryPoint = addFileToConvertingList({
+        entryPointList = addFileToConvertingList({
             source    : entrypointPath,
             rootDir,
             outputDir : firstOutputDir,
@@ -3189,6 +3042,13 @@ const convert = async (rawCliOptions = {}) =>
         target       : cliOptions.target
     };
 
+    if (!cjsList.length)
+    {
+        return false;
+    }
+
+    // The first file parsed will be the entrypoint
+    entrypointPath = cjsList[0].target;
     const result = convertCjsFiles(cjsList,
         {
             replaceStart: confFileOptions.replaceStart,
@@ -3205,14 +3065,14 @@ const convert = async (rawCliOptions = {}) =>
             keepexisting
         });
 
-    if (cliOptions.bundle)
+    if (cliOptions.bundle && entrypointPath)
     {
-        await bundleResult(cjsList, {target: cliOptions.target, bundlePath: cliOptions.bundle});
+        await bundleResult(entrypointPath, {target: cliOptions.target, bundlePath: cliOptions.bundle});
     }
 
     if (cliOptions["update-all"])
     {
-        updatePackageJson({entryPoint, bundlePath: cliOptions.bundle, workingDir});
+        updatePackageJson({entryPoint: entryPointList, bundlePath: cliOptions.bundle, workingDir});
     }
 
     if (!htmlOptions.pattern)
