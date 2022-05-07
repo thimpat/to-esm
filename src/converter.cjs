@@ -2219,21 +2219,21 @@ const insertDirname = (converted) =>
 
         if (converted.indexOf("__dirname") > -1)
         {
-            insertion += insertion + `import { dirname } from 'path';
+            insertion += insertion + `import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 `;
         }
 
         if (converted.indexOf("__filename") > -1)
         {
-            insertion += insertion + `import { __filename } from 'path';
+            insertion += insertion + `import { __filename } from "path";
 const __filename = fileURLToPath(import.meta.url);
 `;
         }
 
         if (insertion)
         {
-            insertion = `import { fileURLToPath } from 'url';
+            insertion = `import { fileURLToPath } from "url";
 ` + insertion;
             converted = insertion + converted;
         }
