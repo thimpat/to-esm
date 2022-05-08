@@ -2854,6 +2854,37 @@ const convertCjsFiles = (list, {
 };
 
 /**
+ * Look for .to-esm config path, so to load automatically a configuration.
+ * @returns {string}
+ */
+const detectESMConfigPath = () =>
+{
+    try
+    {
+        const toEsmConfigName = ".to-esm";
+        const extensionList = ["", ".json", ".cjs"];
+
+        for (let i = 0; i < extensionList.length; ++i)
+        {
+            const extension = extensionList[i];
+            let esmPath = path.resolve(toEsmConfigName + extension);
+            esmPath = normalisePath(esmPath);
+
+            if (fs.existsSync(esmPath) && fs.lstatSync(esmPath).isFile())
+            {
+                return esmPath;
+            }
+        }
+    }
+    catch (e)
+    {
+
+    }
+
+    return "";
+};
+
+/**
  * Use command line arguments to apply conversion
  * @param rawCliOptions
  */
@@ -2874,7 +2905,8 @@ const convert = async (rawCliOptions = {}) =>
     let confFileOptions = {replace: []};
 
     // Config Files
-    let configPath = cliOptions.config;
+    let configPath = cliOptions.config || detectESMConfigPath();
+
     let nonHybridModuleMap = {};
     if (configPath)
     {
