@@ -539,10 +539,12 @@ $> to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
 
 
 
-To apply advanced options, create a config file and make the CLI point to it.
+To apply advanced options, create a config file (.to-esm, .to-esm.json or .to-esm.cjs) and it will be automatically 
+loaded.
+Otherwise, you can create a file with a custom name and explicitely tell the system to load it.
 
 ```shell
-to-esm --config=.to-esm.cjs
+to-esm --config=.my-to-esm-config.cjs
 ```
 
 

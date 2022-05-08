@@ -2215,26 +2215,34 @@ const insertDirname = (converted) =>
 {
     try
     {
-        let insertion = "";
-
-        if (converted.indexOf("__dirname") > -1)
-        {
-            insertion += insertion + `import { dirname } from 'path';
+        const dirnameCode = `import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 `;
+
+        const filenameCode = `const __filename = fileURLToPath(import.meta.url);
+`;
+
+        const importCode = `import { fileURLToPath } from "url";
+`;
+
+        let insertion = "";
+        if (converted.indexOf("__dirname") > -1 && converted.indexOf("import { dirname } from \"path\"") === -1)
+        {
+            insertion = dirnameCode;
         }
 
-        if (converted.indexOf("__filename") > -1)
+        if (converted.indexOf("__filename") > -1 && converted.indexOf("import { __filename } from \"path\"") === -1)
         {
-            insertion += insertion + `import { __filename } from 'path';
-const __filename = fileURLToPath(import.meta.url);
-`;
+            insertion = insertion + filenameCode;
         }
 
         if (insertion)
         {
-            insertion = `import { fileURLToPath } from 'url';
-` + insertion;
+            if (converted.indexOf("import { fileURLToPath } from \"url\"") === -1)
+            {
+                insertion = importCode + insertion;
+            }
+
             converted = insertion + converted;
         }
     }
@@ -2854,6 +2862,37 @@ const convertCjsFiles = (list, {
 };
 
 /**
+ * Look for .to-esm config path, so to load automatically a configuration.
+ * @returns {string}
+ */
+const detectESMConfigPath = () =>
+{
+    try
+    {
+        const toEsmConfigName = ".to-esm";
+        const extensionList = ["", ".json", ".cjs"];
+
+        for (let i = 0; i < extensionList.length; ++i)
+        {
+            const extension = extensionList[i];
+            let esmPath = path.resolve(toEsmConfigName + extension);
+            esmPath = normalisePath(esmPath);
+
+            if (fs.existsSync(esmPath) && fs.lstatSync(esmPath).isFile())
+            {
+                return esmPath;
+            }
+        }
+    }
+    catch (e)
+    {
+
+    }
+
+    return "";
+};
+
+/**
  * Use command line arguments to apply conversion
  * @param rawCliOptions
  */
@@ -2874,7 +2913,8 @@ const convert = async (rawCliOptions = {}) =>
     let confFileOptions = {replace: []};
 
     // Config Files
-    let configPath = cliOptions.config;
+    let configPath = cliOptions.config || detectESMConfigPath();
+
     let nonHybridModuleMap = {};
     if (configPath)
     {
