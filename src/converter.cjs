@@ -2215,26 +2215,34 @@ const insertDirname = (converted) =>
 {
     try
     {
-        let insertion = "";
-
-        if (converted.indexOf("__dirname") > -1)
-        {
-            insertion += insertion + `import { dirname } from "path";
+        const dirnameCode = `import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 `;
+
+        const filenameCode = `const __filename = fileURLToPath(import.meta.url);
+`;
+
+        const importCode = `import { fileURLToPath } from "url";
+`;
+
+        let insertion = "";
+        if (converted.indexOf("__dirname") > -1 && converted.indexOf("import { dirname } from \"path\"") === -1)
+        {
+            insertion = dirnameCode;
         }
 
-        if (converted.indexOf("__filename") > -1)
+        if (converted.indexOf("__filename") > -1 && converted.indexOf("import { __filename } from \"path\"") === -1)
         {
-            insertion += insertion + `import { __filename } from "path";
-const __filename = fileURLToPath(import.meta.url);
-`;
+            insertion = insertion + filenameCode;
         }
 
         if (insertion)
         {
-            insertion = `import { fileURLToPath } from "url";
-` + insertion;
+            if (converted.indexOf("import { fileURLToPath } from \"url\"") === -1)
+            {
+                insertion = importCode + insertion;
+            }
+
             converted = insertion + converted;
         }
     }
