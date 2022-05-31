@@ -878,7 +878,7 @@ const convertJsonImportToVars = (converted, {
             }
         }
 
-        converted = converted.replace(found, `let ${identifier} = ${JSON.stringify(newObject, null, 2)};`);
+        converted = converted.replace(found, `let ${identifier} = ${JSON.stringify(newObject, null, 2)}`);
     }
 
     return converted;
