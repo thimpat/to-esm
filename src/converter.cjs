@@ -529,13 +529,12 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, ou
         {
             const newPath = concatenatePaths(outputDir, requiredPath);
             projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
-            projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
         }
         else
         {
             projectedRequiredPath = calculateRelativePath(sourcePath, requiredPath);
-            projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
         }
+        projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
     }
 
     return projectedRequiredPath;
@@ -830,6 +829,57 @@ const convertModuleExportsToExport = (converted) =>
 
     // Convert module.exports.something to export something
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
+
+    return converted;
+};
+
+const convertJsonImportToVars = (converted, {
+    source
+}) =>
+{
+    const matchData = converted.matchAll(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(['"]([^)]+.json)[^)]\)/g);
+    const matches = [...matchData];
+    const found = Array.from(matches, m => m[0]);
+    const identifiers = Array.from(matches, m => m[1]);
+    const files = Array.from(matches, m => m[2]);
+
+    const n = identifiers.length;
+    for (let i = 0; i < n; ++i)
+    {
+        const identifier = identifiers[i].trim();
+        const filepath = files[i];
+        let absPath = path.resolve(source);
+        let jsonPath = concatenatePaths(absPath, filepath);
+        if (!fs.existsSync(jsonPath))
+        {
+            continue;
+        }
+
+        const jsonContent = fs.readFileSync(jsonPath, "utf-8");
+        const json = JSON.parse(jsonContent.toString());
+        if (Array.isArray(json))
+        {
+            continue;
+        }
+
+        const newObject = {};
+        for (let k in json)
+        {
+            const search1 = `${identifier}.${k}`;
+            if (converted.indexOf(search1) > -1)
+            {
+                newObject[k] = json[k];
+            }
+
+            const search2 = `${identifier}["${k}"]`;
+            if (converted.indexOf(search2) > -1)
+            {
+                newObject[k] = json[k];
+            }
+        }
+
+        converted = converted.replace(found, `let ${identifier} = ${JSON.stringify(newObject, null, 2)};`);
+    }
 
     return converted;
 };
@@ -1756,6 +1806,9 @@ const convertToESMWithRegex = (converted, list, {
 
         converted = convertModuleExportsToExport(converted);
         dumpData(converted, source, "convertModuleExportsToExport");
+
+        converted = convertJsonImportToVars(converted, {source});
+        dumpData(converted, source, "convertJsonImportToVars");
 
         converted = convertRequiresToImport(converted);
         dumpData(converted, source, "convertRequiresToImport");
@@ -2685,6 +2738,11 @@ const convertCjsFiles = (list, {
 
             converted = convertComplexRequiresToSimpleRequires(converted, source);
             dumpData(converted, source, "convert-complex-requires-to-simple-requires");
+
+            converted = convertJsonImportToVars(converted, {
+                source,
+            });
+            dumpData(converted, source, "convert-json-import-to-vars");
 
             if (isCjsCompatible(source, converted))
             {
