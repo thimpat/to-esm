@@ -1,5 +1,7 @@
 {
   "name": "something",
+  "version": "1.0.2",
+  "random": 123456,
   "main": "./example/cjs/demo.cjs",
   "module": "./generated/esm/demo.mjs",
   "type": "commonjs"

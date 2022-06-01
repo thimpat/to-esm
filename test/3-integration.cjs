@@ -495,9 +495,9 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-demo-test-removeResidue.js"), "utf8");
                 await convert(options);
 
-                // To have the correct dump, you need to add a breakpoint to the test case that use it,
-                // Start all of the tests from the beginning. The last dumped file is the one to use for the comparison.
-                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0030-demo-test-24--removeResidue.js"), "utf8");
+                // To have the correct dump, you need to add a breakpoint to the test case that uses it,
+                // Start all the tests from the beginning. The last dumped file is the one to use for the comparison.
+                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0031-demo-test-24--removeResidue.js"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }
@@ -834,6 +834,23 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-31.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-31.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should replace json import", async function ()
+            {
+                const input = "./test/assets/given/demo-test-32.cjs";
+                const options = {
+                    input,
+                    "output"  : path.join(rootDir, "/actual"),
+                    "noheader": true,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-32.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-32.mjs"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }
