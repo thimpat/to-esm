@@ -894,7 +894,7 @@ describe("The converter tool", function ()
                     "noheader"  : false,
                     "target"    : "all",
                     "entrypoint": "./given/demo-test-14.cjs",
-                    "update-all": true,
+                    "update-all": false,
                     bundle      : "./actual/demo-test.min.mjs"
                 };
 
