@@ -596,15 +596,44 @@ const reviewEsmImports = (text, list, {
                 }
 
                 // Hack
-                let requiredPath = moreOptions.useImportMaps ? getESMModuleEntryPath(moduleName, workingDir) : getCJSModuleEntryPath(moduleName, workingDir);
-                if (!requiredPath)
+                let requiredPath;
+                if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM || moreOptions.target === TARGET.ALL)
                 {
-                    console.warn({
-                        lid  : 1099,
-                        color: "#FF0000"
-                    }, ` The module [${moduleName}] was not found in your node_modules directory. `
-                        + "Skipping.");
-                    return match;
+                    requiredPath = getESMModuleEntryPath(moduleName, workingDir);
+                    if (!requiredPath)
+                    {
+                        console.warn({
+                            lid  : 1099,
+                            color: "#FF0000"
+                        }, ` The module [${moduleName}] was not found in your node_modules directory. `
+                            + "Skipping.");
+                        return match;
+                    }
+
+                    let isESM = isESMCompatible(requiredPath);
+
+                    if (!isESM)
+                    {
+                        console.warn({
+                            lid: 1236,
+                            color: "yellow"
+                        }, `The npm module '${moduleName}' does not seem to be ESM compatible.`);
+                        console.warn({
+                            lid: 1238,
+                            color: "yellow"
+                        }, "The system will try to convert it to ESM in a local 'node_modules/' directory");
+                    }
+
+                    if (moreOptions.target === TARGET.ESM && isESM)
+                    {
+                        return match;
+                    }
+
+                }
+                else
+                {
+                    // TODO: Check if obsolete
+                    requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
                 }
 
                 // Source path of projected original source (the .cjs)
@@ -2100,27 +2129,41 @@ const parseEsm = (filepath, content, {
  */
 const isCjsCompatible = (filepath, content = "") =>
 {
-    const extension = path.extname(filepath);
-    if (".mjs" === extension)
+    try
     {
-        return false;
+        const extension = path.extname(filepath);
+        if (".mjs" === extension)
+        {
+            return false;
+        }
+
+        content = content || fs.readFileSync(filepath, "utf-8");
+        content = stripComments(content);
+        content = clearStrings(content);
+
+        if (/\bimport\b[\s\S]*?\bfrom\b/gm.test(content) || /\bexport\b\s+\bdefault\b/gm.test(content))
+        {
+            return false;
+        }
+
+        if (/\brequire\b\s*\(/gm.test(content) || /(?:module\.)?\bexports\b\.?/gm.test(content))
+        {
+            return true;
+        }
+
+        return !/\bexport\b\s+/gm.test(content);
+    }
+    catch (e)
+    {
+        console.error({lid: 1137}, e);
     }
 
-    content = content || fs.readFileSync(filepath, "utf-8");
-    content = stripComments(content);
-    content = clearStrings(content);
+    return false;
+};
 
-    if (/\bimport\b[\s\S]*?\bfrom\b/gm.test(content) || /\bexport\b\s+\bdefault\b/gm.test(content))
-    {
-        return false;
-    }
-
-    if (/\brequire\b\s*\(/gm.test(content) || /(?:module\.)?\bexports\b\.?/gm.test(content))
-    {
-        return true;
-    }
-
-    return !/\bexport\b\s+/gm.test(content);
+const isESMCompatible = (filepath, content = "") =>
+{
+    return !isCjsCompatible(filepath, content);
 };
 
 const findEntry = (source, propertyName = "source") =>
@@ -3037,6 +3080,10 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     cliOptions.target = cliOptions.target || TARGET.ESM;
+    if (cliOptions.useImportMaps)
+    {
+        cliOptions.target = TARGET.BROWSER;
+    }
 
     // Output Files
     cliOptions.output = cliOptions.output || "./";
