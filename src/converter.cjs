@@ -568,7 +568,10 @@ const reviewEsmImports = (text, list, {
         {
             if (~nativeModules.indexOf(regexRequiredPath))
             {
-                console.info({lid: 1017}, ` ${regexRequiredPath} is a built-in NodeJs module.`);
+                if (moreOptions.target === TARGET.BROWSER)
+                {
+                    console.info({lid: 1017}, ` ${regexRequiredPath} is a built-in NodeJs module.`);
+                }
                 return match;
             }
 
@@ -887,7 +890,7 @@ const convertJsonImportToVars = (converted, {
 /**
  * Parse the given test and use regex to transform requires into imports.
  * @note This function is used with both parser (AST or Regex)
- * When use via AST, the transformation is applied on lines.
+ * When use via AST, the transformation is applied by line.
  * When use with the regex fallback, the transformation is done on the whole source.
  * @param converted
  * @returns {*}
@@ -3021,6 +3024,8 @@ const convert = async (rawCliOptions = {}) =>
             inputFileMaskArr.push(cliOptions.input);
         }
     }
+
+    cliOptions.target = cliOptions.target || TARGET.ESM;
 
     // Output Files
     cliOptions.output = cliOptions.output || "./";
