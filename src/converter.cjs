@@ -84,6 +84,17 @@ const normaliseString = (content) =>
     return content;
 };
 
+const setupConsole = () =>
+{
+    const {anaLogger} = require("analogger");
+
+    anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
+    anaLogger.overrideConsole();
+    anaLogger.overrideError();
+
+    console.log({lid: 1300}, "Console is set up");
+};
+
 /**
  * Build target directory.
  * Ignore, if the directory already exist
@@ -3225,4 +3236,8 @@ module.exports.regexifySearchList = regexifySearchList;
 module.exports.getImportMapFromPage = getImportMapFromPage;
 module.exports.resetFileList = resetFileList;
 module.exports.normaliseString = normaliseString;
+
+module.exports.setupConsole = setupConsole;
+
+module.exports.TARGET = TARGET;
 module.exports.DEBUG_DIR = DEBUG_DIR;
