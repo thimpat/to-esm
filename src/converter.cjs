@@ -3120,6 +3120,11 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     cliOptions.target = cliOptions.target || TARGET.ESM;
+    if (cliOptions["update-all"])
+    {
+        cliOptions.target = TARGET.ESM;
+    }
+
     if (cliOptions.useImportMaps)
     {
         cliOptions.target = TARGET.BROWSER;
