@@ -4,6 +4,8 @@ const expect = chai.expect;
 const fs = require("fs");
 const path = require("path");
 
+const capcon = require("capture-console");
+
 let rootDir = path.join(__dirname, "assets");
 
 const {setupConsole, buildTargetDir, convert, normaliseString, TARGET} = require("../src/converter.cjs");
@@ -28,7 +30,7 @@ describe("The converter tool", function ()
         fs.copyFileSync(path.join(rootDir, "other.html"), path.join(rootDir, "actual", "other.html"));
     });
 
-    beforeEach(()=>
+    beforeEach(() =>
     {
         const workingDir = path.join(__dirname, "..");
         process.chdir(workingDir);
@@ -101,8 +103,8 @@ describe("The converter tool", function ()
             const input = "./test/assets/given/demo-test.cjs";
             const options = {
                 input,
-                "output": path.join(rootDir, "/actual"),
-                "noHeader": false,
+                "output"    : path.join(rootDir, "/actual"),
+                "noHeader"  : false,
                 "withreport": true
             };
 
@@ -118,9 +120,9 @@ describe("The converter tool", function ()
                 const input = "./test/assets/given/demo-test-2.cjs";
                 const options = {
                     input,
-                    "output": path.join(rootDir, "/actual"),
-                    "config": path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
-                    "noheader": false,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
+                    "noheader"  : false,
                     "withreport": true
                 };
 
@@ -137,10 +139,10 @@ describe("The converter tool", function ()
                 const input = "./test/assets/given/demo-test-3.cjs";
                 const options = {
                     input,
-                    "output": path.join(rootDir, "/actual"),
-                    "config": path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
-                    "target": TARGET.BROWSER,
-                    "noheader": false,
+                    "output"    : path.join(rootDir, "/actual"),
+                    "config"    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
+                    "target"    : TARGET.BROWSER,
+                    "noheader"  : false,
                     "withreport": true
                 };
 
@@ -316,7 +318,7 @@ describe("The converter tool", function ()
                     "config"    : path.join(__dirname, "assets/given/.toesm-replace-modules.json"),
                     "noheader"  : false,
                     "withreport": true,
-                    target: TARGET.BROWSER
+                    target      : TARGET.BROWSER
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-10.mjs"), "utf8");
@@ -497,7 +499,7 @@ describe("The converter tool", function ()
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
                     "target"  : "esm",
-                    debug: true
+                    debug     : true
                 };
 
                 await convert(options);
@@ -586,7 +588,7 @@ describe("The converter tool", function ()
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
                     "target"  : "browser",
-                    bundle      : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
+                    bundle    : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
                 };
 
                 let expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-29.min.mjs"), "utf8");
@@ -669,7 +671,7 @@ describe("The converter tool", function ()
                     "config"    : path.join(__dirname, "assets/given/.toesm.json"),
                     "noheader"  : false,
                     "withreport": true,
-                    "html": htmlPattern,
+                    "html"      : htmlPattern,
                 };
 
                 await convert(options);
@@ -690,7 +692,7 @@ describe("The converter tool", function ()
                     "config"    : path.join(__dirname, "assets/given/.toesm-invalid.json"),
                     "noheader"  : false,
                     "withreport": true,
-                    "html": htmlPattern,
+                    "html"      : htmlPattern,
                 };
 
                 await convert(options);
@@ -748,9 +750,9 @@ describe("The converter tool", function ()
                 const input = "./given/demo-test-14.cjs";
                 const options = {
                     input,
-                    "output"  :  "./actual",
-                    "noheader": false,
-                    "target"  : "all",
+                    "output"    : "./actual",
+                    "noheader"  : false,
+                    "target"    : "all",
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -776,9 +778,9 @@ describe("The converter tool", function ()
                 const input = "./given/demo-test-14.cjs";
                 const options = {
                     input,
-                    "output"  :  "./actual",
-                    "noheader": false,
-                    "target"  : "all",
+                    "output"    : "./actual",
+                    "noheader"  : false,
+                    "target"    : "all",
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -806,9 +808,9 @@ describe("The converter tool", function ()
                 const input = "./given/demo-test-14.cjs";
                 const options = {
                     input,
-                    "output"  :  "./actual",
-                    "noheader": false,
-                    "target"  : "all",
+                    "output"    : "./actual",
+                    "noheader"  : false,
+                    "target"    : "all",
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -869,9 +871,9 @@ describe("The converter tool", function ()
                 const input = "./given/demo-test-14.cjs";
                 const options = {
                     input,
-                    "output"  :  "./actual",
-                    "noheader": false,
-                    "target"  : "all",
+                    "output"    : "./actual",
+                    "noheader"  : false,
+                    "target"    : "all",
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -943,7 +945,7 @@ describe("The converter tool", function ()
                     input,
                     output  : path.join(rootDir, "/actual"),
                     noheader: true,
-                    target: TARGET.ESM
+                    target  : TARGET.ESM
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-33.mjs"), "utf8");
@@ -961,7 +963,7 @@ describe("The converter tool", function ()
                     input,
                     output  : path.join(rootDir, "/actual"),
                     noheader: true,
-                    target: TARGET.BROWSER
+                    target  : TARGET.BROWSER
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-34.mjs"), "utf8");
@@ -979,7 +981,7 @@ describe("The converter tool", function ()
                     input,
                     output  : path.join(rootDir, "/actual"),
                     noheader: true,
-                    target: TARGET.BROWSER,
+                    target  : TARGET.BROWSER,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-35.mjs"), "utf8");
@@ -997,7 +999,7 @@ describe("The converter tool", function ()
                     input,
                     output  : path.join(rootDir, "/actual"),
                     noheader: true,
-                    target: TARGET.BROWSER,
+                    target  : TARGET.BROWSER,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-35.mjs"), "utf8");
@@ -1015,8 +1017,7 @@ describe("The converter tool", function ()
                     input,
                     output  : path.join(rootDir, "/actual"),
                     noheader: true,
-                    target: TARGET.BROWSER,
-                    debug: true
+                    target  : TARGET.BROWSER,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-36.mjs"), "utf8");
@@ -1027,21 +1028,22 @@ describe("The converter tool", function ()
             }
         );
 
-        it.skip("should export correctly with two different exports", async function ()
+        it("should export correctly with two different exports", async function ()
             {
                 const input = "./test/assets/given/demo-test-37.cjs";
                 const options = {
                     input,
                     output  : path.join(rootDir, "/actual"),
                     noheader: true,
-                    target: TARGET.BROWSER,
+                    target  : TARGET.BROWSER,
                 };
 
-                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-37.mjs"), "utf8");
-                await convert(options);
-                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-37.mjs"), "utf8");
+                const captured = capcon.captureStdio(async function ()
+                {
+                    await convert(options);
+                });
 
-                expect(converted).to.equal(expectedConversion);
+                expect(captured.stdout).to.contain("2 default exports detected");
             }
         );
 
