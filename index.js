@@ -2,7 +2,7 @@
 
 const packageJson = require("./package.json");
 const minimist = require("minimist");
-const {convert} = require("./src/converter.cjs");
+const {convert, setupConsole} = require("./src/converter.cjs");
 
 const LOG_CONTEXTS = {STANDARD: null, TEST: {color: "#B18904"}, C1: null, C2: null, C3: null, DEFAULT: {color: "#FF9999"}};
 
