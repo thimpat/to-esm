@@ -6,7 +6,7 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {setupConsole, buildTargetDir, convert, normaliseString, DEBUG_DIR, TARGET} = require("../src/converter.cjs");
+const {setupConsole, buildTargetDir, convert, normaliseString, TARGET} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
@@ -500,14 +500,8 @@ describe("The converter tool", function ()
                     debug: true
                 };
 
-                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "dump-demo-test-removeResidue.js"), "utf8");
                 await convert(options);
-
-                // To have the correct dump, you need to add a breakpoint to the test case that uses it,
-                // Start all the tests from the beginning. The last dumped file is the one to use for the comparison.
-                const converted = fs.readFileSync(path.join(DEBUG_DIR, "dump-0031-demo-test-24--removeResidue.js"), "utf8");
-
-                expect(converted).to.equal(expectedConversion);
+                expect(fs.existsSync("debug/dump-0001-demo-test-24--read-file.js")).to.be.true;
             }
         );
 
@@ -593,7 +587,6 @@ describe("The converter tool", function ()
                     "noheader": false,
                     "target"  : "browser",
                     bundle      : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
-                    debug: true
                 };
 
                 let expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-29.min.mjs"), "utf8");
@@ -633,7 +626,6 @@ describe("The converter tool", function ()
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
                     "target"  : "all",
-                    "debug": true
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-13.mjs"), "utf8");
@@ -975,6 +967,24 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-34.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-34.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should convert code with regexes correctly", async function ()
+            {
+                const input = "./test/assets/given/demo-test-35.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: true,
+                    target: TARGET.BROWSER,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-35.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-35.mjs"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }
