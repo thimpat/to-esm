@@ -11,7 +11,7 @@ const expect = chai.expect;
 
 const {
     convertRequireToImport,
-    stripComments,
+    stripCodeComments,
     validateSyntax,
     isConventionalFolder,
     concatenatePaths,
@@ -38,9 +38,9 @@ describe("converter.cjs", function ()
     });
 
     /**
-     * @link stripComments
+     * @link stripCodeComments
      */
-    describe("#stripComments()", function ()
+    describe("#stripCodeComments()", function ()
     {
 
         it("should strip comments from strings", function ()
@@ -50,7 +50,7 @@ describe("converter.cjs", function ()
 // const aa = "let QuickLog2 = require(\\"../../src/cjs/quick-log.cjs\\")";`;
 
             // Act
-            const result = stripComments(input);
+            const result = stripCodeComments(input);
 
             expect(result).to.equal("const cc =  `var QuickLog3 = require(\"../../src/cjs/quick-log.cjs\")`;       \n");
         });
@@ -63,7 +63,7 @@ describe("converter.cjs", function ()
             const extracted = [];
 
             // Act
-            stripComments(input, extracted);
+            stripCodeComments(input, extracted);
 
             expect(extracted.length).to.equal(3);
         });

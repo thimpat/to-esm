@@ -9,8 +9,6 @@ import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import { EMPTY_BUFFER }  from "./test/assets/given/constants.mjs";
 import _toesmTemp1  from "node-gyp-build";
-export default _toesmTemp1(__dirname);
-
 /**
  * Some code extract from module to use with test only
  */
@@ -58,7 +56,9 @@ function toBuffer(data) {
     return buf;
 }
 
-try { 
+try {
+    export default _toesmTemp1(__dirname);
 
-} catch (e) { 
+} catch (e) {
+    export default require('./fallback');
 }

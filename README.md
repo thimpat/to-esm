@@ -37,7 +37,9 @@
 
 ## Description
 
-A tool to convert Commonjs files into ESM.
+A tool to convert Commonjs files into ESM files.
+To-esm can be used for generating hybrid modules. Do all of your coding using CommonJs, then convert your code into 
+ESM at build or packaging times.
 
 <br>
 
@@ -522,7 +524,7 @@ $> to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
 | --html         | _html files to receive importmaps_                      | glob                     |
 | --noHeader     | _Options to not generate automatic header_              |                          |
 | --keepExisting | _Options to skip already converted files_               |                          |
-| --target       | _Setting the targeted environment_                      | all / esm / browser      |  
+| --target       | _Setting the targeted environment_                      | esm / browser            |  
 | --bundle       | _Generate minified bundle for browser environment_      | file path                |  
 | --entrypoint   | _Path to .js entrypoint_                                | file path                |  
 | --update-all   | _Automatically update package.json to set entry points_ |                          |  
@@ -956,7 +958,7 @@ const myAnything = require("electron-data-exchanger");
 ### 2- Run to-esm against the entry point
 
 ```shell
-to-esm --entrypoint index.cjs --update-all
+$> to-esm --entrypoint index.cjs --update-all
 ```
 
 > 🚫
@@ -1117,16 +1119,32 @@ node index.mjs
 
 
 
-### 2- Run to-esm against the entry point
+### 2- Run to-esm against en entry point
+
+<br/>
+
+###### For the browser
 
 ```shell
-$> to-esm --entrypoint index.cjs --output ./generated --update-all --target browser --bundle index.min.cjs
+$> to-esm --entrypoint index.cjs --output ./generated --target browser --bundle index.min.mjs
+```
+or
+```shell
+$> to-esm index.cjs --output ./generated --target browser --bundle index.min.mjs
 ```
 
+<br/>
+
+###### For Node
+
 > 🚫
-_If you are not targeting the browser, ignore --target and --bundle options_
+_If you are not targeting the browser, use ```--target esm``` and remove the --bundle option_
 > ```shell
-> $> to-esm --entrypoint index.cjs --update-all
+> $> to-esm --entrypoint index.cjs
+> ```
+> or
+> ```shell
+> $> to-esm index.cjs
 > ```
 
 ---

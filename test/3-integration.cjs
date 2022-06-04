@@ -894,7 +894,7 @@ describe("The converter tool", function ()
                     "noheader"  : false,
                     "target"    : "all",
                     "entrypoint": "./given/demo-test-14.cjs",
-                    "update-all": true,
+                    "update-all": false,
                     bundle      : "./actual/demo-test.min.mjs"
                 };
 
@@ -985,6 +985,61 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-35.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-35.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should export a function correctly despite comments", async function ()
+            {
+                const input = "./test/assets/given/demo-test-35.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: true,
+                    target: TARGET.BROWSER,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-35.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-35.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should export correctly despite comments", async function ()
+            {
+                const input = "./test/assets/given/demo-test-36.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: true,
+                    target: TARGET.BROWSER,
+                    debug: true
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-36.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-36.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it.skip("should export correctly with two different exports", async function ()
+            {
+                const input = "./test/assets/given/demo-test-37.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: true,
+                    target: TARGET.BROWSER,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-37.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-37.mjs"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }

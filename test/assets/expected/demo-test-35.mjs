@@ -82,14 +82,14 @@ const domKeys = Object.assign(Object.create(null), {
     printscreen: "PrintScreen"
 });
 
-// export default {
-// 	UNSUPPORTED,
-// 	reduceModifier,
-// 	reducePlus,
-// 	reduceKey,
-// 	reduceCode,
-// 	toKeyEvent
-// };
+export default {
+	UNSUPPORTED,
+	reduceModifier,
+	reducePlus,
+	reduceKey,
+	reduceCode,
+	toKeyEvent
+};
 
 
 export const reduceModifier = reduceModifier;
