@@ -133,12 +133,15 @@ const buildTargetDir = (targetDir) =>
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
+ * @param source
  * @param detectedExported
  * @returns {*}
  */
-const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
+const convertNonTrivialExportsWithAST = (converted, source, detectedExported = []) =>
 {
     let converted0, subst;
+
+    converted = hideKeyElementCode(converted, source);
 
     for (let i = 0; i < detectedExported.length; ++i)
     {
@@ -155,6 +158,8 @@ const convertNonTrivialExportsWithAST = (converted, detectedExported = []) =>
         converted0 = converted;
         converted = converted0.replace(regexp, subst);
     }
+
+    converted = restoreKeyElementCode(converted);
 
     return converted;
 };
@@ -2718,32 +2723,32 @@ const removeResidue = (str) =>
     return str;
 };
 
-function moveEmbeddedImportsToTop(str, source)
+function moveEmbeddedImportsToTop(converted, source)
 {
-    str = hideKeyElementCode(str, source);
-    dumpData(str, source, "moveEmbeddedImportsToTop - hideKeyElementCode");
+    converted = hideKeyElementCode(converted, source);
+    dumpData(converted, source, "moveEmbeddedImportsToTop - hideKeyElementCode");
 
     // Export default
     let regex = new RegExp(`\\bexport.*default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\\s*;?`, "gm");
     const exportDefault = [];
-    str = beforeReplace(regex, str, function (found, wholeText, index, match)
+    converted = beforeReplace(regex, converted, function (found, wholeText, index, match)
     {
         exportDefault.push(match[0]);
         return "";
     });
-    dumpData(str, source, "moveEmbeddedImportsToTop - Transform export default");
+    dumpData(converted, source, "moveEmbeddedImportsToTop - Transform export default");
 
     // module.exports
     regex = new RegExp(`\\bexport${EXPORT_KEYWORD_MASK}(\\d*)\\s+default\\s+.*;?`, "gm");
-    str = beforeReplace(regex, str, function (found, wholeText, index, match)
+    converted = beforeReplace(regex, converted, function (found, wholeText, index, match)
     {
         exportDefault.push(match[0]);
         return "";
     });
-    dumpData(str, source, "moveEmbeddedImportsToTop - Transform module.exports");
+    dumpData(converted, source, "moveEmbeddedImportsToTop - Transform module.exports");
 
-    str = restoreKeyElementCode(str);
-    dumpData(str, source, "moveEmbeddedImportsToTop - restoreKeyElementCode");
+    converted = restoreKeyElementCode(converted);
+    dumpData(converted, source, "moveEmbeddedImportsToTop - restoreKeyElementCode");
 
     if (exportDefault.length)
     {
@@ -2755,32 +2760,32 @@ function moveEmbeddedImportsToTop(str, source)
                 " converted.");
         }
 
-        if (str.indexOf(IMPORT_MASK_END) > -1)
+        if (converted.indexOf(IMPORT_MASK_END) > -1)
         {
             const escaped = escapeDollar(exportDefault[exportDefault.length - 1] + EOL);
-            str = str.replace(IMPORT_MASK_END, IMPORT_MASK_END + EOL + escaped);
+            converted = converted.replace(IMPORT_MASK_END, IMPORT_MASK_END + EOL + escaped);
         }
         else
         {
-            str = exportDefault[exportDefault.length - 1] + EOL + str;
+            converted = exportDefault[exportDefault.length - 1] + EOL + converted;
         }
 
-        dumpData(str, source, "moveEmbeddedImportsToTop - restore 0");
+        dumpData(converted, source, "moveEmbeddedImportsToTop - restore 0");
     }
 
     const regexMaskIn = new RegExp(`${blockMaskIn}(\\d+)`, "gm");
-    str = str.replaceAll(regexMaskIn, "{");
-    dumpData(str, source, "moveEmbeddedImportsToTop - restore {");
+    converted = converted.replaceAll(regexMaskIn, "{");
+    dumpData(converted, source, "moveEmbeddedImportsToTop - restore {");
 
     const regexMaskOut = new RegExp(`${blockMaskOut}(\\d+)`, "gm");
-    str = str.replaceAll(regexMaskOut, "}");
-    dumpData(str, source, "moveEmbeddedImportsToTop - restore }");
+    converted = converted.replaceAll(regexMaskOut, "}");
+    dumpData(converted, source, "moveEmbeddedImportsToTop - restore }");
 
     const exportDefaultMask = new RegExp(`${EXPORT_KEYWORD_MASK}(\\d+)`, "gm");
-    str = str.replaceAll(exportDefaultMask, "");
-    dumpData(str, source, "moveEmbeddedImportsToTop - restore 4");
+    converted = converted.replaceAll(exportDefaultMask, "");
+    dumpData(converted, source, "moveEmbeddedImportsToTop - restore 4");
 
-    return str;
+    return converted;
 }
 
 /**
@@ -2866,7 +2871,7 @@ const convertCjsFiles = (list, {
 
                 if (success)
                 {
-                    converted = convertNonTrivialExportsWithAST(converted, result.detectedExported);
+                    converted = convertNonTrivialExportsWithAST(converted, source, result.detectedExported);
                     dumpData(converted, source, "convertNonTrivialExportsWithAST");
                     converted = convertModuleExportsToExport(converted);
                     dumpData(converted, source, "convertModuleExportsToExport");
@@ -3301,7 +3306,7 @@ module.exports.convertNonTrivial = convertNonTrivial;
 module.exports.reviewEsmImports = reviewEsmImports;
 module.exports.parseImportWithRegex = parseImportWithRegex;
 module.exports.applyReplace = applyReplaceFromConfig;
-module.exports.stripComments = stripCodeComments;
+module.exports.stripCodeComments = stripCodeComments;
 module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
 module.exports.convertRequireToImport = convertRequiresToImport;
 module.exports.validateSyntax = validateSyntax;
