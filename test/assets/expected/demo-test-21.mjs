@@ -66,8 +66,10 @@ function toBuffer(data) {
     return buf;
 }
 
-try { 
-} catch (e) /* istanbul ignore next */ { 
+try {
+     
+} catch (e) /* istanbul ignore next */ {
+    
 }
 
 
