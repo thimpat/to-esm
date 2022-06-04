@@ -853,12 +853,26 @@ const putBackAmbiguous = (converted) =>
 };
 
 /**
+ * Combine default exports when possible
+ * @param converted
+ * @param source
+ */
+const combineDefaultExports = (converted, source) =>
+{
+
+    return converted;
+};
+
+/**
  * Will not work if a variable is named "exports"
  * @param converted
+ * @param source
  * @returns {*}
  */
-const convertModuleExportsToExport = (converted) =>
+const convertModuleExportsToExport = (converted, source) =>
 {
+    converted = hideKeyElementCode(converted, source);
+
     converted = converted.replace(/\bexports\b\s*=\s*module.exports\s*=/, "module.exports =");
     converted = converted.replace(/\bmodule\.exports\b\s*=\s*exports\s*=/, "module.exports =");
 
@@ -881,8 +895,24 @@ const convertModuleExportsToExport = (converted) =>
     // Convert module.exports to export default
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
 
+    // Convert module.exports.default to export default
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.default\s*=/gm, "export default");
+
     // Convert module.exports.something to export something
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
+
+    converted = combineDefaultExports(converted, source);
+
+    const defaultExportNumber = converted.split("export default").length - 1;
+    if (defaultExportNumber > 1)
+    {
+        console.log({lid: 1207, color: "yellow"}, `${defaultExportNumber} default exports detected`);
+        console.log({lid: 1209, color: "yellow"}, "Assure that you have only one export (or none) of type " +
+            `"module.exports = ..."` +
+            " and use named export if possible => i.e. \"module.exports.myValue = ...\"");
+    }
+
+    converted = restoreKeyElementCode(converted);
 
     return converted;
 };
@@ -2873,13 +2903,14 @@ const convertCjsFiles = (list, {
                 {
                     converted = convertNonTrivialExportsWithAST(converted, source, result.detectedExported);
                     dumpData(converted, source, "convertNonTrivialExportsWithAST");
-                    converted = convertModuleExportsToExport(converted);
+
+                    converted = convertModuleExportsToExport(converted, source);
                     dumpData(converted, source, "convertModuleExportsToExport");
                 }
                 else
                 {
                     // Apply fallback in case of conversion error
-                    console.error({lid: 1207}, ` Applying fallback process to convert [${source}]. The conversion may result in errors.`);
+                    console.error({lid: 1213}, ` Applying fallback process to convert [${source}]. The conversion may result in errors.`);
                     converted = convertToESMWithRegex(converted,
                         list,
                         {
