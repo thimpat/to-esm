@@ -6,7 +6,7 @@ const fs = require("fs");
 const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
-const {stripStrings, stripComments, clearStrings, parseString} = require("strip-comments-strings");
+const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
 
@@ -26,6 +26,7 @@ let commentMasks = {
 };
 let sourceExtractedComments = [];
 let sourceExtractedStrings = [];
+let sourceExtractedRegexes = [];
 
 const blockMaskIn = "👉";
 const blockMaskOut = "👈";
@@ -42,9 +43,14 @@ const TARGET = {
     ALL    : "all"
 };
 const ESM_EXTENSION = ".mjs";
+
 const COMMENT_MASK = "❖✎🔏❉";
+
 const STRING_MASK_START = "❖✎❉";
 const STRING_MASK_END = "❉✎❖";
+
+const REGEX_MASK_START = "✋⛽⚒";
+const REGEX_MASK_END = "⚒⛽✋";
 
 const EOL = require("os").EOL;
 const IMPORT_MASK_START = EOL + "/** to-esm: import-start **/" + EOL;
@@ -1545,11 +1551,35 @@ const stripCodeStrings = (code, extracted = []) =>
     return code;
 };
 
+const stripCodeRegexes = (code, extracted = []) =>
+{
+    let index = -1;
+    code = stripRegexes(code, function (info)
+    {
+        ++index;
+        extracted[index] = info.content;
+        return REGEX_MASK_START + index + REGEX_MASK_END;
+    }, {includeDelimiter: false});
+
+    return code;
+};
+
 const putBackStrings = (str, extracted) =>
 {
     for (let i = 0; i < extracted.length; ++i)
     {
         let mask = STRING_MASK_START + i + STRING_MASK_END;
+        str = str.replace(mask, extracted[i]);
+    }
+
+    return str;
+};
+
+const putBackRegexes = (str, extracted) =>
+{
+    for (let i = 0; i < extracted.length; ++i)
+    {
+        let mask = REGEX_MASK_START + i + REGEX_MASK_END;
         str = str.replace(mask, extracted[i]);
     }
 
@@ -2140,6 +2170,7 @@ const isCjsCompatible = (filepath, content = "") =>
         content = content || fs.readFileSync(filepath, "utf-8");
         content = stripComments(content);
         content = clearStrings(content);
+        content = stripRegexes(content);
 
         if (/\bimport\b[\s\S]*?\bfrom\b/gm.test(content) || /\bexport\b\s+\bdefault\b/gm.test(content))
         {
@@ -2565,10 +2596,17 @@ const hideKeyElementCode = (str, source) =>
 {
     sourceExtractedComments = [];
     sourceExtractedStrings = [];
+    sourceExtractedRegexes = [];
+
     str = stripCodeComments(str, sourceExtractedComments, commentMasks);
     dumpData(str, source, "hideKeyElementCode - stripCodeComments");
+
     str = stripCodeStrings(str, sourceExtractedStrings);
     dumpData(str, source, "hideKeyElementCode - stripCodeStrings");
+
+    str = stripCodeRegexes(str, sourceExtractedRegexes);
+    dumpData(str, source, "hideKeyElementCode - stripCodeRegexes");
+
     str = markBlocks(str).modifiedSource;
     dumpData(str, source, "hideKeyElementCode - markBlocks");
 
@@ -2579,6 +2617,8 @@ const restoreKeyElementCode = (str) =>
 {
     str = putBackStrings(str, sourceExtractedStrings);
     str = putBackComments(str, sourceExtractedComments, commentMasks);
+    str = putBackRegexes(str, sourceExtractedRegexes);
+
     return str;
 };
 
