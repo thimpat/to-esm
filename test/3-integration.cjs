@@ -6,14 +6,14 @@ const path = require("path");
 
 let rootDir = path.join(__dirname, "assets");
 
-const {buildTargetDir, convert, normaliseString, DEBUG_DIR} = require("../src/converter.cjs");
-
-
+const {setupConsole, buildTargetDir, convert, normaliseString, DEBUG_DIR, TARGET} = require("../src/converter.cjs");
 
 describe("The converter tool", function ()
 {
     before(function ()
     {
+        setupConsole();
+
         // Prepare actual folder
         const assetsFolder = path.join(rootDir, "/actual");
         if (fs.existsSync(assetsFolder))
@@ -26,6 +26,12 @@ describe("The converter tool", function ()
         fs.copyFileSync(path.join(rootDir, "index.html"), path.join(rootDir, "actual", "index.html"));
         fs.copyFileSync(path.join(rootDir, "index-2.html"), path.join(rootDir, "actual", "index-2.html"));
         fs.copyFileSync(path.join(rootDir, "other.html"), path.join(rootDir, "actual", "other.html"));
+    });
+
+    beforeEach(()=>
+    {
+        const workingDir = path.join(__dirname, "..");
+        process.chdir(workingDir);
     });
 
     after(function ()
@@ -133,6 +139,7 @@ describe("The converter tool", function ()
                     input,
                     "output": path.join(rootDir, "/actual"),
                     "config": path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
+                    "target": TARGET.BROWSER,
                     "noheader": false,
                     "withreport": true
                 };
@@ -309,6 +316,7 @@ describe("The converter tool", function ()
                     "config"    : path.join(__dirname, "assets/given/.toesm-replace-modules.json"),
                     "noheader"  : false,
                     "withreport": true,
+                    target: TARGET.BROWSER
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-10.mjs"), "utf8");
@@ -380,7 +388,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm"
+                    "target"  : TARGET.BROWSER
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-18.mjs"), "utf8");
@@ -933,6 +941,42 @@ describe("The converter tool", function ()
 
                 const result = await convert(options);
                 expect(result).to.be.false;
+            }
+        );
+
+        it("should not try to convert module require with non relative paths when target is esm", async function ()
+            {
+                const input = "./test/assets/given/demo-test-33.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: true,
+                    target: TARGET.ESM
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-33.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-33.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should try to convert modules with non relative paths when target is browser", async function ()
+            {
+                const input = "./test/assets/given/demo-test-34.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: true,
+                    target: TARGET.BROWSER
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-34.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-34.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
             }
         );
 

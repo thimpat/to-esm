@@ -1,1 +1,0 @@
-console.log("Skip this 3");var o=class{constructor(){console.log("Hello you!")}start(){console.log("I'm ready")}},l=new o,t=new o;console.log(l.example.start());console.log("Skip this 1");console.log("Skip this 2");var e=class{constructor(){console.log("Hello you!")}},r=new e,p=new e;export{r as default,p as example2};

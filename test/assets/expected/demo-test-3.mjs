@@ -4,7 +4,7 @@
  * [./test/assets/given/demo-test-3.cjs]{@link ./test/assets/given/demo-test-3.cjs}
  * 
  **/
-import chalk000  from "./node_modules/chalk-cjs/source.mjs";
+import chalk000  from "chalk-cjs";
 import magnimus  from "mama-magnimus";
 import magnimus2  from "mama-magnimus-cjs";
 import rgbhex  from "./node_modules/rgb-hex-cjs/index.mjs";
