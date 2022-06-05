@@ -622,6 +622,24 @@ const reviewEsmImports = (text, list, {
                     }
 
                     let isESM = isESMCompatible(requiredPath);
+                    if (isESM)
+                    {
+                        if (moreOptions.target === TARGET.ESM)
+                        {
+                            return match;
+                        }
+                        else if (moreOptions.target === TARGET.BROWSER)
+                        {
+                            // TODO: Check if browser compatible
+                            let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+
+                            let relativePath = path.relative(projectedPath, requiredPath);
+                            relativePath = normalisePath(relativePath);
+
+                            match = `from "${relativePath}"`;
+                            return match;
+                        }
+                    }
 
                     if (!isESM)
                     {
@@ -635,10 +653,6 @@ const reviewEsmImports = (text, list, {
                         }, "The system will try to convert it to ESM in a local 'node_modules/' directory");
                     }
 
-                    if (moreOptions.target === TARGET.ESM && isESM)
-                    {
-                        return match;
-                    }
 
                 }
                 else
