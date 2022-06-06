@@ -325,19 +325,26 @@ const getESMModuleEntryPath = (moduleName, targetDir = "") =>
 
 const dumpData = (converted, source, title = "") =>
 {
-    if (!DEBUG_MODE)
+    try
     {
-        return;
-    }
-    ++dumpCounter;
-    const name = path.parse(source).name;
-    if (title)
-    {
-        title = "-" + title;
-    }
+        if (!DEBUG_MODE)
+        {
+            return;
+        }
+        ++dumpCounter;
+        const name = path.parse(source).name;
+        if (title)
+        {
+            title = "-" + title;
+        }
 
-    const indexCounter = dumpCounter.toString().padStart(4, "0");
-    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
+        const indexCounter = dumpCounter.toString().padStart(4, "0");
+        fs.writeFileSync(path.join(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
+    }
+    catch (e)
+    {
+        console.error({lid: 3001}, e.message);
+    }
 };
 
 /**
@@ -1926,7 +1933,7 @@ const convertToESMWithRegex = (converted, list, {
         converted = convertNonTrivial(converted, source);
         dumpData(converted, source, "convertNonTrivial");
 
-        converted = convertModuleExportsToExport(converted);
+        converted = convertModuleExportsToExport(converted, source);
         dumpData(converted, source, "convertModuleExportsToExport");
 
         converted = convertJsonImportToVars(converted, {source});
