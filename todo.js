@@ -1,6 +1,7 @@
 
-// FIX: to-esm parse comments: See draft-1. pingServer won't be exported
+// TODO: Cannot not minify ESM with native modules imports
+// TODO: Prevent .mjs conversion
 
-// FIX: When there are two different default exports, to-esm choke. For instance:
-// module.exports = something
-// module.exports.default = something
+// Minor
+// TODO: Remove trailing semi-colon
+// TODO: Use forward slashes instead of back slashes
