@@ -275,13 +275,15 @@ const calculateRelativePath = (source, requiredPath) =>
  * Third-Party Module path starting with ./node_modules/ + relative path to the entry point
  * @param moduleName
  * @param targetDir
- * @param isCjs
+ * @param target
  * @returns {string|null}
  */
-const getModuleEntryPointPath = (moduleName, targetDir = "", isCjs = true) =>
+const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
 {
     try
     {
+        let isCjs = target === TARGET.CJS;
+
         let entryPoint;
         entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, useNativeResolve: false});
         /* istanbul ignore next */
@@ -313,12 +315,12 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", isCjs = true) =>
 
 const getCJSModuleEntryPath = (moduleName, targetDir = "") =>
 {
-    return getModuleEntryPointPath(moduleName, targetDir, true);
+    return getModuleEntryPointPath(moduleName, targetDir, TARGET.CJS);
 };
 
-const getESMModuleEntryPath = (moduleName, targetDir = "") =>
+const getESMModuleEntryPath = (moduleName, targetDir = "", target) =>
 {
-    return getModuleEntryPointPath(moduleName, targetDir, false);
+    return getModuleEntryPointPath(moduleName, targetDir, target);
 };
 
 // ---------------------------------------------------
@@ -619,7 +621,7 @@ const reviewEsmImports = (text, list, {
                 let requiredPath;
                 if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM)
                 {
-                    requiredPath = getESMModuleEntryPath(moduleName, workingDir);
+                    requiredPath = getESMModuleEntryPath(moduleName, workingDir, moreOptions.target);
                     if (!requiredPath)
                     {
                         console.warn({
