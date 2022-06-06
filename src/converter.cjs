@@ -2480,110 +2480,145 @@ const insertHeader = (converted, source, {noHeader = false} = {}) =>
  * @note Event though we already loaded package.json, things might have happened,
  * so, we load a fresh version than we rewrite immediately.
  * @param entryPoint
+ * @param workingDir
+ * @param target
+ * @param useImportMaps
+ * @param importMaps
  * @param bundlePath
  * @returns {boolean}
  */
-const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
-{
-    if (!entryPoint)
+const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps, importMaps, bundlePath} = {}) =>
     {
-        console.error({lid: 1401}, " Can not update package.json. The option --entrypoint was not set.");
-        return false;
-    }
-
-    const packageJsonLocation = path.join(workingDir, "./package.json");
-
-    /* istanbul ignore next */
-    if (!fs.existsSync(packageJsonLocation))
-    {
-        console.error({lid: 1281}, ` package.json not in [${packageJsonLocation}].`);
-        return false;
-    }
-
-    let json;
-
-    try
-    {
-        let content = fs.readFileSync(packageJsonLocation, "utf-8") || "";
-        /* istanbul ignore next */
-        if (!content.trim())
+        if (!entryPoint)
         {
-            console.error({lid: 1283}, " package.json is empty or invalid.");
+            console.error({lid: 1401}, " Can not update package.json. The option --entrypoint was not set.");
             return false;
         }
-        json = JSON.parse(content);
 
-        const entry = {
-            "require": entryPoint.source,
-            "import" : entryPoint.target
-        };
+        const packageJsonLocation = path.join(workingDir, "./package.json");
 
-        json.main = entryPoint.source;
-        json.module = entryPoint.target;
-        json.type = "module";
-
-        if (!json.exports)
+        /* istanbul ignore next */
+        if (!fs.existsSync(packageJsonLocation))
         {
-            /* istanbul ignore next */
-            json.exports = entry;
+            console.error({lid: 1281}, ` package.json not in [${packageJsonLocation}].`);
+            return false;
         }
-        else
+
+        let json;
+
+        try
         {
-            // Cannot update
-            if (Array.isArray(json.exports["."]))
+            let content = fs.readFileSync(packageJsonLocation, "utf-8") || "";
+            /* istanbul ignore next */
+            if (!content.trim())
             {
-                console.log({lid: 1419}, "Cannot update package.json. Expecting exports key to be an object.");
+                console.error({lid: 1283}, " package.json is empty or invalid.");
                 return false;
             }
+            json = JSON.parse(content);
 
-            if (Object.keys(json.exports).length <= 0)
+            if (useImportMaps)
             {
-                json.exports = entry;
+                if (importMaps && Object.keys(importMaps).length)
+                {
+                    json.imports = json.imports || {};
+                    Object.assign(json.imports, importMaps);
+                }
             }
-            else if (json.exports.hasOwnProperty("import") || json.exports.hasOwnProperty("require"))
+
+            if (target === TARGET.BROWSER)
             {
-                json.exports.import = entry.import;
-                json.exports.require = entry.require;
-            }
-            else if (typeof json.exports["."] === "object")
-            {
-                json.exports["."] = Object.assign({}, json.exports["."], entry);
+                const browserField = json.browser;
+                if (typeof browserField === "string" || !browserField)
+                {
+                    const target = bundlePath || entryPoint.target;
+                    if (target)
+                    {
+                        json.browser = target;
+                    }
+                }
+                else
+                {
+                    console.error({lid: 1285}, "The field browser is already set to a non string value. It will not" +
+                        " be updated");
+                }
             }
             else
             {
-                /* istanbul ignore next */
-                json.exports["."] = entry;
-            }
-        }
+                const entry = {
+                    "require": entryPoint.source,
+                    "import" : entryPoint.target
+                };
 
-        let indent = 2;
-        try
-        {
-            indent = await getIndent(content);
+                json.main = entryPoint.source;
+                json.module = entryPoint.target;
+                json.type = "module";
+
+                if (!json.exports)
+                {
+                    /* istanbul ignore next */
+                    json.exports = entry;
+                }
+                else
+                {
+                    // Cannot update
+                    if (Array.isArray(json.exports["."]))
+                    {
+                        console.log({lid: 1419}, "Cannot update package.json. Expecting exports key to be an object.");
+                        return false;
+                    }
+
+                    if (Object.keys(json.exports).length <= 0)
+                    {
+                        json.exports = entry;
+                    }
+                    else if (json.exports.hasOwnProperty("import") || json.exports.hasOwnProperty("require"))
+                    {
+                        json.exports.import = entry.import;
+                        json.exports.require = entry.require;
+                    }
+                    else if (typeof json.exports["."] === "object")
+                    {
+                        json.exports["."] = Object.assign({}, json.exports["."], entry);
+                    }
+                    else
+                    {
+                        /* istanbul ignore next */
+                        json.exports["."] = entry;
+                    }
+                }
+            }
+
+            let indent = 2;
+            try
+            {
+                indent = await getIndent(content);
+            }
+            catch (e)
+            {
+                /* istanbul ignore next */
+                console.info({lid: 1289}, " ", e.message);
+            }
+
+            let str = normaliseString(JSON.stringify(json, null, indent));
+            fs.writeFileSync(packageJsonLocation, str, "utf8");
+
+            console.log({lid: 1412}, " ");
+            console.log({lid: 1414}, " ================================================================");
+            console.log({lid: 1416}, " package.json updated");
+            console.log({lid: 1418}, " ----------------------------------------------------------------");
+            console.log({lid: 1420}, " Your package.json has successfully been updated (--update-all option)");
         }
-        catch (e)
+        catch
+            (e)
         {
             /* istanbul ignore next */
-            console.info({lid: 1289}, " ", e.message);
+            console.error({lid: 1285}, " Could not update package.json.");
         }
 
-        let str = normaliseString(JSON.stringify(json, null, indent));
-        fs.writeFileSync(packageJsonLocation, str, "utf8");
-
-        console.log({lid: 1412}, " ");
-        console.log({lid: 1414}, " ================================================================");
-        console.log({lid: 1416}, " package.json updated");
-        console.log({lid: 1418}, " ----------------------------------------------------------------");
-        console.log({lid: 1420}, " Your package.json has successfully been updated (--update-all option)");
+        return true;
     }
-    catch (e)
-    {
-        /* istanbul ignore next */
-        console.error({lid: 1285}, " Could not update package.json.");
-    }
-
-    return true;
-};
+;
 
 /**
  * Bundle and minify
@@ -3330,7 +3365,12 @@ const convert = async (rawCliOptions = {}) =>
 
     if (cliOptions["update-all"])
     {
-        updatePackageJson({entryPoint: entryPointList, bundlePath: cliOptions.bundle, workingDir});
+        updatePackageJson({
+            entryPoint: entryPointList,
+            bundlePath: cliOptions.bundle,
+            workingDir, ...moreOptions,
+            importMaps
+        });
     }
 
     if (!htmlOptions.pattern)
