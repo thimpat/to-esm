@@ -307,9 +307,11 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.info({lid: 1147}, ` Checking [${moduleName}] package.json`, e.message);
     }
 
+    /* istanbul ignore next */
     return null;
 };
 
@@ -347,6 +349,7 @@ const dumpData = (converted, source, title = "") =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error({lid: 3001}, e.message);
     }
 };
@@ -1236,6 +1239,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             }
             catch (e)
             {
+                /* istanbul ignore next */
                 console.error({lid: 1006}, "", e.message);
             }
         }
@@ -1914,6 +1918,7 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error({lid: 1093}, e.message);
     }
 
@@ -2283,9 +2288,11 @@ const isCjsCompatible = (filepath, content = "") =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error({lid: 1137}, e);
     }
 
+    /* istanbul ignore next */
     return false;
 };
 
@@ -2304,8 +2311,11 @@ const isESMCompatible = (filepath, content = "") =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error({lid: 1141}, e);
     }
+
+    /* istanbul ignore next */
     return false;
 };
 
@@ -2339,6 +2349,7 @@ const isBrowserCompatible = (filepath, content = "") =>
         // console.error({lid: 1139}, e);
     }
 
+    /* istanbul ignore next */
     return false;
 };
 
@@ -2396,7 +2407,9 @@ const addFileToConvertingList = ({
         const extension = path.parse(source).extname;
         if (extension)
         {
+            /* istanbul ignore next */
             console.error({lid: 1143}, ` Could not find the file [${source}]`);
+            /* istanbul ignore next */
             return false;
         }
 
@@ -3415,6 +3428,7 @@ const convert = async (rawCliOptions = {}) =>
             }
             catch (e)
             {
+                /* istanbul ignore next */
                 console.error({lid: 1095}, "", e.message);
             }
         }
