@@ -615,7 +615,7 @@ const reviewEsmImports = (text, list, {
 
                 // Hack
                 let requiredPath;
-                if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM || moreOptions.target === TARGET.ALL)
+                if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM)
                 {
                     requiredPath = getESMModuleEntryPath(moduleName, workingDir);
                     if (!requiredPath)
@@ -2632,7 +2632,7 @@ const minifyCode = async (entryPointPath, bundlePath) =>
  */
 const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 {
-    if (target === TARGET.BROWSER || target === TARGET.ALL)
+    if (target === TARGET.BROWSER)
     {
         await minifyCode(entryPointPath, bundlePath);
 
@@ -3177,12 +3177,13 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     cliOptions.target = cliOptions.target || TARGET.ESM;
-    if (cliOptions["update-all"])
+    if (cliOptions.target === TARGET.ALL)
     {
-        cliOptions.target = TARGET.ESM;
+        console.error({lid: 1149}, `The option --target ${TARGET.ALL} is no longer supported. It defaults to --target ${TARGET.BROWSER} now`);
+        cliOptions.target = TARGET.BROWSER;
     }
 
-    if (cliOptions.useImportMaps)
+    if (cliOptions.useimportmaps)
     {
         cliOptions.target = TARGET.BROWSER;
     }
