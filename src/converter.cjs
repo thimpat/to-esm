@@ -2715,7 +2715,7 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
  * @param bundlePath Generated build File path
  * @returns {Promise<unknown>}
  */
-const minifyCode = async (entryPointPath, bundlePath) =>
+const minifyCode = async (entryPointPath, bundlePath, target) =>
 {
     try
     {
@@ -2725,6 +2725,12 @@ const minifyCode = async (entryPointPath, bundlePath) =>
         entryPointPath = path.resolve(entryPointPath);
         bundlePath = path.resolve(bundlePath);
 
+        let platform;
+        if (target === TARGET.ESM)
+        {
+            platform = "node";
+        }
+
         await esbuild.build({
             entryPoints  : [entryPointPath],
             bundle       : true,
@@ -2733,18 +2739,22 @@ const minifyCode = async (entryPointPath, bundlePath) =>
             target       : "es6",
             minify       : true,
             legalComments: "eof",
+            platform
         });
 
         let content = fs.readFileSync(bundlePath, "utf-8");
         content = content.replace(/\/\*! [^*]+\*\//g, "");
         fs.writeFileSync(bundlePath, content);
 
+        return true;
     }
     catch (e)
     {
         /* istanbul ignore next */
         console.error({lid: 1387}, " Fail to bundle.");
     }
+
+    return false;
 };
 
 /**
@@ -2756,20 +2766,22 @@ const minifyCode = async (entryPointPath, bundlePath) =>
  */
 const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 {
-    if (target === TARGET.BROWSER)
+    if (!await minifyCode(entryPointPath, bundlePath, target))
     {
-        await minifyCode(entryPointPath, bundlePath);
-
-        console.log({lid: 1312}, " ");
-        console.log({lid: 1314}, " ================================================================");
-        console.log({lid: 1316}, " Bundle generated");
-        console.log({lid: 1318}, " ----------------------------------------------------------------");
-        console.log({lid: 1320}, " The bundle has been generated. Use");
-        console.log({lid: 1322}, ` require("./node_modules/${bundlePath}")`);
-        console.log({lid: 1324}, " or");
-        console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
-        console.log({lid: 1328}, " from your html code to load it in the browser.");
+        console.error({lid: 1743}, " Fail to minify");
+        return false
     }
+
+    console.log({lid: 1312}, " ");
+    console.log({lid: 1314}, " ================================================================");
+    console.log({lid: 1316}, " Bundle generated");
+    console.log({lid: 1318}, " ----------------------------------------------------------------");
+    console.log({lid: 1320}, " The bundle has been generated. Use");
+    console.log({lid: 1322}, ` require("./node_modules/${bundlePath}")`);
+    console.log({lid: 1324}, " or");
+    console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
+    console.log({lid: 1328}, " from your html code to load it in the browser.");
+    return true
 };
 
 const hideKeyElementCode = (str, source) =>
@@ -3424,8 +3436,9 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     const moreOptions = {
-        useImportMaps: !!htmlOptions.pattern,
-        target       : cliOptions.target
+        useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
+        target       : cliOptions.target,
+        nm           : cliOptions.nm || "node_modules"
     };
 
     if (!cjsList.length)
