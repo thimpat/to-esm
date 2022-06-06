@@ -649,7 +649,8 @@ const reviewEsmImports = (text, list, {
                             {
                                 let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
 
-                                let relativePath = path.relative(projectedPath, requiredPath);
+                                let projectedDir = path.parse(projectedPath).dir;
+                                let relativePath = path.relative(projectedDir, requiredPath);
                                 relativePath = normalisePath(relativePath);
 
                                 importMaps[moduleName] = requiredPath;
