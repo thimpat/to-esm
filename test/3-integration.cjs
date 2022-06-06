@@ -1083,6 +1083,24 @@ describe("The converter tool", function ()
             }
         );
 
+        it("should not try to convert an esm file", async function ()
+            {
+                const input = "./test/assets/given/demo-test-39.js";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: false,
+                    target  : TARGET.BROWSER,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-39.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-39.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
 
     });
 
