@@ -752,7 +752,7 @@ describe("The converter tool", function ()
                     input,
                     "output"    : "./actual",
                     "noheader"  : false,
-                    "target"    : "all",
+                    "target"    : TARGET.ESM,
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -780,7 +780,7 @@ describe("The converter tool", function ()
                     input,
                     "output"    : "./actual",
                     "noheader"  : false,
-                    "target"    : "all",
+                    "target"    : TARGET.ESM,
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -810,7 +810,7 @@ describe("The converter tool", function ()
                     input,
                     "output"    : "./actual",
                     "noheader"  : false,
-                    "target"    : "all",
+                    "target"    : TARGET.ESM,
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -873,7 +873,7 @@ describe("The converter tool", function ()
                     input,
                     "output"    : "./actual",
                     "noheader"  : false,
-                    "target"    : "all",
+                    "target"    : TARGET.ESM,
                     "entrypoint": "./given/demo-test-14.cjs",
                     "update-all": true
                 };
@@ -1044,6 +1044,24 @@ describe("The converter tool", function ()
                 });
 
                 expect(captured.stdout).to.contain("2 default exports detected");
+            }
+        );
+
+        it("should convert the Analogger code correctly", async function ()
+            {
+                const input = "./test/assets/given/analogger/analogger-test.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    target  : TARGET.BROWSER,
+                    "useImportMaps": true
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "analogger-test.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "analogger-test.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
             }
         );
 
