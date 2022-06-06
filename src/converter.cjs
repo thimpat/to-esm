@@ -956,8 +956,6 @@ const convertModuleExportsToExport = (converted, source) =>
     // Convert module.exports.something to export something
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
 
-    converted = combineDefaultExports(converted, source);
-
     const defaultExportNumber = converted.split("export default").length - 1;
     if (defaultExportNumber > 1)
     {
@@ -2771,7 +2769,7 @@ const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath
     if (!await minifyCode(entryPointPath, bundlePath, target))
     {
         console.error({lid: 1743}, " Fail to minify");
-        return false
+        return false;
     }
 
     console.log({lid: 1312}, " ");
@@ -2783,7 +2781,7 @@ const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath
     console.log({lid: 1324}, " or");
     console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
     console.log({lid: 1328}, " from your html code to load it in the browser.");
-    return true
+    return true;
 };
 
 const hideKeyElementCode = (str, source) =>
