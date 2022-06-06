@@ -605,7 +605,7 @@ const reviewEsmImports = (text, list, {
             }
 
             // Third party libraries
-            if (!regexRequiredPath.startsWith("."))
+            if (!regexRequiredPath.startsWith(".") && !regexRequiredPath.startsWith("/"))
             {
                 let moduleName = regexRequiredPath;
                 if (nonHybridModuleMap[moduleName])
@@ -637,30 +637,45 @@ const reviewEsmImports = (text, list, {
                         }
                         else if (moreOptions.target === TARGET.BROWSER)
                         {
-                            // TODO: Check if browser compatible
-                            let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+                            // Check if browser compatible
+                            if (isBrowserCompatible(requiredPath))
+                            {
+                                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
 
-                            let relativePath = path.relative(projectedPath, requiredPath);
-                            relativePath = normalisePath(relativePath);
+                                let relativePath = path.relative(projectedPath, requiredPath);
+                                relativePath = normalisePath(relativePath);
 
-                            match = `from "${relativePath}"`;
-                            return match;
+                                importMaps[moduleName] = requiredPath;
+
+                                if (moreOptions.useImportMaps)
+                                {
+                                    return match;
+                                }
+
+                                match = `from "${relativePath}"`;
+                                return match;
+                            }
+
+                            console.warn({
+                                lid  : 1101,
+                                color: "yellow"
+                            }, ` The file [${requiredPath}] is not browser compatible. The system will try to generate one`);
+
+                            // If not, start conversion from the .cjs
+                            requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
                         }
                     }
-
-                    if (!isESM)
+                    else
                     {
                         console.warn({
-                            lid: 1236,
+                            lid  : 1236,
                             color: "yellow"
                         }, `The npm module '${moduleName}' does not seem to be ESM compatible.`);
                         console.warn({
-                            lid: 1238,
+                            lid  : 1238,
                             color: "yellow"
-                        }, "The system will try to convert it to ESM in a local 'node_modules/' directory");
+                        }, `The system will try to convert it to ESM in the local "${moreOptions.nm}" directory`);
                     }
-
-
                 }
                 else
                 {
@@ -677,6 +692,8 @@ const reviewEsmImports = (text, list, {
                         followlinked, workingDir, outputDir
                     });
 
+                importMaps[moduleName] = requiredPath;
+
                 if (followlinked)
                 {
                     addFileToConvertingList({
@@ -690,15 +707,17 @@ const reviewEsmImports = (text, list, {
                     });
                 }
 
-                importMaps[moduleName] = requiredPath;
+                // importMaps[moduleName] = requiredPath;
                 if (moreOptions.useImportMaps)
                 {
-                    projectedRequiredPath = moduleName;
-                    if (requiredPath.indexOf("node_modules") > -1)
-                    {
-                        requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
-                    }
-                    importMaps[moduleName] = requiredPath;
+                    //     projectedRequiredPath = moduleName;
+                    //     if (requiredPath.indexOf("node_modules") > -1)
+                    //     {
+                    //         requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
+                    //     }
+                    //     importMaps[moduleName] = requiredPath;
+                    //     match = `from "${moduleName}"`;
+                    return match;
                 }
 
                 return match.replace(regexRequiredPath, projectedRequiredPath);
@@ -2250,7 +2269,55 @@ const isCjsCompatible = (filepath, content = "") =>
 
 const isESMCompatible = (filepath, content = "") =>
 {
-    return !isCjsCompatible(filepath, content);
+    try
+    {
+        const extension = path.extname(filepath);
+        if (".cjs" === extension)
+        {
+            return false;
+        }
+
+        content = content || fs.readFileSync(filepath, "utf-8");
+        return !isCjsCompatible(filepath, content);
+    }
+    catch (e)
+    {
+        console.error({lid: 1141}, e);
+    }
+    return false;
+};
+
+const isBrowserCompatible = (filepath, content = "") =>
+{
+    try
+    {
+        content = content || fs.readFileSync(filepath, "utf-8");
+        if (!isESMCompatible(filepath, content))
+        {
+            return false;
+        }
+
+        espree.parse(
+            content, {
+                sourceType : "module",
+                ecmaVersion: "latest",
+            }
+        );
+
+        content = stripComments(content);
+        content = clearStrings(content);
+        content = stripRegexes(content);
+
+        const regexp = new RegExp(`\\bfrom\\b.+\\b(${nativeModules.join("|")})\\b`);
+        const hasCore = regexp.test(content);
+        return !hasCore;
+    }
+    catch (e)
+    {
+        // console.error({lid: 1139}, e);
+    }
+
+    return false;
 };
 
 const findEntry = (source, propertyName = "source") =>
