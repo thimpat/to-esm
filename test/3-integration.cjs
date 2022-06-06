@@ -1065,6 +1065,25 @@ describe("The converter tool", function ()
             }
         );
 
+        it("should convert script with shebang", async function ()
+            {
+                const input = "./test/assets/given/demo-test-38.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: false,
+                    target  : TARGET.BROWSER,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-38.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-38.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+
     });
 
 
