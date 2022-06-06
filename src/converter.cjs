@@ -32,6 +32,8 @@ const blockMaskIn = "👉";
 const blockMaskOut = "👈";
 
 
+let strSheBang = "";
+
 let dumpCounter = 0;
 let DEBUG_MODE = false;
 
@@ -892,14 +894,23 @@ const putBackAmbiguous = (converted) =>
     return converted;
 };
 
-/**
- * Combine default exports when possible
- * @param converted
- * @param source
- */
-const combineDefaultExports = (converted, source) =>
+const removeShebang = (converted) =>
 {
+    const firstLine = converted.split("\n")[0];
+    if (/^(?:\/\/ *)?#!.+/.test(firstLine))
+    {
+        strSheBang = firstLine.trim();
+        converted = converted.substring(strSheBang.length).trim();
+    }
+    return converted;
+};
 
+const restoreShebang = (converted) =>
+{
+    if (strSheBang)
+    {
+        converted = strSheBang + EOL + converted;
+    }
     return converted;
 };
 
@@ -3000,6 +3011,8 @@ const convertCjsFiles = (list, {
             converted = applyReplaceFromConfig(converted, replaceStart);
             dumpData(converted, source, "replace-from-config-file");
 
+            converted = removeShebang(converted);
+
             converted = convertComplexRequiresToSimpleRequires(converted, source);
             dumpData(converted, source, "convert-complex-requires-to-simple-requires");
 
@@ -3091,6 +3104,8 @@ const convertCjsFiles = (list, {
 
             converted = removeResidue(converted);
             dumpData(converted, source, "removeResidue");
+
+            converted = restoreShebang(converted);
 
             // ******************************************
             const targetFile = path.basename(source, path.extname(source));
