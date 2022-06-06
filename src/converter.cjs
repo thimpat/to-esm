@@ -1874,26 +1874,35 @@ const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
  */
 const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
 {
-    let fullHtmlPath = path.resolve(htmlPath);
-    /* istanbul ignore next */
-    if (!fs.existsSync(fullHtmlPath))
+    try
     {
-        console.error({lid: 1080}, ` Could not find HTML file at [${fullHtmlPath}]`);
-        return;
+        let fullHtmlPath = path.resolve(htmlPath);
+        /* istanbul ignore next */
+        if (!fs.existsSync(fullHtmlPath))
+        {
+            console.error({lid: 1081}, ` Could not find HTML file at [${fullHtmlPath}]`);
+            return;
+        }
+
+        // Get merged version of importmap from html page and importmap from parsing
+        let newMaps = getImportMapFromPage(fullHtmlPath);
+
+        newMaps = combineImportMaps(newMaps, importMaps);
+
+        newMaps = rewriteImportMapPaths(newMaps, htmlPath);
+
+        newMaps = applyReplaceToImportMap(newMaps, htmlOptions);
+
+        newMaps = combineImportMaps(newMaps, htmlOptions.importmap);
+
+        writeImportMapToHTML(newMaps, fullHtmlPath);
+
+        console.log({lid: 1080}, `"${fullHtmlPath}" has been successfully updated`);
     }
-
-    // Get merged version of importmap from html page and importmap from parsing
-    let newMaps = getImportMapFromPage(fullHtmlPath);
-
-    newMaps = combineImportMaps(newMaps, importMaps);
-
-    newMaps = rewriteImportMapPaths(newMaps, htmlPath);
-
-    newMaps = applyReplaceToImportMap(newMaps, htmlOptions);
-
-    newMaps = combineImportMaps(newMaps, htmlOptions.importmap);
-
-    writeImportMapToHTML(newMaps, fullHtmlPath);
+    catch (e)
+    {
+        console.error({lid: 1093}, e.message);
+    }
 
 };
 
@@ -1909,7 +1918,7 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
 {
     list.forEach((html) =>
     {
-        console.error({lid: 1200}, ` Processing [${html}] for importing maps.`);
+        console.log({lid: 1200}, `Processing [${html}] for importing maps.`);
         parseHTMLFile(html, {importMaps, confFileOptions, moreOptions, htmlOptions});
     });
 };
