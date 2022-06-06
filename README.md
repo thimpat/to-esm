@@ -304,7 +304,7 @@ hi();
 
 #### Generate code for the browser
 
-> **--target** < **browser** | esm | all >
+> **--target** < **browser** | esm >
 
 ```shell
 # Command < 💻
@@ -418,7 +418,7 @@ See the importmap section to have a more modular approach.
 
 <span style="font-size:40px;">📋</span>
 
-####  Generate some importmap within html files
+####  Generate importMaps within html files
 
 > --html < pattern | html >
 
@@ -426,6 +426,12 @@ See the importmap section to have a more modular approach.
 # Generates => 📝 ./demo.mjs & update index.html
 $> to-esm example/cjs/demo.cjs --html index.html
 ```
+
+> 🚫
+> **NOTE: When this option is used, the target is always "browser" even if a different one is passed via the option  
+> --target.**
+
+
 
 ---
 
