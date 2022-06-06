@@ -32,6 +32,8 @@ const blockMaskIn = "👉";
 const blockMaskOut = "👈";
 
 
+let strSheBang = "";
+
 let dumpCounter = 0;
 let DEBUG_MODE = false;
 
@@ -273,13 +275,15 @@ const calculateRelativePath = (source, requiredPath) =>
  * Third-Party Module path starting with ./node_modules/ + relative path to the entry point
  * @param moduleName
  * @param targetDir
- * @param isCjs
+ * @param target
  * @returns {string|null}
  */
-const getModuleEntryPointPath = (moduleName, targetDir = "", isCjs = true) =>
+const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
 {
     try
     {
+        let isCjs = target === TARGET.CJS;
+
         let entryPoint;
         entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, useNativeResolve: false});
         /* istanbul ignore next */
@@ -303,20 +307,22 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", isCjs = true) =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.info({lid: 1147}, ` Checking [${moduleName}] package.json`, e.message);
     }
 
+    /* istanbul ignore next */
     return null;
 };
 
 const getCJSModuleEntryPath = (moduleName, targetDir = "") =>
 {
-    return getModuleEntryPointPath(moduleName, targetDir, true);
+    return getModuleEntryPointPath(moduleName, targetDir, TARGET.CJS);
 };
 
-const getESMModuleEntryPath = (moduleName, targetDir = "") =>
+const getESMModuleEntryPath = (moduleName, targetDir = "", target) =>
 {
-    return getModuleEntryPointPath(moduleName, targetDir, false);
+    return getModuleEntryPointPath(moduleName, targetDir, target);
 };
 
 // ---------------------------------------------------
@@ -325,19 +331,27 @@ const getESMModuleEntryPath = (moduleName, targetDir = "") =>
 
 const dumpData = (converted, source, title = "") =>
 {
-    if (!DEBUG_MODE)
+    try
     {
-        return;
-    }
-    ++dumpCounter;
-    const name = path.parse(source).name;
-    if (title)
-    {
-        title = "-" + title;
-    }
+        if (!DEBUG_MODE)
+        {
+            return;
+        }
+        ++dumpCounter;
+        const name = path.parse(source).name;
+        if (title)
+        {
+            title = "-" + title;
+        }
 
-    const indexCounter = dumpCounter.toString().padStart(4, "0");
-    fs.writeFileSync(path.join(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
+        const indexCounter = dumpCounter.toString().padStart(4, "0");
+        fs.writeFileSync(path.join(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error({lid: 3001}, e.message);
+    }
 };
 
 /**
@@ -598,7 +612,7 @@ const reviewEsmImports = (text, list, {
             }
 
             // Third party libraries
-            if (!regexRequiredPath.startsWith("."))
+            if (!regexRequiredPath.startsWith(".") && !regexRequiredPath.startsWith("/"))
             {
                 let moduleName = regexRequiredPath;
                 if (nonHybridModuleMap[moduleName])
@@ -608,9 +622,9 @@ const reviewEsmImports = (text, list, {
 
                 // Hack
                 let requiredPath;
-                if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM || moreOptions.target === TARGET.ALL)
+                if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM)
                 {
-                    requiredPath = getESMModuleEntryPath(moduleName, workingDir);
+                    requiredPath = getESMModuleEntryPath(moduleName, workingDir, moreOptions.target);
                     if (!requiredPath)
                     {
                         console.warn({
@@ -622,24 +636,53 @@ const reviewEsmImports = (text, list, {
                     }
 
                     let isESM = isESMCompatible(requiredPath);
+                    if (isESM)
+                    {
+                        if (moreOptions.target === TARGET.ESM)
+                        {
+                            return match;
+                        }
+                        else if (moreOptions.target === TARGET.BROWSER)
+                        {
+                            // Check if browser compatible
+                            if (isBrowserCompatible(requiredPath))
+                            {
+                                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
 
-                    if (!isESM)
+                                let relativePath = path.relative(projectedPath, requiredPath);
+                                relativePath = normalisePath(relativePath);
+
+                                importMaps[moduleName] = requiredPath;
+
+                                if (moreOptions.useImportMaps)
+                                {
+                                    return match;
+                                }
+
+                                match = `from "${relativePath}"`;
+                                return match;
+                            }
+
+                            console.warn({
+                                lid  : 1101,
+                                color: "yellow"
+                            }, ` The file [${requiredPath}] is not browser compatible. The system will try to generate one`);
+
+                            // If not, start conversion from the .cjs
+                            requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
+                        }
+                    }
+                    else
                     {
                         console.warn({
-                            lid: 1236,
+                            lid  : 1236,
                             color: "yellow"
                         }, `The npm module '${moduleName}' does not seem to be ESM compatible.`);
                         console.warn({
-                            lid: 1238,
+                            lid  : 1238,
                             color: "yellow"
-                        }, "The system will try to convert it to ESM in a local 'node_modules/' directory");
+                        }, `The system will try to convert it to ESM in the local "${moreOptions.nm}" directory`);
                     }
-
-                    if (moreOptions.target === TARGET.ESM && isESM)
-                    {
-                        return match;
-                    }
-
                 }
                 else
                 {
@@ -656,6 +699,8 @@ const reviewEsmImports = (text, list, {
                         followlinked, workingDir, outputDir
                     });
 
+                importMaps[moduleName] = requiredPath;
+
                 if (followlinked)
                 {
                     addFileToConvertingList({
@@ -669,15 +714,17 @@ const reviewEsmImports = (text, list, {
                     });
                 }
 
-                importMaps[moduleName] = requiredPath;
+                // importMaps[moduleName] = requiredPath;
                 if (moreOptions.useImportMaps)
                 {
-                    projectedRequiredPath = moduleName;
-                    if (requiredPath.indexOf("node_modules") > -1)
-                    {
-                        requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
-                    }
-                    importMaps[moduleName] = requiredPath;
+                    //     projectedRequiredPath = moduleName;
+                    //     if (requiredPath.indexOf("node_modules") > -1)
+                    //     {
+                    //         requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
+                    //     }
+                    //     importMaps[moduleName] = requiredPath;
+                    //     match = `from "${moduleName}"`;
+                    return match;
                 }
 
                 return match.replace(regexRequiredPath, projectedRequiredPath);
@@ -852,14 +899,25 @@ const putBackAmbiguous = (converted) =>
     return converted;
 };
 
-/**
- * Combine default exports when possible
- * @param converted
- * @param source
- */
-const combineDefaultExports = (converted, source) =>
+const removeShebang = (converted) =>
 {
+    const firstLine = converted.split("\n")[0];
+    if (/^(?:\/\/ *)?#!.+/.test(firstLine))
+    {
+        strSheBang = firstLine.trim();
+        converted = converted.substring(strSheBang.length).trim();
+    }
+    return converted;
+};
 
+const restoreShebang = (converted) =>
+{
+    if (strSheBang)
+    {
+        converted = strSheBang + EOL + converted;
+    }
+
+    strSheBang = "";
     return converted;
 };
 
@@ -900,8 +958,6 @@ const convertModuleExportsToExport = (converted, source) =>
 
     // Convert module.exports.something to export something
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
-
-    converted = combineDefaultExports(converted, source);
 
     const defaultExportNumber = converted.split("export default").length - 1;
     if (defaultExportNumber > 1)
@@ -1183,6 +1239,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
             }
             catch (e)
             {
+                /* istanbul ignore next */
                 console.error({lid: 1006}, "", e.message);
             }
         }
@@ -1834,26 +1891,36 @@ const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
  */
 const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
 {
-    let fullHtmlPath = path.resolve(htmlPath);
-    /* istanbul ignore next */
-    if (!fs.existsSync(fullHtmlPath))
+    try
     {
-        console.error({lid: 1080}, ` Could not find HTML file at [${fullHtmlPath}]`);
-        return;
+        let fullHtmlPath = path.resolve(htmlPath);
+        /* istanbul ignore next */
+        if (!fs.existsSync(fullHtmlPath))
+        {
+            console.error({lid: 1081}, ` Could not find HTML file at [${fullHtmlPath}]`);
+            return;
+        }
+
+        // Get merged version of importmap from html page and importmap from parsing
+        let newMaps = getImportMapFromPage(fullHtmlPath);
+
+        newMaps = combineImportMaps(newMaps, importMaps);
+
+        newMaps = rewriteImportMapPaths(newMaps, htmlPath);
+
+        newMaps = applyReplaceToImportMap(newMaps, htmlOptions);
+
+        newMaps = combineImportMaps(newMaps, htmlOptions.importmap);
+
+        writeImportMapToHTML(newMaps, fullHtmlPath);
+
+        console.log({lid: 1080}, `"${fullHtmlPath}" has been successfully updated`);
     }
-
-    // Get merged version of importmap from html page and importmap from parsing
-    let newMaps = getImportMapFromPage(fullHtmlPath);
-
-    newMaps = combineImportMaps(newMaps, importMaps);
-
-    newMaps = rewriteImportMapPaths(newMaps, htmlPath);
-
-    newMaps = applyReplaceToImportMap(newMaps, htmlOptions);
-
-    newMaps = combineImportMaps(newMaps, htmlOptions.importmap);
-
-    writeImportMapToHTML(newMaps, fullHtmlPath);
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error({lid: 1093}, e.message);
+    }
 
 };
 
@@ -1869,7 +1936,7 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
 {
     list.forEach((html) =>
     {
-        console.error({lid: 1200}, ` Processing [${html}] for importing maps.`);
+        console.log({lid: 1200}, `Processing [${html}] for importing maps.`);
         parseHTMLFile(html, {importMaps, confFileOptions, moreOptions, htmlOptions});
     });
 };
@@ -1912,7 +1979,7 @@ const convertToESMWithRegex = (converted, list, {
         converted = convertNonTrivial(converted, source);
         dumpData(converted, source, "convertNonTrivial");
 
-        converted = convertModuleExportsToExport(converted);
+        converted = convertModuleExportsToExport(converted, source);
         dumpData(converted, source, "convertModuleExportsToExport");
 
         converted = convertJsonImportToVars(converted, {source});
@@ -2221,15 +2288,69 @@ const isCjsCompatible = (filepath, content = "") =>
     }
     catch (e)
     {
+        /* istanbul ignore next */
         console.error({lid: 1137}, e);
     }
 
+    /* istanbul ignore next */
     return false;
 };
 
 const isESMCompatible = (filepath, content = "") =>
 {
-    return !isCjsCompatible(filepath, content);
+    try
+    {
+        const extension = path.extname(filepath);
+        if (".cjs" === extension)
+        {
+            return false;
+        }
+
+        content = content || fs.readFileSync(filepath, "utf-8");
+        return !isCjsCompatible(filepath, content);
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error({lid: 1141}, e);
+    }
+
+    /* istanbul ignore next */
+    return false;
+};
+
+const isBrowserCompatible = (filepath, content = "") =>
+{
+    try
+    {
+        content = content || fs.readFileSync(filepath, "utf-8");
+        if (!isESMCompatible(filepath, content))
+        {
+            return false;
+        }
+
+        espree.parse(
+            content, {
+                sourceType : "module",
+                ecmaVersion: "latest",
+            }
+        );
+
+        content = stripComments(content);
+        content = clearStrings(content);
+        content = stripRegexes(content);
+
+        const regexp = new RegExp(`\\bfrom\\b.+\\b(${nativeModules.join("|")})\\b`);
+        const hasCore = regexp.test(content);
+        return !hasCore;
+    }
+    catch (e)
+    {
+        // console.error({lid: 1139}, e);
+    }
+
+    /* istanbul ignore next */
+    return false;
 };
 
 const findEntry = (source, propertyName = "source") =>
@@ -2286,7 +2407,9 @@ const addFileToConvertingList = ({
         const extension = path.parse(source).extname;
         if (extension)
         {
+            /* istanbul ignore next */
             console.error({lid: 1143}, ` Could not find the file [${source}]`);
+            /* istanbul ignore next */
             return false;
         }
 
@@ -2459,110 +2582,145 @@ const insertHeader = (converted, source, {noHeader = false} = {}) =>
  * @note Event though we already loaded package.json, things might have happened,
  * so, we load a fresh version than we rewrite immediately.
  * @param entryPoint
+ * @param workingDir
+ * @param target
+ * @param useImportMaps
+ * @param importMaps
  * @param bundlePath
  * @returns {boolean}
  */
-const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
-{
-    if (!entryPoint)
+const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps, importMaps, bundlePath} = {}) =>
     {
-        console.error({lid: 1401}, " Can not update package.json. The option --entrypoint was not set.");
-        return false;
-    }
-
-    const packageJsonLocation = path.join(workingDir, "./package.json");
-
-    /* istanbul ignore next */
-    if (!fs.existsSync(packageJsonLocation))
-    {
-        console.error({lid: 1281}, ` package.json not in [${packageJsonLocation}].`);
-        return false;
-    }
-
-    let json;
-
-    try
-    {
-        let content = fs.readFileSync(packageJsonLocation, "utf-8") || "";
-        /* istanbul ignore next */
-        if (!content.trim())
+        if (!entryPoint)
         {
-            console.error({lid: 1283}, " package.json is empty or invalid.");
+            console.error({lid: 1401}, " Can not update package.json. The option --entrypoint was not set.");
             return false;
         }
-        json = JSON.parse(content);
 
-        const entry = {
-            "require": entryPoint.source,
-            "import" : entryPoint.target
-        };
+        const packageJsonLocation = path.join(workingDir, "./package.json");
 
-        json.main = entryPoint.source;
-        json.module = entryPoint.target;
-        json.type = "module";
-
-        if (!json.exports)
+        /* istanbul ignore next */
+        if (!fs.existsSync(packageJsonLocation))
         {
-            /* istanbul ignore next */
-            json.exports = entry;
+            console.error({lid: 1281}, ` package.json not in [${packageJsonLocation}].`);
+            return false;
         }
-        else
+
+        let json;
+
+        try
         {
-            // Cannot update
-            if (Array.isArray(json.exports["."]))
+            let content = fs.readFileSync(packageJsonLocation, "utf-8") || "";
+            /* istanbul ignore next */
+            if (!content.trim())
             {
-                console.log({lid: 1419}, "Cannot update package.json. Expecting exports key to be an object.");
+                console.error({lid: 1283}, " package.json is empty or invalid.");
                 return false;
             }
+            json = JSON.parse(content);
 
-            if (Object.keys(json.exports).length <= 0)
+            if (useImportMaps)
             {
-                json.exports = entry;
+                if (importMaps && Object.keys(importMaps).length)
+                {
+                    json.imports = json.imports || {};
+                    Object.assign(json.imports, importMaps);
+                }
             }
-            else if (json.exports.hasOwnProperty("import") || json.exports.hasOwnProperty("require"))
+
+            if (target === TARGET.BROWSER)
             {
-                json.exports.import = entry.import;
-                json.exports.require = entry.require;
-            }
-            else if (typeof json.exports["."] === "object")
-            {
-                json.exports["."] = Object.assign({}, json.exports["."], entry);
+                const browserField = json.browser;
+                if (typeof browserField === "string" || !browserField)
+                {
+                    const target = bundlePath || entryPoint.target;
+                    if (target)
+                    {
+                        json.browser = target;
+                    }
+                }
+                else
+                {
+                    console.error({lid: 1285}, "The field browser is already set to a non string value. It will not" +
+                        " be updated");
+                }
             }
             else
             {
-                /* istanbul ignore next */
-                json.exports["."] = entry;
-            }
-        }
+                const entry = {
+                    "require": entryPoint.source,
+                    "import" : entryPoint.target
+                };
 
-        let indent = 2;
-        try
-        {
-            indent = await getIndent(content);
+                json.main = entryPoint.source;
+                json.module = entryPoint.target;
+                json.type = "module";
+
+                if (!json.exports)
+                {
+                    /* istanbul ignore next */
+                    json.exports = entry;
+                }
+                else
+                {
+                    // Cannot update
+                    if (Array.isArray(json.exports["."]))
+                    {
+                        console.log({lid: 1419}, "Cannot update package.json. Expecting exports key to be an object.");
+                        return false;
+                    }
+
+                    if (Object.keys(json.exports).length <= 0)
+                    {
+                        json.exports = entry;
+                    }
+                    else if (json.exports.hasOwnProperty("import") || json.exports.hasOwnProperty("require"))
+                    {
+                        json.exports.import = entry.import;
+                        json.exports.require = entry.require;
+                    }
+                    else if (typeof json.exports["."] === "object")
+                    {
+                        json.exports["."] = Object.assign({}, json.exports["."], entry);
+                    }
+                    else
+                    {
+                        /* istanbul ignore next */
+                        json.exports["."] = entry;
+                    }
+                }
+            }
+
+            let indent = 2;
+            try
+            {
+                indent = await getIndent(content);
+            }
+            catch (e)
+            {
+                /* istanbul ignore next */
+                console.info({lid: 1289}, " ", e.message);
+            }
+
+            let str = normaliseString(JSON.stringify(json, null, indent));
+            fs.writeFileSync(packageJsonLocation, str, "utf8");
+
+            console.log({lid: 1412}, " ");
+            console.log({lid: 1414}, " ================================================================");
+            console.log({lid: 1416}, " package.json updated");
+            console.log({lid: 1418}, " ----------------------------------------------------------------");
+            console.log({lid: 1420}, " Your package.json has successfully been updated (--update-all option)");
         }
-        catch (e)
+        catch
+            (e)
         {
             /* istanbul ignore next */
-            console.info({lid: 1289}, " ", e.message);
+            console.error({lid: 1285}, " Could not update package.json.");
         }
 
-        let str = normaliseString(JSON.stringify(json, null, indent));
-        fs.writeFileSync(packageJsonLocation, str, "utf8");
-
-        console.log({lid: 1412}, " ");
-        console.log({lid: 1414}, " ================================================================");
-        console.log({lid: 1416}, " package.json updated");
-        console.log({lid: 1418}, " ----------------------------------------------------------------");
-        console.log({lid: 1420}, " Your package.json has successfully been updated (--update-all option)");
+        return true;
     }
-    catch (e)
-    {
-        /* istanbul ignore next */
-        console.error({lid: 1285}, " Could not update package.json.");
-    }
-
-    return true;
-};
+;
 
 /**
  * Bundle and minify
@@ -2570,7 +2728,7 @@ const updatePackageJson = async ({entryPoint, workingDir} = {}) =>
  * @param bundlePath Generated build File path
  * @returns {Promise<unknown>}
  */
-const minifyCode = async (entryPointPath, bundlePath) =>
+const minifyCode = async (entryPointPath, bundlePath, target) =>
 {
     try
     {
@@ -2580,6 +2738,12 @@ const minifyCode = async (entryPointPath, bundlePath) =>
         entryPointPath = path.resolve(entryPointPath);
         bundlePath = path.resolve(bundlePath);
 
+        let platform;
+        if (target === TARGET.ESM)
+        {
+            platform = "node";
+        }
+
         await esbuild.build({
             entryPoints  : [entryPointPath],
             bundle       : true,
@@ -2588,18 +2752,22 @@ const minifyCode = async (entryPointPath, bundlePath) =>
             target       : "es6",
             minify       : true,
             legalComments: "eof",
+            platform
         });
 
         let content = fs.readFileSync(bundlePath, "utf-8");
         content = content.replace(/\/\*! [^*]+\*\//g, "");
         fs.writeFileSync(bundlePath, content);
 
+        return true;
     }
     catch (e)
     {
         /* istanbul ignore next */
         console.error({lid: 1387}, " Fail to bundle.");
     }
+
+    return false;
 };
 
 /**
@@ -2611,20 +2779,22 @@ const minifyCode = async (entryPointPath, bundlePath) =>
  */
 const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath = "./"}) =>
 {
-    if (target === TARGET.BROWSER || target === TARGET.ALL)
+    if (!await minifyCode(entryPointPath, bundlePath, target))
     {
-        await minifyCode(entryPointPath, bundlePath);
-
-        console.log({lid: 1312}, " ");
-        console.log({lid: 1314}, " ================================================================");
-        console.log({lid: 1316}, " Bundle generated");
-        console.log({lid: 1318}, " ----------------------------------------------------------------");
-        console.log({lid: 1320}, " The bundle has been generated. Use");
-        console.log({lid: 1322}, ` require("./node_modules/${bundlePath}")`);
-        console.log({lid: 1324}, " or");
-        console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
-        console.log({lid: 1328}, " from your html code to load it in the browser.");
+        console.error({lid: 1743}, " Fail to minify");
+        return false;
     }
+
+    console.log({lid: 1312}, " ");
+    console.log({lid: 1314}, " ================================================================");
+    console.log({lid: 1316}, " Bundle generated");
+    console.log({lid: 1318}, " ----------------------------------------------------------------");
+    console.log({lid: 1320}, " The bundle has been generated. Use");
+    console.log({lid: 1322}, ` require("./node_modules/${bundlePath}")`);
+    console.log({lid: 1324}, " or");
+    console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
+    console.log({lid: 1328}, " from your html code to load it in the browser.");
+    return true;
 };
 
 const hideKeyElementCode = (str, source) =>
@@ -2868,6 +3038,8 @@ const convertCjsFiles = (list, {
             converted = applyReplaceFromConfig(converted, replaceStart);
             dumpData(converted, source, "replace-from-config-file");
 
+            converted = removeShebang(converted);
+
             converted = convertComplexRequiresToSimpleRequires(converted, source);
             dumpData(converted, source, "convert-complex-requires-to-simple-requires");
 
@@ -2959,6 +3131,8 @@ const convertCjsFiles = (list, {
 
             converted = removeResidue(converted);
             dumpData(converted, source, "removeResidue");
+
+            converted = restoreShebang(converted);
 
             // ******************************************
             const targetFile = path.basename(source, path.extname(source));
@@ -3156,12 +3330,13 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     cliOptions.target = cliOptions.target || TARGET.ESM;
-    if (cliOptions["update-all"])
+    if (cliOptions.target === TARGET.ALL)
     {
-        cliOptions.target = TARGET.ESM;
+        console.error({lid: 1149}, `The option --target ${TARGET.ALL} is no longer supported. It defaults to --target ${TARGET.BROWSER} now`);
+        cliOptions.target = TARGET.BROWSER;
     }
 
-    if (cliOptions.useImportMaps)
+    if (cliOptions.useimportmaps)
     {
         cliOptions.target = TARGET.BROWSER;
     }
@@ -3253,6 +3428,7 @@ const convert = async (rawCliOptions = {}) =>
             }
             catch (e)
             {
+                /* istanbul ignore next */
                 console.error({lid: 1095}, "", e.message);
             }
         }
@@ -3274,8 +3450,9 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     const moreOptions = {
-        useImportMaps: !!htmlOptions.pattern,
-        target       : cliOptions.target
+        useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
+        target       : cliOptions.target,
+        nm           : cliOptions.nm || "node_modules"
     };
 
     if (!cjsList.length)
@@ -3308,7 +3485,12 @@ const convert = async (rawCliOptions = {}) =>
 
     if (cliOptions["update-all"])
     {
-        updatePackageJson({entryPoint: entryPointList, bundlePath: cliOptions.bundle, workingDir});
+        updatePackageJson({
+            entryPoint: entryPointList,
+            bundlePath: cliOptions.bundle,
+            workingDir, ...moreOptions,
+            importMaps
+        });
     }
 
     if (!htmlOptions.pattern)
