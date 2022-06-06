@@ -913,6 +913,8 @@ const restoreShebang = (converted) =>
     {
         converted = strSheBang + EOL + converted;
     }
+
+    strSheBang = "";
     return converted;
 };
 
