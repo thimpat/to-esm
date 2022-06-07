@@ -2737,6 +2737,7 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
  * @param bundlePath Generated build File path
  * @param target
  * @param minify
+ * @param sourcemap
  * @returns {Promise<unknown>}
  */
 const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, sourcemap = false} = {}) =>
