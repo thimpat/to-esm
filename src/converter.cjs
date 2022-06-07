@@ -42,6 +42,7 @@ const TARGET = {
     BROWSER: "browser",
     ESM    : "esm",
     CJS    : "cjs",
+    PACKAGE: "package",
     ALL    : "all"
 };
 const ESM_EXTENSION = ".mjs";
@@ -251,23 +252,27 @@ const concatenatePaths = (source, requiredPath) =>
 };
 
 /**
- * Use conventions (See file top)
- * @todo Change function name to more appropriate name
- * @param source
- * @param requiredPath
+ * Calculate the relative path from a source to another path.
+ * For instance, when doing a require() or import, the target
+ * path needs to be resolved for file1 to correctly require file2.
+ * ------> /some/path/to/file1
+ * ------> /some/other/path/to/file2
+ * Resolution on file1: require("../../other/path/to/file2")
+ * @param sourcePath
+ * @param targetPath
  * @returns {string}
  */
-const calculateRelativePath = (source, requiredPath) =>
+const calculateRelativePath = (sourcePath, targetPath) =>
 {
-    source = normalisePath(source);
-    requiredPath = normalisePath(requiredPath);
+    sourcePath = normalisePath(sourcePath);
+    targetPath = normalisePath(targetPath);
 
-    if (!isConventionalFolder(source))
+    if (!isConventionalFolder(sourcePath))
     {
-        source = path.parse(source).dir + "/";
+        sourcePath = path.parse(sourcePath).dir + "/";
     }
 
-    const relativePath = path.relative(source, requiredPath);
+    const relativePath = path.relative(sourcePath, targetPath);
     return normalisePath(relativePath);
 };
 
@@ -648,16 +653,19 @@ const reviewEsmImports = (text, list, {
                             if (isBrowserCompatible(requiredPath))
                             {
                                 let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
-
-                                let projectedDir = path.parse(projectedPath).dir;
-                                let relativePath = path.relative(projectedDir, requiredPath);
-                                relativePath = normalisePath(relativePath);
+                                let relativePath = calculateRelativePath(projectedPath, requiredPath);
 
                                 importMaps[moduleName] = requiredPath;
 
                                 if (moreOptions.useImportMaps)
                                 {
                                     return match;
+                                }
+
+                                if (moreOptions.prefixpath)
+                                {
+                                    relativePath = path.join(moreOptions.prefixpath, relativePath);
+                                    relativePath = normalisePath(relativePath);
                                 }
 
                                 match = `from "${relativePath}"`;
@@ -3331,6 +3339,13 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     cliOptions.target = cliOptions.target || TARGET.ESM;
+
+    if (cliOptions.target === TARGET.PACKAGE)
+    {
+        cliOptions.target = TARGET.BROWSER;
+        cliOptions.prefixpath = "../../";
+    }
+
     if (cliOptions.target === TARGET.ALL)
     {
         console.error({lid: 1149}, `The option --target ${TARGET.ALL} is no longer supported. It defaults to --target ${TARGET.BROWSER} now`);
@@ -3341,6 +3356,9 @@ const convert = async (rawCliOptions = {}) =>
     {
         cliOptions.target = TARGET.BROWSER;
     }
+
+    cliOptions.prefixpath = cliOptions.prefixpath || "";
+    cliOptions.prefixpath = cliOptions.prefixpath.trim();
 
     // Output Files
     cliOptions.output = cliOptions.output || "./";
@@ -3453,7 +3471,8 @@ const convert = async (rawCliOptions = {}) =>
     const moreOptions = {
         useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
         target       : cliOptions.target,
-        nm           : cliOptions.nm || "node_modules"
+        nm           : cliOptions.nm || "node_modules",
+        prefixpath   : cliOptions.prefixpath
     };
 
     if (!cjsList.length)
