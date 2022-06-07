@@ -1,4 +1,6 @@
-
+// Major
+// TODO: Fix generated entrypoint file location
+//
 // Minor
 // TODO: Remove trailing semi-colon => See @test: should try to convert modules with non relative paths when target is
 //  browser

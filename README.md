@@ -64,8 +64,8 @@ npm install to-esm -g
 
 ```shell
 
-to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--target=< browser|esm >] 
-[--bundle=<filepath>] [--update-all]
+to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--target=< browser|esm|package >] 
+[--prefixpath=<dirpath>] [--bundle=<filepath>] [--update-all]
 
 ```
 
@@ -304,11 +304,11 @@ hi();
 
 #### Generate code for the browser
 
-> **--target** < **browser** | esm >
+> **--target** < **browser** | esm | package >
 
 ```shell
 # Command < 💻
-$> to-esm  example/cjs/input.cjs --output generated --target browser
+$> to-esm  example/cjs/input.cjs --output generated --target browser --bundle out.min.js
 ```
 ---
 
@@ -359,7 +359,7 @@ The browser will automatically load the other files.
 
 > **demo.mjs** is the entrypoint.
 
-All of the related files are automatically loaded by the browser.
+All the related files are automatically loaded by the browser.
 <br/>
 
 </details>
@@ -512,11 +512,57 @@ $> to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
 
 ```
 
-
-
-
 <br><br>
 
+---
+
+### Options to generate code for npm packages --target package
+
+<br>
+
+> 🚫
+> **NOTE: This option is experimental**
+
+To generate a non-bundled package code for npm, use this option.
+It will add an extra prefix ../../ to all relative path to third party modules.
+
+<br>
+<br>
+
+---
+
+### Options to correct relative paths to third party modules
+
+<br>
+
+If your code point to a npm module with the option ```--target browser```, the system will convert the import to 
+the module location entrypoint.
+
+For instance:
+
+📝 _source.cjs_ ↴
+> const toAnsi = require("to-ansi");
+
+Will be converted to this path (or similar):
+
+📝 _source.mjs_ ↴
+> import toAnsi  from "../../node_modules/to-ansi/index.mjs";
+
+The path will be okay at conversion time. However, if the generated file (```source.mjs```) is required inside a 
+browser, it is possible that the path will no longer be valid. It will depend on your server configuration. 
+
+The option ```--prefixpath``` allows to correct the issue by prepending a some value to the target path. 
+This way, you can redirect the converted path to point to the correct location on your server.
+
+```
+# 💻 < Command
+to-esm source.cjs --output out/ --prefixpath ../somewhere/
+```
+
+📝 _source.mjs_ ↴
+> import toAnsi  from "../somewhere/../../node_modules/to-ansi/index.mjs";
+
+<br/><br/>
 
 <span style="font-size:40px;">🪛</span>
 
@@ -530,10 +576,11 @@ $> to-esm  --input="example/cjs/*.?(c)js" --output=example/esm/
 | --html         | _html files to receive importmaps_                      | glob                     |
 | --noHeader     | _Options to not generate automatic header_              |                          |
 | --keepExisting | _Options to skip already converted files_               |                          |
-| --target       | _Setting the targeted environment_                      | esm / browser            |  
+| --target       | _Setting the targeted environment_                      | esm / browser / package  |  
 | --bundle       | _Generate minified bundle for browser environment_      | file path                |  
 | --entrypoint   | _Path to .js entrypoint_                                | file path                |  
 | --update-all   | _Automatically update package.json to set entry points_ |                          |  
+| --prefixpath   | _Add a path to paths targeting third party modules_     | directory path <br/>     |  
 
 
 

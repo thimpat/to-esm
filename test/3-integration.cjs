@@ -12,6 +12,8 @@ const {setupConsole, buildTargetDir, convert, normaliseString, TARGET} = require
 
 describe("The converter tool", function ()
 {
+    this.timeout(10000);
+
     before(function ()
     {
         setupConsole();

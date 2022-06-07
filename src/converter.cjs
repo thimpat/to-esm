@@ -42,6 +42,7 @@ const TARGET = {
     BROWSER: "browser",
     ESM    : "esm",
     CJS    : "cjs",
+    PACKAGE: "package",
     ALL    : "all"
 };
 const ESM_EXTENSION = ".mjs";
@@ -251,23 +252,27 @@ const concatenatePaths = (source, requiredPath) =>
 };
 
 /**
- * Use conventions (See file top)
- * @todo Change function name to more appropriate name
- * @param source
- * @param requiredPath
+ * Calculate the relative path from a source to another path.
+ * For instance, when doing a require() or import, the target
+ * path needs to be resolved for file1 to correctly require file2.
+ * ------> /some/path/to/file1
+ * ------> /some/other/path/to/file2
+ * Resolution on file1: require("../../other/path/to/file2")
+ * @param sourcePath
+ * @param targetPath
  * @returns {string}
  */
-const calculateRelativePath = (source, requiredPath) =>
+const calculateRelativePath = (sourcePath, targetPath) =>
 {
-    source = normalisePath(source);
-    requiredPath = normalisePath(requiredPath);
+    sourcePath = normalisePath(sourcePath);
+    targetPath = normalisePath(targetPath);
 
-    if (!isConventionalFolder(source))
+    if (!isConventionalFolder(sourcePath))
     {
-        source = path.parse(source).dir + "/";
+        sourcePath = path.parse(sourcePath).dir + "/";
     }
 
-    const relativePath = path.relative(source, requiredPath);
+    const relativePath = path.relative(sourcePath, targetPath);
     return normalisePath(relativePath);
 };
 
@@ -648,16 +653,19 @@ const reviewEsmImports = (text, list, {
                             if (isBrowserCompatible(requiredPath))
                             {
                                 let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
-
-                                let projectedDir = path.parse(projectedPath).dir;
-                                let relativePath = path.relative(projectedDir, requiredPath);
-                                relativePath = normalisePath(relativePath);
+                                let relativePath = calculateRelativePath(projectedPath, requiredPath);
 
                                 importMaps[moduleName] = requiredPath;
 
                                 if (moreOptions.useImportMaps)
                                 {
                                     return match;
+                                }
+
+                                if (moreOptions.prefixpath)
+                                {
+                                    relativePath = path.join(moreOptions.prefixpath, relativePath);
+                                    relativePath = normalisePath(relativePath);
                                 }
 
                                 match = `from "${relativePath}"`;
@@ -2727,9 +2735,12 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
  * Bundle and minify
  * @param entryPointPath
  * @param bundlePath Generated build File path
+ * @param target
+ * @param minify
+ * @param sourcemap
  * @returns {Promise<unknown>}
  */
-const minifyCode = async (entryPointPath, bundlePath, target) =>
+const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, sourcemap = false} = {}) =>
 {
     try
     {
@@ -2749,9 +2760,10 @@ const minifyCode = async (entryPointPath, bundlePath, target) =>
             entryPoints  : [entryPointPath],
             bundle       : true,
             outfile      : bundlePath,
+            sourcemap,
             format       : "esm",
             target       : "es6",
-            minify       : true,
+            minify,
             legalComments: "eof",
             platform
         });
@@ -2778,11 +2790,16 @@ const minifyCode = async (entryPointPath, bundlePath, target) =>
  * @param target
  * @param bundlePath
  */
-const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath = "./"}) =>
+const bundleResult = async (entryPointPath, {
+    target = TARGET.BROWSER,
+    bundlePath = "./",
+    minify = false,
+    sourcemap = false
+}) =>
 {
-    if (!await minifyCode(entryPointPath, bundlePath, target))
+    if (!await minifyCode(entryPointPath, bundlePath, target, {minify, sourcemap}))
     {
-        console.error({lid: 1743}, " Fail to minify");
+        console.error({lid: 1743}, " Failed to minify");
         return false;
     }
 
@@ -3331,6 +3348,13 @@ const convert = async (rawCliOptions = {}) =>
     }
 
     cliOptions.target = cliOptions.target || TARGET.ESM;
+
+    if (cliOptions.target === TARGET.PACKAGE)
+    {
+        cliOptions.target = TARGET.BROWSER;
+        cliOptions.prefixpath = "../../";
+    }
+
     if (cliOptions.target === TARGET.ALL)
     {
         console.error({lid: 1149}, `The option --target ${TARGET.ALL} is no longer supported. It defaults to --target ${TARGET.BROWSER} now`);
@@ -3341,6 +3365,9 @@ const convert = async (rawCliOptions = {}) =>
     {
         cliOptions.target = TARGET.BROWSER;
     }
+
+    cliOptions.prefixpath = cliOptions.prefixpath || "";
+    cliOptions.prefixpath = cliOptions.prefixpath.trim();
 
     // Output Files
     cliOptions.output = cliOptions.output || "./";
@@ -3450,10 +3477,20 @@ const convert = async (rawCliOptions = {}) =>
         htmlOptions.pattern = html;
     }
 
+    cliOptions.minify = !["false", "no", "non"].includes(cliOptions.minify);
+
+    if (["false", "no", "non"].includes(cliOptions.sourcemap))
+    {
+        cliOptions.sourcemap = false;
+    }
+
     const moreOptions = {
         useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
         target       : cliOptions.target,
-        nm           : cliOptions.nm || "node_modules"
+        nm           : cliOptions.nm || "node_modules",
+        prefixpath   : cliOptions.prefixpath,
+        minify       : !!cliOptions.minify,
+        sourcemap    : !!cliOptions.sourcemap
     };
 
     if (!cjsList.length)
@@ -3481,7 +3518,12 @@ const convert = async (rawCliOptions = {}) =>
 
     if (cliOptions.bundle && entrypointPath)
     {
-        await bundleResult(entrypointPath, {target: cliOptions.target, bundlePath: cliOptions.bundle});
+        await bundleResult(entrypointPath, {
+            target    : cliOptions.target,
+            bundlePath: cliOptions.bundle,
+            minify    : moreOptions.minify,
+            sourcemap : moreOptions.sourcemap
+        });
     }
 
     if (cliOptions["update-all"])
