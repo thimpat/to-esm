@@ -2757,7 +2757,7 @@ const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, s
 
         await esbuild.build({
             entryPoints  : [entryPointPath],
-            bundle       : false,
+            bundle       : true,
             outfile      : bundlePath,
             sourcemap,
             format       : "esm",
