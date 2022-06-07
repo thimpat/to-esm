@@ -83,3 +83,7 @@ markdown.json
 README-OLD.md/
 debug/
 
+/CHANGELOG.md
+/INFO.md
+/README-OLD.md
+/todo.js
