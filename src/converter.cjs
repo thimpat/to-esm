@@ -2735,9 +2735,11 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
  * Bundle and minify
  * @param entryPointPath
  * @param bundlePath Generated build File path
+ * @param target
+ * @param minify
  * @returns {Promise<unknown>}
  */
-const minifyCode = async (entryPointPath, bundlePath, target) =>
+const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, sourcemap = false} = {}) =>
 {
     try
     {
@@ -2755,11 +2757,12 @@ const minifyCode = async (entryPointPath, bundlePath, target) =>
 
         await esbuild.build({
             entryPoints  : [entryPointPath],
-            bundle       : true,
+            bundle       : false,
             outfile      : bundlePath,
+            sourcemap,
             format       : "esm",
             target       : "es6",
-            minify       : true,
+            minify,
             legalComments: "eof",
             platform
         });
@@ -2786,11 +2789,16 @@ const minifyCode = async (entryPointPath, bundlePath, target) =>
  * @param target
  * @param bundlePath
  */
-const bundleResult = async (entryPointPath, {target = TARGET.BROWSER, bundlePath = "./"}) =>
+const bundleResult = async (entryPointPath, {
+    target = TARGET.BROWSER,
+    bundlePath = "./",
+    minify = false,
+    sourcemap = false
+}) =>
 {
-    if (!await minifyCode(entryPointPath, bundlePath, target))
+    if (!await minifyCode(entryPointPath, bundlePath, target, {minify, sourcemap}))
     {
-        console.error({lid: 1743}, " Fail to minify");
+        console.error({lid: 1743}, " Failed to minify");
         return false;
     }
 
@@ -3468,11 +3476,20 @@ const convert = async (rawCliOptions = {}) =>
         htmlOptions.pattern = html;
     }
 
+    cliOptions.minify = !["false", "no", "non"].includes(cliOptions.minify);
+
+    if (["false", "no", "non"].includes(cliOptions.sourcemap))
+    {
+        cliOptions.sourcemap = false;
+    }
+
     const moreOptions = {
         useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
         target       : cliOptions.target,
         nm           : cliOptions.nm || "node_modules",
-        prefixpath   : cliOptions.prefixpath
+        prefixpath   : cliOptions.prefixpath,
+        minify       : !!cliOptions.minify,
+        sourcemap    : !!cliOptions.sourcemap
     };
 
     if (!cjsList.length)
@@ -3500,7 +3517,12 @@ const convert = async (rawCliOptions = {}) =>
 
     if (cliOptions.bundle && entrypointPath)
     {
-        await bundleResult(entrypointPath, {target: cliOptions.target, bundlePath: cliOptions.bundle});
+        await bundleResult(entrypointPath, {
+            target    : cliOptions.target,
+            bundlePath: cliOptions.bundle,
+            minify    : moreOptions.minify,
+            sourcemap : moreOptions.sourcemap
+        });
     }
 
     if (cliOptions["update-all"])
