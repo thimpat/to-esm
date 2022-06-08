@@ -303,7 +303,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
         /* istanbul ignore next */
         if (nodeModulesPos === -1)
         {
-            console.error({lid: 1381}, ` The mode [${moduleName}] is located in a non-node_modules directory.`);
+            console.error({lid: 1381}, ` The module [${moduleName}] is located in a non-node_modules directory.`);
         }
 
         entryPoint = "./" + entryPoint.substring(nodeModulesPos);
@@ -325,7 +325,7 @@ const getCJSModuleEntryPath = (moduleName, targetDir = "") =>
     return getModuleEntryPointPath(moduleName, targetDir, TARGET.CJS);
 };
 
-const getESMModuleEntryPath = (moduleName, targetDir = "", target) =>
+const getESMModuleEntryPath = (moduleName, targetDir, target) =>
 {
     return getModuleEntryPointPath(moduleName, targetDir, target);
 };
