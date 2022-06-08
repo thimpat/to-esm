@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const __filename = fileURLToPath(import.meta.url);
-import toAnsi  from "../../../node_modules/to-ansi/index.mjs";
+import toAnsi  from "to-ansi";
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 import {app, BrowserWindow}  from "electron";

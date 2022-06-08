@@ -290,7 +290,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
         let isCjs = target === TARGET.CJS;
 
         let entryPoint;
-        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, useNativeResolve: false});
+        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, isBrowser: target === TARGET.BROWSER, useNativeResolve: false});
         /* istanbul ignore next */
         if (entryPoint === null)
         {
@@ -303,7 +303,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
         /* istanbul ignore next */
         if (nodeModulesPos === -1)
         {
-            console.error({lid: 1381}, ` The mode [${moduleName}] is located in a non-node_modules directory.`);
+            console.error({lid: 1381}, ` The module [${moduleName}] is located in a non-node_modules directory.`);
         }
 
         entryPoint = "./" + entryPoint.substring(nodeModulesPos);
@@ -325,7 +325,7 @@ const getCJSModuleEntryPath = (moduleName, targetDir = "") =>
     return getModuleEntryPointPath(moduleName, targetDir, TARGET.CJS);
 };
 
-const getESMModuleEntryPath = (moduleName, targetDir = "", target) =>
+const getESMModuleEntryPath = (moduleName, targetDir, target) =>
 {
     return getModuleEntryPointPath(moduleName, targetDir, target);
 };
@@ -635,7 +635,7 @@ const reviewEsmImports = (text, list, {
                         console.warn({
                             lid  : 1099,
                             color: "#FF0000"
-                        }, ` The module [${moduleName}] was not found in your node_modules directory. `
+                        }, ` The module [${moduleName}] for [target: ${moreOptions.target}] was not found in your node_modules directory. `
                             + "Skipping.");
                         return match;
                     }
@@ -2661,7 +2661,6 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
                     "import" : entryPoint.target
                 };
 
-                json.main = entryPoint.source;
                 json.module = entryPoint.target;
                 json.type = "module";
 

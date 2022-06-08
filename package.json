@@ -40,7 +40,7 @@
     "esbuild": "^0.14.38",
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",
-    "find-entry-point": "^1.4.3",
+    "find-entry-point": "^1.4.4",
     "glob": "^7.2.0",
     "js-beautify": "^1.14.0",
     "markdown-include": "^0.4.3",

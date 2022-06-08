@@ -338,7 +338,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "browser"
+                    "target"  : TARGET.BROWSER
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-12.mjs"), "utf8");
@@ -356,7 +356,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-16.mjs"), "utf8");
@@ -374,7 +374,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm"
+                    "target"  : TARGET.ESM
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-17.mjs"), "utf8");
@@ -392,7 +392,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : TARGET.BROWSER
+                    "target"  : TARGET.ESM
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-18.mjs"), "utf8");
@@ -410,7 +410,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm"
+                    "target"  : TARGET.ESM
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-19.mjs"), "utf8");
@@ -428,7 +428,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-20.mjs"), "utf8");
@@ -446,7 +446,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-21.mjs"), "utf8");
@@ -464,7 +464,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-22.mjs"), "utf8");
@@ -482,7 +482,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm"
+                    "target"  : TARGET.ESM
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-23.mjs"), "utf8");
@@ -500,7 +500,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                     debug     : true
                 };
 
@@ -516,7 +516,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-25.mjs"), "utf8");
@@ -534,7 +534,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-26.mjs"), "utf8");
@@ -552,7 +552,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-27.mjs"), "utf8");
@@ -570,7 +570,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "esm",
+                    "target"  : TARGET.ESM,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-28.mjs"), "utf8");
@@ -589,7 +589,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "browser",
+                    "target"  : TARGET.BROWSER,
                     bundle    : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
                 };
 
@@ -611,7 +611,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "browser",
+                    "target"  : TARGET.BROWSER,
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "ana-logger.mjs"), "utf8");
@@ -647,7 +647,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
-                    "target"  : "browser"
+                    "target"  : TARGET.BROWSER
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-13-bis.mjs"), "utf8");
@@ -788,7 +788,7 @@ describe("The converter tool", function ()
                 };
 
                 await convert(options);
-                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package.json"), "utf8");
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package-1.json"), "utf8");
                 const converted = fs.readFileSync(path.join(rootDir, "package.json"), "utf8");
                 process.chdir("../..");
                 expect(converted).to.equal(expectedConversion);
@@ -832,7 +832,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": true,
-                    "target"  : "browser"
+                    "target"  : TARGET.BROWSER
                 };
 
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-31.mjs"), "utf8");
@@ -917,7 +917,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": true,
-                    "target"  : "browser"
+                    "target"  : TARGET.BROWSER
                 };
 
                 const result = await convert(options);
@@ -932,7 +932,7 @@ describe("The converter tool", function ()
                     input,
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": true,
-                    "target"  : "browser"
+                    "target"  : TARGET.BROWSER
                 };
 
                 const result = await convert(options);
@@ -958,6 +958,7 @@ describe("The converter tool", function ()
             }
         );
 
+        // TODO: Fix trailing semi-colon
         it("should try to convert modules with non relative paths when target is browser", async function ()
             {
                 const input = "./test/assets/given/demo-test-34.cjs";
