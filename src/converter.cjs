@@ -290,7 +290,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
         let isCjs = target === TARGET.CJS;
 
         let entryPoint;
-        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, useNativeResolve: false});
+        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, isBrowser: target === TARGET.BROWSER, useNativeResolve: false});
         /* istanbul ignore next */
         if (entryPoint === null)
         {
@@ -635,7 +635,7 @@ const reviewEsmImports = (text, list, {
                         console.warn({
                             lid  : 1099,
                             color: "#FF0000"
-                        }, ` The module [${moduleName}] was not found in your node_modules directory. `
+                        }, ` The module [${moduleName}] for [target: ${moreOptions.target}] was not found in your node_modules directory. `
                             + "Skipping.");
                         return match;
                     }
