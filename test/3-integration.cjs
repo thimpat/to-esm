@@ -788,7 +788,7 @@ describe("The converter tool", function ()
                 };
 
                 await convert(options);
-                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package.json"), "utf8");
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "package-1.json"), "utf8");
                 const converted = fs.readFileSync(path.join(rootDir, "package.json"), "utf8");
                 process.chdir("../..");
                 expect(converted).to.equal(expectedConversion);

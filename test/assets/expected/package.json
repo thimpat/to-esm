@@ -2,7 +2,7 @@
   "name": "something",
   "version": "1.0.2",
   "random": 123456,
-  "main": "./given/demo-test-14.cjs",
+  "main": "./example/cjs/demo.cjs",
   "module": "./actual/demo-test-14.mjs",
   "type": "module",
   "exports": {

@@ -1,6 +1,6 @@
 {
   "name": "something",
-  "main": "./given/demo-test-14.cjs",
+  "main": "./example/cjs/demo.cjs",
   "module": "./actual/demo-test-14.mjs",
   "type": "module",
   "exports": {

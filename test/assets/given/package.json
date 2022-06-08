@@ -3,6 +3,10 @@
   "version": "1.0.2",
   "random": 123456,
   "main": "./example/cjs/demo.cjs",
-  "module": "./generated/esm/demo.mjs",
-  "type": "commonjs"
+  "module": "./actual/demo-test-14.mjs",
+  "type": "module",
+  "exports": {
+    "require": "./given/demo-test-14.cjs",
+    "import": "./actual/demo-test-14.mjs"
+  }
 }
