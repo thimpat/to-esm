@@ -290,7 +290,11 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
         let isCjs = target === TARGET.CJS;
 
         let entryPoint;
-        entryPoint = findPackageEntryPoint(moduleName, targetDir, {isCjs, isBrowser: target === TARGET.BROWSER, useNativeResolve: false});
+        entryPoint = findPackageEntryPoint(moduleName, targetDir, {
+            isCjs,
+            isBrowser       : target === TARGET.BROWSER,
+            useNativeResolve: false
+        });
         /* istanbul ignore next */
         if (entryPoint === null)
         {
@@ -2154,72 +2158,87 @@ const installPackage =
  * It is specially useful for the importmaps.
  * @note Some libraries only supports ESM on their latest version.
  * @param config
- * @returns {Promise<{}>}
+ * @returns {Promise<{}|null>}
  */
 const installNonHybridModules = async (config = []) =>
 {
-    const replaceModules = config.replaceModules || [];
-
-    let packageJsonPath = path.resolve("./package.json");
-    /* istanbul ignore next */
-    if (!fs.existsSync(packageJsonPath))
+    try
     {
-        console.error({lid: 1014}, " Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.");
+        const replaceModules = config.replaceModules || [];
+
+        let packageJsonPath = path.resolve("./package.json");
+        /* istanbul ignore next */
+        if (!fs.existsSync(packageJsonPath))
+        {
+            console.error({lid: 1014}, " Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.");
+            return null;
+        }
+
+        // const toEsmPackageJson = require(packageJsonPath);
+        const moduleList = Object.keys(replaceModules);
+
+        const nonHybridModules = {};
+
+        if (!moduleList || !moduleList.length)
+        {
+            return null;
+        }
+
+        for (const moduleName of moduleList)
+        {
+            try
+            {
+                const moduleItem = replaceModules[moduleName];
+
+                moduleItem.cjs = moduleItem.cjs || {};
+                moduleItem.esm = moduleItem.esm || {};
+
+                let version = moduleItem.cjs.version || "@latest";
+                let cjsName = moduleItem.cjs.name || moduleName;
+                let isDevDependencies = !!moduleItem.cjs.devDependencies;
+
+                // Install cjs package
+                installPackage({
+                    version,
+                    name       : cjsName,
+                    isDevDependencies,
+                    moduleName,
+                    isCjs      : true,
+                    packageJson: toEsmPackageJson
+                });
+
+                version = moduleItem.esm.version || "@latest";
+                let esmName = moduleItem.esm.name || moduleName;
+                isDevDependencies = !!moduleItem.esm.devDependencies;
+
+                // Install esm package
+                installPackage({
+                    version,
+                    name       : esmName,
+                    isDevDependencies,
+                    moduleName,
+                    isCjs      : false,
+                    packageJson: toEsmPackageJson
+                });
+
+                nonHybridModules[cjsName] = esmName;
+                return nonHybridModules;
+            }
+            catch (e)
+            {
+                /* istanbul ignore next */
+                console.error({lid: 1015}, "", e.message);
+            }
+        }
+
         return null;
     }
-
-    // const toEsmPackageJson = require(packageJsonPath);
-    const moduleList = Object.keys(replaceModules);
-
-    const nonHybridModules = {};
-
-    for (const moduleName of moduleList)
+    catch (e)
     {
-        try
-        {
-            const moduleItem = replaceModules[moduleName];
-
-            moduleItem.cjs = moduleItem.cjs || {};
-            moduleItem.esm = moduleItem.esm || {};
-
-            let version = moduleItem.cjs.version || "@latest";
-            let cjsName = moduleItem.cjs.name || moduleName;
-            let isDevDependencies = !!moduleItem.cjs.devDependencies;
-
-            // Install cjs package
-            installPackage({
-                version,
-                name       : cjsName,
-                isDevDependencies,
-                moduleName,
-                isCjs      : true,
-                packageJson: toEsmPackageJson
-            });
-
-            version = moduleItem.esm.version || "@latest";
-            let esmName = moduleItem.esm.name || moduleName;
-            isDevDependencies = !!moduleItem.esm.devDependencies;
-
-            // Install esm package
-            installPackage({
-                version,
-                name       : esmName,
-                isDevDependencies,
-                moduleName,
-                isCjs      : false,
-                packageJson: toEsmPackageJson
-            });
-
-            nonHybridModules[cjsName] = esmName;
-        }
-        catch (e)
-        {
-            /* istanbul ignore next */
-            console.error({lid: 1015}, "", e.message);
-        }
+        console.error({lid: 1535}, e);
     }
 
-    return nonHybridModules;
+    return null;
 };
 
 
@@ -3280,43 +3299,45 @@ const detectESMConfigPath = () =>
  */
 const convert = async (rawCliOptions = {}) =>
 {
-    const workingDir = normalisePath(process.cwd(), {isFolder: true});
-
-    console.log({lid: 1400}, `Current working directory: ${workingDir}`);
-
-    resetFileList();
-
-    const cliOptions = {};
-    Object.keys(rawCliOptions).forEach((key) =>
+    try
     {
-        cliOptions[key.toLowerCase()] = rawCliOptions[key];
-    });
+        const workingDir = normalisePath(process.cwd(), {isFolder: true});
 
-    let confFileOptions = {replace: []};
+        console.log({lid: 1400}, `Current working directory: ${workingDir}`);
 
-    // Config Files
-    let configPath = cliOptions.config || detectESMConfigPath();
+        resetFileList();
 
-    let nonHybridModuleMap = {};
-    if (configPath)
-    {
-        confFileOptions = await getOptionsConfigFile(configPath);
-
-        // Convert search replacement strings to regex
-        confFileOptions.replaceStart = regexifySearchList(confFileOptions.replaceStart);
-        confFileOptions.replaceEnd = regexifySearchList(confFileOptions.replaceEnd);
-
-        // Install special npm modules based on config
-        nonHybridModuleMap = await installNonHybridModules(confFileOptions) || {};
-    }
-
-    // Input Files
-    let inputFileMaskArr = [];
-    if (rawCliOptions._ && rawCliOptions._.length)
-    {
-        if (rawCliOptions._.length > 1)
+        const cliOptions = {};
+        Object.keys(rawCliOptions).forEach((key) =>
         {
-            console.log({lid: 1307}, ` Bad arguments.
+            cliOptions[key.toLowerCase()] = rawCliOptions[key];
+        });
+
+        let confFileOptions = {replace: []};
+
+        // Config Files
+        let configPath = cliOptions.config || detectESMConfigPath();
+
+        let nonHybridModuleMap = {};
+        if (configPath)
+        {
+            confFileOptions = await getOptionsConfigFile(configPath);
+
+            // Convert search replacement strings to regex
+            confFileOptions.replaceStart = regexifySearchList(confFileOptions.replaceStart);
+            confFileOptions.replaceEnd = regexifySearchList(confFileOptions.replaceEnd);
+
+            // Install special npm modules based on config
+            nonHybridModuleMap = await installNonHybridModules(confFileOptions) || {};
+        }
+
+        // Input Files
+        let inputFileMaskArr = [];
+        if (rawCliOptions._ && rawCliOptions._.length)
+        {
+            if (rawCliOptions._.length > 1)
+            {
+                console.log({lid: 1307}, ` Bad arguments.
             Here are some examples for invoking "to-esm":
             ------------------------------------------------------
             $> ${toAnsi.getTextFromHex(`${toEsmPackageJson.name} filepath --output outputdir`, {fg: "#FF00FF"})} 
@@ -3329,231 +3350,241 @@ const convert = async (rawCliOptions = {}) =>
             ${toAnsi.getTextFromHex("https://www.npmjs.com/package/to-esm", {fg: "#00FF00"})} 
              
             `);
-            return;
-        }
-        inputFileMaskArr.push(...rawCliOptions._);
-    }
 
-    if (cliOptions.input)
-    {
-        if (Array.isArray(cliOptions.input))
-        {
-            inputFileMaskArr.push(...cliOptions.input);
-        }
-        else
-        {
-            inputFileMaskArr.push(cliOptions.input);
-        }
-    }
-
-    cliOptions.target = cliOptions.target || TARGET.ESM;
-
-    if (cliOptions.target === TARGET.PACKAGE)
-    {
-        cliOptions.target = TARGET.BROWSER;
-        cliOptions.prefixpath = "../../";
-    }
-
-    if (cliOptions.target === TARGET.ALL)
-    {
-        console.error({lid: 1149}, `The option --target ${TARGET.ALL} is no longer supported. It defaults to --target ${TARGET.BROWSER} now`);
-        cliOptions.target = TARGET.BROWSER;
-    }
-
-    if (cliOptions.useimportmaps)
-    {
-        cliOptions.target = TARGET.BROWSER;
-    }
-
-    cliOptions.prefixpath = cliOptions.prefixpath || "";
-    cliOptions.prefixpath = cliOptions.prefixpath.trim();
-
-    // Output Files
-    cliOptions.output = cliOptions.output || "./";
-    const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
-
-    const firstOutputDir = outputDirArr[0];
-
-    for (let i = 0; i < inputFileMaskArr.length; ++i)
-    {
-        const inputFileMask = inputFileMaskArr[i];
-        const outputDir = outputDirArr[i];
-
-        if (outputDir)
-        {
-            buildTargetDir(outputDir);
-        }
-
-        const list = glob.sync(inputFileMask, {
-            dot  : true,
-            nodir: true
-        });
-
-        /* istanbul ignore next */
-        if (!list.length)
-        {
-            console.error({lid: 1151}, " The pattern did not match any file.");
-            return false;
-        }
-
-        let rootDir;
-        if (list && list.length > 1)
-        {
-            rootDir = commonDir(workingDir, list);
-        }
-        else
-        {
-            rootDir = path.join(workingDir, path.dirname(list[0]));
-        }
-
-        if (!cliOptions.entrypoint && !i && list.length === 1)
-        {
-            cliOptions.entrypoint = list[0];
-            break;
-        }
-
-        list.forEach((source) =>
-        {
-            addFileToConvertingList({source, rootDir, outputDir, workingDir});
-        });
-
-    }
-
-    // Note: The multi directory options may complicate things. Consider making it obsolete.
-    let entryPointList;
-    let entrypointPath = null;
-    if (cliOptions.entrypoint)
-    {
-        entrypointPath = normalisePath(cliOptions.entrypoint);
-        console.log({lid: 1402}, toAnsi.getTextFromHex(`Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
-        let rootDir = path.parse(entrypointPath).dir;
-        rootDir = path.resolve(rootDir);
-        entryPointList = addFileToConvertingList({
-            source    : entrypointPath,
-            rootDir,
-            outputDir : firstOutputDir,
-            workingDir,
-            entryPoint: true
-        });
-    }
-
-    // No header
-    const noheader = !!cliOptions.noheader;
-    const withreport = !!cliOptions.withreport;
-    const fallback = !!cliOptions.fallback;
-    const keepexisting = !!cliOptions.keepexisting;
-    const debug = cliOptions.debug || false;
-    const debuginput = debug || cliOptions.debuginput || "";
-
-    if (debuginput)
-    {
-        if (fs.existsSync(DEBUG_DIR))
-        {
-            try
-            {
-                fs.rmSync(DEBUG_DIR, {recursive: true, force: true});
+                return {cjsList, success: false};
             }
-            catch (e)
+            inputFileMaskArr.push(...rawCliOptions._);
+        }
+
+        if (cliOptions.input)
+        {
+            if (Array.isArray(cliOptions.input))
             {
-                /* istanbul ignore next */
-                console.error({lid: 1095}, "", e.message);
+                inputFileMaskArr.push(...cliOptions.input);
+            }
+            else
+            {
+                inputFileMaskArr.push(cliOptions.input);
             }
         }
-        buildTargetDir(DEBUG_DIR);
-    }
 
-    DEBUG_MODE = !!debuginput;
+        cliOptions.target = cliOptions.target || TARGET.ESM;
 
-    let followlinked = !cliOptions.ignorelinked;
-
-    const importMaps = {};
-
-    let htmlOptions = confFileOptions.html || {};
-
-    let html = cliOptions.html;
-    if (html)
-    {
-        htmlOptions.pattern = html;
-    }
-
-    cliOptions.minify = !["false", "no", "non"].includes(cliOptions.minify);
-
-    if (["false", "no", "non"].includes(cliOptions.sourcemap))
-    {
-        cliOptions.sourcemap = false;
-    }
-
-    const moreOptions = {
-        useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
-        target       : cliOptions.target,
-        nm           : cliOptions.nm || "node_modules",
-        prefixpath   : cliOptions.prefixpath,
-        minify       : !!cliOptions.minify,
-        sourcemap    : !!cliOptions.sourcemap
-    };
-
-    if (!cjsList.length)
-    {
-        return false;
-    }
-
-    // The first file parsed will be the entrypoint
-    entrypointPath = cjsList[0].target;
-    const result = convertCjsFiles(cjsList,
+        if (cliOptions.target === TARGET.PACKAGE)
         {
-            replaceStart: confFileOptions.replaceStart,
-            replaceEnd  : confFileOptions.replaceEnd,
-            nonHybridModuleMap,
-            noheader,
-            followlinked,
-            withreport,
-            importMaps,
-            workingDir,
-            fallback,
-            moreOptions,
-            debuginput,
-            keepexisting
-        });
+            cliOptions.target = TARGET.BROWSER;
+            cliOptions.prefixpath = "../../";
+        }
 
-    if (cliOptions.bundle && entrypointPath)
-    {
-        await bundleResult(entrypointPath, {
-            target    : cliOptions.target,
-            bundlePath: cliOptions.bundle,
-            minify    : moreOptions.minify,
-            sourcemap : moreOptions.sourcemap
-        });
-    }
-
-    if (cliOptions["update-all"])
-    {
-        updatePackageJson({
-            entryPoint: entryPointList,
-            bundlePath: cliOptions.bundle,
-            workingDir, ...moreOptions,
-            importMaps
-        });
-    }
-
-    if (!htmlOptions.pattern)
-    {
-        return null;
-    }
-
-    if (!Object.keys(importMaps).length)
-    {
-        console.info({lid: 1202}, " No importmap entry found.");
-        return cjsList;
-    }
-
-    const htmlList = glob.sync(htmlOptions.pattern,
+        if (cliOptions.target === TARGET.ALL)
         {
-            root : workingDir,
-            nodir: true
-        });
+            console.error({lid: 1149}, `The option --target ${TARGET.ALL} is no longer supported. It defaults to --target ${TARGET.BROWSER} now`);
+            cliOptions.target = TARGET.BROWSER;
+        }
 
-    updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions, htmlOptions});
-    return cjsList;
+        if (cliOptions.useimportmaps)
+        {
+            cliOptions.target = TARGET.BROWSER;
+        }
+
+        cliOptions.prefixpath = cliOptions.prefixpath || "";
+        cliOptions.prefixpath = cliOptions.prefixpath.trim();
+
+        // Output Files
+        cliOptions.output = cliOptions.output || "./";
+        const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
+
+        const firstOutputDir = outputDirArr[0];
+
+        for (let i = 0; i < inputFileMaskArr.length; ++i)
+        {
+            const inputFileMask = inputFileMaskArr[i];
+            const outputDir = outputDirArr[i];
+
+            if (outputDir)
+            {
+                buildTargetDir(outputDir);
+            }
+
+            const list = glob.sync(inputFileMask, {
+                dot  : true,
+                nodir: true
+            });
+
+            /* istanbul ignore next */
+            if (!list.length)
+            {
+                console.error({lid: 1151}, " The pattern did not match any file.");
+                return {cjsList, success: false};
+            }
+
+            let rootDir;
+            if (list && list.length > 1)
+            {
+                rootDir = commonDir(workingDir, list);
+            }
+            else
+            {
+                rootDir = path.join(workingDir, path.dirname(list[0]));
+            }
+
+            if (!cliOptions.entrypoint && !i && list.length === 1)
+            {
+                cliOptions.entrypoint = list[0];
+                break;
+            }
+
+            list.forEach((source) =>
+            {
+                addFileToConvertingList({source, rootDir, outputDir, workingDir});
+            });
+
+        }
+
+        // Note: The multi directory options may complicate things. Consider making it obsolete.
+        let entryPointList;
+        let entrypointPath = null;
+        if (cliOptions.entrypoint)
+        {
+            entrypointPath = normalisePath(cliOptions.entrypoint);
+            console.log({lid: 1402}, toAnsi.getTextFromHex(`Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
+            let rootDir = path.parse(entrypointPath).dir;
+            rootDir = path.resolve(rootDir);
+            entryPointList = addFileToConvertingList({
+                source    : entrypointPath,
+                rootDir,
+                outputDir : firstOutputDir,
+                workingDir,
+                entryPoint: true
+            });
+        }
+
+        // No header
+        const noheader = !!cliOptions.noheader;
+        const withreport = !!cliOptions.withreport;
+        const fallback = !!cliOptions.fallback;
+        const keepexisting = !!cliOptions.keepexisting;
+        const debug = cliOptions.debug || false;
+        const debuginput = debug || cliOptions.debuginput || "";
+
+        if (debuginput)
+        {
+            if (fs.existsSync(DEBUG_DIR))
+            {
+                try
+                {
+                    fs.rmSync(DEBUG_DIR, {recursive: true, force: true});
+                }
+                catch (e)
+                {
+                    /* istanbul ignore next */
+                    console.error({lid: 1095}, "", e.message);
+                }
+            }
+            buildTargetDir(DEBUG_DIR);
+        }
+
+        DEBUG_MODE = !!debuginput;
+
+        let followlinked = !cliOptions.ignorelinked;
+
+        const importMaps = {};
+
+        let htmlOptions = confFileOptions.html || {};
+
+        let html = cliOptions.html;
+        if (html)
+        {
+            htmlOptions.pattern = html;
+        }
+
+        cliOptions.minify = !["false", "no", "non"].includes(cliOptions.minify);
+
+        if (["false", "no", "non"].includes(cliOptions.sourcemap))
+        {
+            cliOptions.sourcemap = false;
+        }
+
+        const moreOptions = {
+            useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
+            target       : cliOptions.target,
+            nm           : cliOptions.nm || "node_modules",
+            prefixpath   : cliOptions.prefixpath,
+            minify       : !!cliOptions.minify,
+            sourcemap    : !!cliOptions.sourcemap
+        };
+
+        if (!cjsList.length)
+        {
+            return {cjsList, success: false};
+        }
+
+        // The first file parsed will be the entrypoint
+        entrypointPath = cjsList[0].target;
+
+        const success = convertCjsFiles(cjsList,
+            {
+                replaceStart: confFileOptions.replaceStart,
+                replaceEnd  : confFileOptions.replaceEnd,
+                nonHybridModuleMap,
+                noheader,
+                followlinked,
+                withreport,
+                importMaps,
+                workingDir,
+                fallback,
+                moreOptions,
+                debuginput,
+                keepexisting
+            });
+
+        if (cliOptions.bundle && entrypointPath)
+        {
+            await bundleResult(entrypointPath, {
+                target    : cliOptions.target,
+                bundlePath: cliOptions.bundle,
+                minify    : moreOptions.minify,
+                sourcemap : moreOptions.sourcemap
+            });
+        }
+
+        if (cliOptions["update-all"])
+        {
+            updatePackageJson({
+                entryPoint: entryPointList,
+                bundlePath: cliOptions.bundle,
+                workingDir, ...moreOptions,
+                importMaps
+            });
+        }
+
+        if (!htmlOptions.pattern)
+        {
+            return {cjsList, success};
+        }
+
+        if (!Object.keys(importMaps).length)
+        {
+            console.info({lid: 1202}, " No importMaps entry found.");
+            return {cjsList, success};
+        }
+
+        const htmlList = glob.sync(htmlOptions.pattern,
+            {
+                root : workingDir,
+                nodir: true
+            });
+
+        updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions, htmlOptions});
+
+        return {cjsList, success};
+    }
+    catch (e)
+    {
+        console.error({lid: 1453}, e);
+    }
+
+    return {cjsList, success: false};
 };
 
 module.exports.buildTargetDir = buildTargetDir;

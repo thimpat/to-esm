@@ -716,9 +716,9 @@ describe("The converter tool", function ()
                     "withreport": false,
                 };
 
-                const success = await convert(options);
+                const success = (await convert(options)).success;
 
-                chai.expect(success).to.be.null;
+                chai.expect(success).to.be.false;
             }
         );
 
@@ -733,16 +733,16 @@ describe("The converter tool", function ()
                     "withreport": false,
                 };
 
-                const success = await convert(options);
+                const success = (await convert(options)).success;
 
-                chai.expect(success).to.be.null;
+                chai.expect(success).to.be.false;
             }
         );
 
         it("should do nothing when the list of files is empty", async function ()
             {
-                const result = await convert();
-                chai.expect(result).to.be.false;
+                const {success} = await convert();
+                chai.expect(success).to.be.false;
             }
         );
 
@@ -920,8 +920,8 @@ describe("The converter tool", function ()
                     "target"  : TARGET.BROWSER
                 };
 
-                const result = await convert(options);
-                expect(result).to.be.false;
+                const {success} = await convert(options);
+                expect(success).to.be.false;
             }
         );
 
@@ -935,8 +935,8 @@ describe("The converter tool", function ()
                     "target"  : TARGET.BROWSER
                 };
 
-                const result = await convert(options);
-                expect(result).to.be.false;
+                const {success} = await convert(options);
+                expect(success).to.be.false;
             }
         );
 
