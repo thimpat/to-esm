@@ -5,6 +5,8 @@ const minimist = require("minimist");
 const {convert, setupConsole} = require("./src/converter.cjs");
 const chokidar = require("chokidar");
 
+const WATCH_DELAY = 2000;
+
 const getHelp = () =>
 {
     return `
@@ -39,10 +41,59 @@ Examples:
 `;
 };
 
-const onChange = async (savedOptions, path) =>
+let timerID = null;
+let startConversion = async (watcher, savedOptions) =>
 {
-    console.log({lid: 1020, color: "green"}, `File ${path} has been changed`);
-    await convert(savedOptions);
+    try
+    {
+        const {cjsList} = await convert(savedOptions);
+        const watchList = getWatchList(cjsList);
+        if (Object.keys(watchList).length)
+        {
+            await watcher.unwatch("*");
+            watcher.add(watchList);
+        }
+    }
+    catch (e)
+    {
+        console.error({lid: 1547}, e);
+    }
+
+    timerID = null;
+};
+
+const triggerConversionWithDelay = ({delay = WATCH_DELAY, watcher = null, savedOptions = null, filepath = ""} = {}) =>
+{
+    if (!timerID)
+    {
+        console.log({lid: 1020, color: "green"}, `File ${filepath} has changed`);
+    }
+
+    clearTimeout(timerID);
+    timerID = setTimeout(startConversion.bind(null, watcher, savedOptions, {filepath}), delay);
+};
+
+const getWatchList = (list) =>
+{
+    const nb = list ? list.length : 0;
+    const watchList = [];
+    for (let i = 0; i < nb; ++i)
+    {
+        watchList.push(list[i].source);
+    }
+    return watchList;
+};
+
+const onChange = async (savedOptions, watcher, filepath) =>
+{
+    try
+    {
+        triggerConversionWithDelay({savedOptions, watcher, filepath});
+    }
+    catch (e)
+    {
+        console.error({lid: 1547}, e);
+    }
 };
 
 (async () =>
@@ -68,7 +119,7 @@ const onChange = async (savedOptions, path) =>
 
     const savedOptions = Object.assign({}, cliOptions);
 
-    const list = await convert(cliOptions);
+    const {cjsList} = await convert(cliOptions);
 
     // If triggered by the watcher, return, so we don't add another listener
     if (savedOptions.automated)
@@ -84,29 +135,23 @@ const onChange = async (savedOptions, path) =>
         console.log({lid: 1002, color: "green"}, `Watch mode enabled`);
         console.log({lid: 1000, color: "green"}, `---------------------------`);
 
-        const nb = list ? list.length : 0;
-        const watchList = [];
-        for (let i = 0; i < nb; ++i)
-        {
-            watchList.push(list[i].source);
-        }
-
+        const watchList = getWatchList(cjsList);
         if (watchList.length)
         {
             const watcher = chokidar.watch(watchList, {
-                ignored: /(^|[\/\\])\../, // ignore dotfiles
+                ignored   : /(^|[\/\\])\../, // ignore dotfiles
                 persistent: true
             });
 
             watcher
-                .on("change", onChange.bind(null, savedOptions))
-                .on("unlink", onChange.bind(null, savedOptions));
+                .on("change", onChange.bind(null, savedOptions, watcher))
+                .on("unlink", onChange.bind(null, savedOptions, watcher));
         }
     }
 })()
     .catch(err =>
-{
-    /* istanbul ignore next */
-    console.error(`${packageJson.name}: (1016)`, err);
-});
+    {
+        /* istanbul ignore next */
+        console.error(`${packageJson.name}: (1016)`, err);
+    });
 
