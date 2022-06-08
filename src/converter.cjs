@@ -2661,7 +2661,6 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
                     "import" : entryPoint.target
                 };
 
-                json.main = entryPoint.source;
                 json.module = entryPoint.target;
                 json.type = "module";
 
