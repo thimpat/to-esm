@@ -1,5 +1,7 @@
 // Major
 // TODO: Fix generated entrypoint file location
+// TODO: Minify .cjs
+// TODO: Add option --update-all-with-minified
 //
 // Minor
 // TODO: Remove trailing semi-colon => See @test: should try to convert modules with non relative paths when target is
