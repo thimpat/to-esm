@@ -20,7 +20,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "analogger": "^1.15.3",
+    "analogger": "^1.16.0",
     "to-esm": "file:../.."
   }
 }

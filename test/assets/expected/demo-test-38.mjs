@@ -5,7 +5,7 @@
  * [./test/assets/given/demo-test-38.cjs]{@link ./test/assets/given/demo-test-38.cjs}
  * 
  **/
-import {findPackageEntryPoint}  from "../../../node_modules/to-ansi/index.mjs";
+import {findPackageEntryPoint}  from "to-ansi";
 
 const argv = minimist(process.argv.slice(2));
 
