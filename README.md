@@ -65,7 +65,7 @@ npm install to-esm -g
 ```shell
 
 to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--target=< browser|esm|package >] 
-[--prefixpath=<dirpath>] [--bundle=<filepath>] [--update-all]
+[--prefixpath=<dirpath>] [--bundle=<filepath>] [--watch] [--update-all]
 
 ```
 
@@ -569,18 +569,19 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 ## Options (via command line)
 
 
-| **Options**    | **Description**                                         | **Expect**               |
-|----------------|---------------------------------------------------------|--------------------------|
-| filepath       | _File or pattern to convert_                            | **Only required option** |
-| --output       | _Output directory_                                      | directory path           |
-| --html         | _html files to receive importmaps_                      | glob                     |
-| --noHeader     | _Options to not generate automatic header_              |                          |
-| --keepExisting | _Options to skip already converted files_               |                          |
-| --target       | _Setting the targeted environment_                      | esm / browser / package  |  
-| --bundle       | _Generate minified bundle for browser environment_      | file path                |  
-| --entrypoint   | _Path to .js entrypoint_                                | file path                |  
-| --update-all   | _Automatically update package.json to set entry points_ |                          |  
-| --prefixpath   | _Add a path to paths targeting third party modules_     | directory path <br/>     |  
+| **Options**    | **Description**                                                       | **Expect**               |
+|----------------|-----------------------------------------------------------------------|--------------------------|
+| filepath       | _File or pattern to convert_                                          | **Only required option** |
+| --output       | _Output directory_                                                    | directory path           |
+| --html         | _html files to receive importmaps_                                    | glob                     |
+| --noHeader     | _Options to not generate automatic header_                            |                          |
+| --keepExisting | _Options to skip already converted files_                             |                          |
+| --target       | _Setting the targeted environment_                                    | esm / browser / package  |  
+| --bundle       | _Generate minified bundle for browser environment_                    | file path                |  
+| --entrypoint   | _Path to .js entrypoint_                                              | file path                |  
+| --update-all   | _Automatically update package.json to set entry points_               |                          |  
+| --prefixpath   | _Add a path to paths targeting third party modules_                   | directory path <br/>     |  
+| --watch        | _Watch mode to automatically apply conversions when changes detected_ | directory path <br/>     |  
 
 
 
