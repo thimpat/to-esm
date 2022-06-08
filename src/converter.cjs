@@ -3537,7 +3537,7 @@ const convert = async (rawCliOptions = {}) =>
 
     if (!htmlOptions.pattern)
     {
-        return cjsList;
+        return null;
     }
 
     if (!Object.keys(importMaps).length)
