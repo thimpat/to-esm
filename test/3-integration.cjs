@@ -718,7 +718,7 @@ describe("The converter tool", function ()
 
                 const success = await convert(options);
 
-                chai.expect(success).to.be.false;
+                chai.expect(success).to.be.null;
             }
         );
 
@@ -735,7 +735,7 @@ describe("The converter tool", function ()
 
                 const success = await convert(options);
 
-                chai.expect(success).to.be.false;
+                chai.expect(success).to.be.null;
             }
         );
 
