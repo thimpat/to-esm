@@ -3537,13 +3537,13 @@ const convert = async (rawCliOptions = {}) =>
 
     if (!htmlOptions.pattern)
     {
-        return result;
+        return cjsList;
     }
 
     if (!Object.keys(importMaps).length)
     {
         console.info({lid: 1202}, " No importmap entry found.");
-        return result;
+        return cjsList;
     }
 
     const htmlList = glob.sync(htmlOptions.pattern,
@@ -3553,7 +3553,7 @@ const convert = async (rawCliOptions = {}) =>
         });
 
     updateHTMLFiles(htmlList, {importMaps, moreOptions, confFileOptions, htmlOptions});
-
+    return cjsList;
 };
 
 module.exports.buildTargetDir = buildTargetDir;

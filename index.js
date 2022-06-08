@@ -3,9 +3,7 @@
 const packageJson = require("./package.json");
 const minimist = require("minimist");
 const {convert, setupConsole} = require("./src/converter.cjs");
-
-const LOG_CONTEXTS = {STANDARD: null, TEST: {color: "#B18904"}, C1: null, C2: null, C3: null, DEFAULT: {color: "#FF9999"}};
-
+const chokidar = require("chokidar");
 
 const getHelp = () =>
 {
@@ -41,6 +39,12 @@ Examples:
 `;
 };
 
+const onChange = async (savedOptions, path) =>
+{
+    console.log({lid: 1020, color: "green"}, `File ${path} has been changed`);
+    await convert(savedOptions);
+};
+
 (async () =>
 {
     const cliOptions = minimist(process.argv.slice(2));
@@ -62,7 +66,43 @@ Examples:
 
     setupConsole();
 
-    await convert(cliOptions);
+    const savedOptions = Object.assign({}, cliOptions);
+
+    const list = await convert(cliOptions);
+
+    // If triggered by the watcher, return, so we don't add another listener
+    if (savedOptions.automated)
+    {
+        return;
+    }
+
+    if (cliOptions.watch)
+    {
+        savedOptions.automated = true;
+
+        console.log({lid: 1000, color: "green"}, `---------------------------`);
+        console.log({lid: 1002, color: "green"}, `Watch mode enabled`);
+        console.log({lid: 1000, color: "green"}, `---------------------------`);
+
+        const nb = list ? list.length : 0;
+        const watchList = [];
+        for (let i = 0; i < nb; ++i)
+        {
+            watchList.push(list[i].source);
+        }
+
+        if (watchList.length)
+        {
+            const watcher = chokidar.watch(watchList, {
+                ignored: /(^|[\/\\])\../, // ignore dotfiles
+                persistent: true
+            });
+
+            watcher
+                .on("change", onChange.bind(null, savedOptions))
+                .on("unlink", onChange.bind(null, savedOptions));
+        }
+    }
 })()
     .catch(err =>
 {
