@@ -563,8 +563,8 @@ const changePathExtensionToESM = (filepath) =>
 
 /**
  *
- * @param sourcePath
- * @param requiredPath
+ * @param {string} sourcePath Path to the file that does the require/import
+ * @param {string} requiredPath Original required path
  * @param list
  * @param followlinked
  * @param outputDir
@@ -600,8 +600,222 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, followlinked, ou
     return projectedRequiredPath;
 };
 
+const reviewThirdParty = (text, list, {
+    source,
+    rootDir,
+    outputDir,
+    workingDir,
+    followlinked,
+    regexRequiredPath,
+    nonHybridModuleMap,
+    importMaps,
+    moreOptions,
+}) =>
+{
+    try
+    {
+        let moduleName = regexRequiredPath;
+        if (nonHybridModuleMap[moduleName])
+        {
+            moduleName = nonHybridModuleMap[moduleName];
+        }
+
+        // Hack
+        let requiredPath;
+        if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM)
+        {
+            requiredPath = getESMModuleEntryPath(moduleName, workingDir, moreOptions.target);
+            if (!requiredPath)
+            {
+                console.warn({
+                    lid  : 1099,
+                    color: "#FF0000"
+                }, ` The module [${moduleName}] for [target: ${moreOptions.target}] was not found in your node_modules directory. `
+                    + "Skipping.");
+                return regexRequiredPath;
+            }
+
+            let isESM = isESMCompatible(requiredPath);
+            if (isESM)
+            {
+                if (moreOptions.target === TARGET.ESM)
+                {
+                    return regexRequiredPath;
+                }
+                else if (moreOptions.target === TARGET.BROWSER)
+                {
+                    // Check if browser compatible
+                    if (isBrowserCompatible(requiredPath))
+                    {
+                        let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+                        let relativePath = calculateRelativePath(projectedPath, requiredPath);
+
+                        importMaps[moduleName] = requiredPath;
+
+                        if (moreOptions.useImportMaps)
+                        {
+                            return regexRequiredPath;
+                        }
+
+                        if (moreOptions.prefixpath)
+                        {
+                            relativePath = joinPath(moreOptions.prefixpath, relativePath);
+                            relativePath = normalisePath(relativePath);
+                        }
+
+                        return relativePath;
+                    }
+
+                    console.warn({
+                        lid  : 1101,
+                        color: "yellow"
+                    }, ` The file [${requiredPath}] is not browser compatible. The system will try to generate one`);
+
+                    // If not, start conversion from the .cjs
+                    requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
+                }
+            }
+            else
+            {
+                console.warn({
+                    lid  : 1236,
+                    color: "yellow"
+                }, `The npm module '${moduleName}' does not seem to be ESM compatible.`);
+                console.warn({
+                    lid  : 1238,
+                    color: "yellow"
+                }, `The system will try to convert it to ESM in the local "${moreOptions.nm}" directory`);
+            }
+        }
+        else
+        {
+            // TODO: Check if obsolete
+            requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
+        }
+
+        // Source path of projected original source (the .cjs)
+        let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+
+        let projectedRequiredPath = calculateRequiredPath(
+            {
+                sourcePath: projectedPath, requiredPath, list,
+                followlinked, workingDir, outputDir
+            });
+
+        importMaps[moduleName] = requiredPath;
+
+        if (followlinked)
+        {
+            addFileToConvertingList({
+                source   : requiredPath,
+                rootDir  : workingDir,
+                outputDir,
+                workingDir,
+                followlinked,
+                notOnDisk: moreOptions.useImportMaps,
+                referrer : source
+            });
+        }
+
+        // importMaps[moduleName] = requiredPath;
+        if (moreOptions.useImportMaps)
+        {
+            //     projectedRequiredPath = moduleName;
+            //     if (requiredPath.indexOf("node_modules") > -1)
+            //     {
+            //         requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
+            //     }
+            //     importMaps[moduleName] = requiredPath;
+            //     match = `from "${moduleName}"`;
+            return match;
+        }
+
+        return projectedRequiredPath;
+    }
+    catch (e)
+    {
+        console.error({lid: 1217}, "", e.message);
+    }
+
+    return regexRequiredPath;
+
+};
+
+const reviewRelativeImport = (text, list, {
+    source,
+    rootDir,
+    outputDir,
+    workingDir,
+    followlinked,
+    regexRequiredPath,
+}) =>
+{
+    // Source path of projected original source (the .cjs)
+    try
+    {
+        // The required path from the source path above
+        let requiredPath = concatenatePaths(source, regexRequiredPath);
+
+        if (followlinked)
+        {
+            addFileToConvertingList({
+                source           : requiredPath,
+                rootDir,
+                outputDir,
+                workingDir,
+                followlinked,
+                referrer         : source,
+                multiCsjExtension: true
+            });
+        }
+    }
+    catch (e)
+    {
+        console.error({lid: 1117}, "", e.message);
+    }
+
+    regexRequiredPath = changePathExtensionToESM(regexRequiredPath);
+    return regexRequiredPath;
+};
+
+const reviewAbsoluteImport = (text, list, {
+    source,
+    rootDir,
+    outputDir,
+    workingDir,
+    followlinked,
+    regexRequiredPath
+}) =>
+{
+    // Source path of projected original source (the .cjs)
+    try
+    {
+        // The required path from the source path above
+        let requiredPath = normalisePath(regexRequiredPath);
+        if (followlinked)
+        {
+            addFileToConvertingList({
+                source           : requiredPath,
+                rootDir,
+                outputDir,
+                workingDir,
+                followlinked,
+                referrer         : source,
+                multiCsjExtension: true
+            });
+        }
+    }
+    catch (e)
+    {
+        console.error({lid: 1117}, "", e.message);
+    }
+
+    regexRequiredPath = changePathExtensionToESM(regexRequiredPath);
+    return regexRequiredPath;
+};
+
 /**
- * Parse imported libraries (the ones that don't have a relative or absolute path)
+ * Parse imported
  * @param text
  * @param list
  * @param fileProp
@@ -635,158 +849,52 @@ const reviewEsmImports = (text, list, {
                 return match;
             }
 
-            // Third party libraries
-            if (!regexRequiredPath.startsWith(".") && !regexRequiredPath.startsWith("/"))
-            {
-                let moduleName = regexRequiredPath;
-                if (nonHybridModuleMap[moduleName])
-                {
-                    moduleName = nonHybridModuleMap[moduleName];
-                }
-
-                // Hack
-                let requiredPath;
-                if (moreOptions.target === TARGET.BROWSER || moreOptions.target === TARGET.ESM)
-                {
-                    requiredPath = getESMModuleEntryPath(moduleName, workingDir, moreOptions.target);
-                    if (!requiredPath)
-                    {
-                        console.warn({
-                            lid  : 1099,
-                            color: "#FF0000"
-                        }, ` The module [${moduleName}] for [target: ${moreOptions.target}] was not found in your node_modules directory. `
-                            + "Skipping.");
-                        return match;
-                    }
-
-                    let isESM = isESMCompatible(requiredPath);
-                    if (isESM)
-                    {
-                        if (moreOptions.target === TARGET.ESM)
-                        {
-                            return match;
-                        }
-                        else if (moreOptions.target === TARGET.BROWSER)
-                        {
-                            // Check if browser compatible
-                            if (isBrowserCompatible(requiredPath))
-                            {
-                                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
-                                let relativePath = calculateRelativePath(projectedPath, requiredPath);
-
-                                importMaps[moduleName] = requiredPath;
-
-                                if (moreOptions.useImportMaps)
-                                {
-                                    return match;
-                                }
-
-                                if (moreOptions.prefixpath)
-                                {
-                                    relativePath = joinPath(moreOptions.prefixpath, relativePath);
-                                    relativePath = normalisePath(relativePath);
-                                }
-
-                                match = `from "${relativePath}"`;
-                                return match;
-                            }
-
-                            console.warn({
-                                lid  : 1101,
-                                color: "yellow"
-                            }, ` The file [${requiredPath}] is not browser compatible. The system will try to generate one`);
-
-                            // If not, start conversion from the .cjs
-                            requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
-                        }
-                    }
-                    else
-                    {
-                        console.warn({
-                            lid  : 1236,
-                            color: "yellow"
-                        }, `The npm module '${moduleName}' does not seem to be ESM compatible.`);
-                        console.warn({
-                            lid  : 1238,
-                            color: "yellow"
-                        }, `The system will try to convert it to ESM in the local "${moreOptions.nm}" directory`);
-                    }
-                }
-                else
-                {
-                    // TODO: Check if obsolete
-                    requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
-                }
-
-                // Source path of projected original source (the .cjs)
-                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
-
-                let projectedRequiredPath = calculateRequiredPath(
-                    {
-                        sourcePath: projectedPath, requiredPath, list,
-                        followlinked, workingDir, outputDir
-                    });
-
-                importMaps[moduleName] = requiredPath;
-
-                if (followlinked)
-                {
-                    addFileToConvertingList({
-                        source   : requiredPath,
-                        rootDir  : workingDir,
-                        outputDir,
-                        workingDir,
-                        followlinked,
-                        notOnDisk: moreOptions.useImportMaps,
-                        referrer : source
-                    });
-                }
-
-                // importMaps[moduleName] = requiredPath;
-                if (moreOptions.useImportMaps)
-                {
-                    //     projectedRequiredPath = moduleName;
-                    //     if (requiredPath.indexOf("node_modules") > -1)
-                    //     {
-                    //         requiredPath = "./node_modules" + requiredPath.split("node_modules")[1];
-                    //     }
-                    //     importMaps[moduleName] = requiredPath;
-                    //     match = `from "${moduleName}"`;
-                    return match;
-                }
-
-                return match.replace(regexRequiredPath, projectedRequiredPath);
-            }
-
             if (regexRequiredPath.startsWith("./") || regexRequiredPath.startsWith(".."))
             {
-                // Source path of projected original source (the .cjs)
-                let {projectedPath} = getProjectedPathAll({source, rootDir, outputDir});
+                const solvedRelativeRequire = reviewRelativeImport(text, list, {
+                    source,
+                    rootDir,
+                    outputDir,
+                    workingDir,
+                    followlinked,
+                    regexRequiredPath,
+                });
 
-                // The required path from the source path above
-                let requiredPath = concatenatePaths(source, regexRequiredPath);
-
-                let projectedRequiredPath = calculateRequiredPath(
-                    {
-                        sourcePath: projectedPath, requiredPath, outputDir,
-                        list, followlinked, workingDir
-                    });
-
-                if (followlinked)
-                {
-                    addFileToConvertingList({
-                        source           : requiredPath,
-                        rootDir,
-                        outputDir,
-                        workingDir,
-                        followlinked,
-                        referrer         : source,
-                        multiCsjExtension: true
-                    });
-                }
-
-                return match.replace(regexRequiredPath, projectedRequiredPath);
+                match = match.replace(regexRequiredPath, solvedRelativeRequire);
             }
+            else if (regexRequiredPath.startsWith("/"))
+            {
+                const solvedAbsoluteRequire = reviewAbsoluteImport(text, list, {
+                    source,
+                    rootDir,
+                    outputDir,
+                    workingDir,
+                    followlinked,
+                    regexRequiredPath,
+                    moreOptions,
+                    match
+                });
+
+                match = match.replace(regexRequiredPath, solvedAbsoluteRequire);
+            }
+            else // Third party libraries
+            {
+                let solvedPath = reviewThirdParty(text, list, {
+                    source,
+                    rootDir,
+                    outputDir,
+                    workingDir,
+                    importMaps,
+                    nonHybridModuleMap,
+                    followlinked,
+                    regexRequiredPath,
+                    moreOptions,
+                    match
+                });
+
+                match = match.replace(regexRequiredPath, solvedPath);
+            }
+
 
             /* istanbul ignore next */
             return match;
@@ -794,7 +902,7 @@ const reviewEsmImports = (text, list, {
         catch (e)
         {
             /* istanbul ignore next */
-            console.error({lid: 1108}, "", e.message);
+            console.error({lid: 1139}, "", e.message);
         }
 
     });
@@ -1740,7 +1848,6 @@ const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
 /**
  * Clean code from remaining directives
  * @param converted
- * @param target
  * @returns {*}
  */
 const cleanDirectives = (converted) =>
