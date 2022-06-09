@@ -590,7 +590,7 @@ describe("The converter tool", function ()
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
                     "target"  : TARGET.BROWSER,
-                    bundle    : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
+                    "bundle-browser"    : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
                 };
 
                 let expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-29.min.mjs"), "utf8");
