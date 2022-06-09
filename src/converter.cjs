@@ -376,34 +376,46 @@ const dumpData = (converted, source, title = "") =>
  */
 const normalisePath = (somePath, {isFolder = false} = {}) =>
 {
-    somePath = somePath.replace(/\\/gm, "/");
-    if (isFolder)
+    try
     {
-        if (!isConventionalFolder(somePath))
+        if (somePath === undefined || somePath === null)
         {
-            somePath = somePath + "/";
+            return somePath;
+        }
+
+        somePath = somePath.replace(/\\/gm, "/");
+        if (isFolder)
+        {
+            if (!isConventionalFolder(somePath))
+            {
+                somePath = somePath + "/";
+            }
+        }
+
+        if (path.isAbsolute(somePath))
+        {
+            return somePath;
+        }
+
+        const firstChar = somePath.charAt(0);
+        if (!somePath)
+        {
+            somePath = "./";
+        }
+        else if (somePath === ".")
+        {
+            somePath = "./";
+        }
+        else if (!([".", "/"].includes(firstChar)))
+        {
+            somePath = "./" + somePath;
         }
     }
-
-    if (path.isAbsolute(somePath))
+    catch (e)
     {
-        return somePath;
+        console.error({lid: 1123}, e.message);
     }
 
-    const firstChar = somePath.charAt(0);
-    if (!somePath)
-    {
-        somePath = "./";
-    }
-    else if (somePath === ".")
-    {
-        somePath = "./";
-    }
-    else if (!([".", "/"].includes(firstChar)))
-    {
-        somePath = "./" + somePath;
-
-    }
     return somePath;
 };
 
@@ -2366,10 +2378,9 @@ const isBrowserCompatible = (filepath, content = "") =>
         );
 
         content = stripComments(content);
-        content = clearStrings(content);
         content = stripRegexes(content);
 
-        const regexp = new RegExp(`\\bfrom\\b.+\\b(${nativeModules.join("|")})\\b`);
+        const regexp = new RegExp(`\\bfrom\\b +["'] *\\b(${nativeModules.join("|")})\\b *["']`);
         const hasCore = regexp.test(content);
         return !hasCore;
     }
@@ -2812,6 +2823,7 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {minify = true,
             target       : "es6",
             minify,
             legalComments: "eof",
+            allowOverwrite: true,
             platform
         });
 
@@ -2819,15 +2831,86 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {minify = true,
         content = content.replace(/\/\*! [^*]+\*\//g, "");
         fs.writeFileSync(bundlePath, content);
 
+        displaySuccessBundleMessage(bundlePath, target);
+
         return true;
     }
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 1387}, " Fail to bundle.");
+        console.error({lid: 1387}, `Fail to bundle: ${e.message}`);
     }
 
     return false;
+};
+
+const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true, sourcemap = false} = {}) =>
+{
+    try
+    {
+        const minifyDir = path.parse(bundlePath).dir;
+        buildTargetDir(minifyDir);
+
+        entryPointPath = resolvePath(entryPointPath);
+        bundlePath = resolvePath(bundlePath);
+
+        await esbuild.build({
+            entryPoints  : [entryPointPath],
+            bundle       : true,
+            outfile      : bundlePath,
+            sourcemap,
+            format       : "cjs",
+            target       : "node" + process.version.split(".")[0].replace("v", ""),
+            minify,
+            legalComments: "eof",
+            allowOverwrite: true,
+            platform     : "node"
+        });
+
+        let content = fs.readFileSync(bundlePath, "utf-8");
+        content = content.replace(/\/\*! [^*]+\*\//g, "");
+        fs.writeFileSync(bundlePath, content);
+
+        displaySuccessBundleMessage(bundlePath, TARGET.CJS);
+
+        return true;
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error({lid: 1387}, `Fail to bundle: ${e.message}`);
+    }
+
+    return false;
+};
+
+const displaySeparator = ({width = 64} = {}) =>
+{
+    console.log({lid: 1514});
+    console.log({lid: 1518}, "".padEnd(width, "."));
+};
+
+const displaySuccessBundleMessage = (bundlePath, target) =>
+{
+    console.log({lid: 1312});
+    displaySeparator();
+    console.log({lid: 1316, color: "orange"}, ` Bundle generated for ${target} => ${bundlePath}`);
+    console.log({lid: 1320}, "Usage: ");
+
+    if (target === TARGET.CJS)
+    {
+        console.log({lid: 1322}, ` require("${bundlePath}")`);
+    }
+    else if (target === TARGET.ESM)
+    {
+        console.log({lid: 1324}, ` import ... from "${bundlePath}"`);
+    }
+    else if (target === TARGET.BROWSER)
+    {
+        console.log({lid: 1326}, ` <script type="module" src="${bundlePath}"></script>`);
+        console.log({lid: 1328}, " from your html code");
+    }
+
 };
 
 /**
@@ -2837,28 +2920,43 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {minify = true,
  * @param target
  * @param bundlePath
  */
-const bundleResult = async (entryPointPath, {
+const bundleResults = async (entryPointPath, {
     target = TARGET.BROWSER,
     bundlePath = "./",
+    cjsBundlePath = "",
+    browserBundlePath = "",
     minify = false,
-    sourcemap = false
+    sourcemap = false,
+    cjsEntryPath = ""
 }) =>
 {
-    if (!await minifyCode(entryPointPath, bundlePath, target, {minify, sourcemap}))
+    if (bundlePath && !await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {minify, sourcemap}))
     {
-        console.error({lid: 1743}, " Failed to minify");
+        console.error({lid: 1743}, ` Failed to minify ${target}`);
         return false;
     }
 
-    console.log({lid: 1312}, " ");
-    console.log({lid: 1314}, " ================================================================");
-    console.log({lid: 1316}, " Bundle generated");
-    console.log({lid: 1318}, " ----------------------------------------------------------------");
-    console.log({lid: 1320}, " The bundle has been generated. Use");
-    console.log({lid: 1322}, ` require("./node_modules/${bundlePath}")`);
-    console.log({lid: 1324}, " or");
-    console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
-    console.log({lid: 1328}, " from your html code to load it in the browser.");
+    if (browserBundlePath)
+    {
+        if (isBrowserCompatible(entryPointPath))
+        {
+            if (!await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {minify, sourcemap}))
+            {
+                console.error({lid: 1745}, ` Failed to minify ${TARGET.BROWSER}`);
+            }
+        }
+        else
+        {
+            displaySeparator();
+            console.error({lid: 1747}, `${entryPointPath} is not browser compatible. Skipping bundle generation for ${TARGET.BROWSER}`);
+        }
+    }
+
+    if (cjsBundlePath && !await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {minify, sourcemap}))
+    {
+        console.error({lid: 1749}, ` Failed to minify ${TARGET.CJS}`);
+    }
+
     return true;
 };
 
@@ -3272,7 +3370,7 @@ const convertCjsFiles = (list, {
                 report[source] = converted;
             }
 
-            console.log({lid: 1150}, " ");
+            console.log({lid: 1150});
 
         }
         catch (e)
@@ -3549,6 +3647,7 @@ const convert = async (rawCliOptions = {}) =>
         }
 
         // The first file parsed will be the entrypoint
+        let cjsEntryPath = cjsList[0].source;
         entrypointPath = cjsList[0].target;
 
         const success = convertCjsFiles(cjsList,
@@ -3567,23 +3666,38 @@ const convert = async (rawCliOptions = {}) =>
                 keepexisting
             });
 
-        if (cliOptions.bundle && entrypointPath)
+        let bundlePath = cliOptions.bundle || cliOptions["bundle-esm"];
+        let cjsBundlePath = cliOptions["bundle-cjs"];
+        let browserBundlePath = cliOptions["bundle-browser"];
+
+        bundlePath = normalisePath(bundlePath) || "";
+        cjsBundlePath = normalisePath(cjsBundlePath) || "";
+        browserBundlePath = normalisePath(browserBundlePath) || "";
+
+        if ((bundlePath || cjsBundlePath || browserBundlePath) && entrypointPath)
         {
-            await bundleResult(entrypointPath, {
-                target    : cliOptions.target,
-                bundlePath: cliOptions.bundle,
-                minify    : moreOptions.minify,
-                sourcemap : moreOptions.sourcemap
+            await bundleResults(entrypointPath, {
+                cjsEntryPath,
+                target   : cliOptions.target,
+                bundlePath,
+                cjsBundlePath,
+                browserBundlePath,
+                minify   : moreOptions.minify,
+                sourcemap: moreOptions.sourcemap
             });
         }
 
         if (cliOptions["update-all"])
         {
+            let useBundle = cliOptions["use-bundle"];
             updatePackageJson({
                 entryPoint: entryPointList,
-                bundlePath: cliOptions.bundle,
+                bundlePath,
+                cjsBundlePath,
+                browserBundlePath,
                 workingDir, ...moreOptions,
-                importMaps
+                importMaps,
+                useBundle
             });
         }
 
@@ -3610,7 +3724,7 @@ const convert = async (rawCliOptions = {}) =>
     }
     catch (e)
     {
-        console.error({lid: 1453}, e);
+        console.error({lid: 1453}, e.message);
     }
 
     return {cjsList, success: false};
