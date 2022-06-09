@@ -7,6 +7,7 @@ const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
+const {resolvePath, joinPath} = require("@thimpat/libutils");
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
 
@@ -247,7 +248,7 @@ const concatenatePaths = (source, requiredPath) =>
 {
     source = normalisePath(source);
     const sourceDir = isConventionalFolder(source) ? source : path.parse(source).dir;
-    let importPath = path.join(sourceDir, requiredPath);
+    let importPath = joinPath(sourceDir, requiredPath);
     return normalisePath(importPath);
 };
 
@@ -354,7 +355,7 @@ const dumpData = (converted, source, title = "") =>
         }
 
         const indexCounter = dumpCounter.toString().padStart(4, "0");
-        fs.writeFileSync(path.join(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
+        fs.writeFileSync(joinPath(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
     }
     catch (e)
     {
@@ -506,16 +507,16 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
 {
     try
     {
-        const sourcePath = path.resolve(source);
-        rootDir = path.resolve(rootDir);
+        const sourcePath = resolvePath(source);
+        rootDir = resolvePath(rootDir);
 
         // Get mapped path by subtracting rootDir
         let {subPath, subDir} = subtractPath(sourcePath, rootDir);
 
-        let projectedDir = path.join(outputDir, subDir);
+        let projectedDir = joinPath(outputDir, subDir);
         projectedDir = normalisePath(projectedDir);
 
-        let projectedPath = path.join(outputDir, subPath);
+        let projectedPath = joinPath(outputDir, subPath);
         projectedPath = normalisePath(projectedPath);
 
         return {
@@ -542,7 +543,7 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
 const changePathExtensionToESM = (filepath) =>
 {
     const parsed = path.parse(filepath);
-    const renamed = path.join(parsed.dir, parsed.name + ESM_EXTENSION);
+    const renamed = joinPath(parsed.dir, parsed.name + ESM_EXTENSION);
     return normalisePath(renamed);
 };
 
@@ -668,7 +669,7 @@ const reviewEsmImports = (text, list, {
 
                                 if (moreOptions.prefixpath)
                                 {
-                                    relativePath = path.join(moreOptions.prefixpath, relativePath);
+                                    relativePath = joinPath(moreOptions.prefixpath, relativePath);
                                     relativePath = normalisePath(relativePath);
                                 }
 
@@ -796,14 +797,14 @@ const reviewEsmImports = (text, list, {
  */
 const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 {
-    const parsedFilePath = path.join(workingDir, fileProp.source);
+    const parsedFilePath = joinPath(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
 
     const re = /require\(["'`]([.\/][^)]+)["'`]\)/gmu;
 
     return text.replace(re, function (match, group)
     {
-        const target = path.join(parsedFileDir, group);
+        const target = joinPath(parsedFileDir, group);
         const extension = path.extname(target);
 
         const targets = [];
@@ -824,7 +825,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 
         const index = list.findIndex(function ({source})
         {
-            const possibleFilePath = path.join(workingDir, source);
+            const possibleFilePath = joinPath(workingDir, source);
             return (targets.includes(possibleFilePath));
         });
 
@@ -834,16 +835,16 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
         }
 
         // current file's absolute path
-        const sourcePath = path.resolve(fileProp.outputDir);
+        const sourcePath = resolvePath(fileProp.outputDir);
 
         const {source, outputDir} = list[index];
         const basename = path.parse(source).name;
 
         // Absolute path in the "require"
-        const destinationPath = path.resolve(outputDir);
+        const destinationPath = resolvePath(outputDir);
 
         let relativePath = path.relative(sourcePath, destinationPath);
-        relativePath = path.join(relativePath, basename + ESM_EXTENSION);
+        relativePath = joinPath(relativePath, basename + ESM_EXTENSION);
         relativePath = relativePath.replace(/\\/g, "/");
         if (!([".", "/"].includes(relativePath.charAt(0))))
         {
@@ -1001,7 +1002,7 @@ const convertJsonImportToVars = (converted, {
     {
         const identifier = identifiers[i].trim();
         const filepath = files[i];
-        let absPath = path.resolve(source);
+        let absPath = resolvePath(source);
         let jsonPath = concatenatePaths(absPath, filepath);
         if (!fs.existsSync(jsonPath))
         {
@@ -1369,7 +1370,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
 
         if (debuginput)
         {
-            const debugPath = path.join(DEBUG_DIR, source + ".json");
+            const debugPath = joinPath(DEBUG_DIR, source + ".json");
             buildTargetDir(path.parse(debugPath).dir);
             writeStream = fs.createWriteStream(debugPath);
             readable = Readable.from([""]);
@@ -1735,7 +1736,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 {
     try
     {
-        let sourceAbs = path.join(workingDir, source);
+        let sourceAbs = joinPath(workingDir, source);
         sourceAbs = normalisePath(sourceAbs);
 
         rootDir = normalisePath(rootDir);
@@ -1743,13 +1744,13 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 
         let targetName = path.parse(subPath).name + ESM_EXTENSION;
 
-        let target = path.join(outputDir, subDir, targetName);
+        let target = joinPath(outputDir, subDir, targetName);
         target = normalisePath(target);
 
-        let targetAbs = path.join(workingDir, target);
+        let targetAbs = joinPath(workingDir, target);
 
         let extra = path.parse(source);
-        let sourceNoExt = path.join(extra.dir, extra.name);
+        let sourceNoExt = joinPath(extra.dir, extra.name);
         sourceNoExt = normalisePath(sourceNoExt);
 
         source = normalisePath(source);
@@ -1837,7 +1838,7 @@ const rewriteImportMapPaths = (newMaps, htmlPath) =>
         try
         {
             const root = path.relative(htmlPath, "./");
-            const jsPath = path.join(root, newMaps.imports[kk]);
+            const jsPath = joinPath(root, newMaps.imports[kk]);
             newMaps.imports[kk] = normalisePath(jsPath);
         }
         catch (e)
@@ -1906,7 +1907,7 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
 {
     try
     {
-        let fullHtmlPath = path.resolve(htmlPath);
+        let fullHtmlPath = resolvePath(htmlPath);
         /* istanbul ignore next */
         if (!fs.existsSync(fullHtmlPath))
         {
@@ -2023,7 +2024,7 @@ const getOptionsConfigFile = async (configPath) =>
 {
     let confFileOptions = {};
 
-    configPath = path.resolve(configPath);
+    configPath = resolvePath(configPath);
     if (fs.existsSync(configPath))
     {
         const extension = path.parse(configPath).ext;
@@ -2092,7 +2093,7 @@ const getLibraryInfo = (modulePackname) =>
             info.installed = true;
 
             const dir = path.parse(installed).dir;
-            const packageJsonPath = path.join(dir, "package.json");
+            const packageJsonPath = joinPath(dir, "package.json");
             const packageJson = require(packageJsonPath);
             info.version = packageJson.version;
         }
@@ -2166,7 +2167,7 @@ const installNonHybridModules = async (config = []) =>
     {
         const replaceModules = config.replaceModules || [];
 
-        let packageJsonPath = path.resolve("./package.json");
+        let packageJsonPath = resolvePath("./package.json");
         /* istanbul ignore next */
         if (!fs.existsSync(packageJsonPath))
         {
@@ -2447,7 +2448,7 @@ const addFileToConvertingList = ({
         for (let i = 0; i < possibleCjsExtensions.length; ++i)
         {
             const extension = possibleCjsExtensions[i];
-            foundPath = path.join(source + extension);
+            foundPath = joinPath(source + extension);
             if (fs.existsSync(foundPath))
             {
                 found = true;
@@ -2625,7 +2626,7 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
             return false;
         }
 
-        const packageJsonLocation = path.join(workingDir, "./package.json");
+        const packageJsonLocation = joinPath(workingDir, "./package.json");
 
         /* istanbul ignore next */
         if (!fs.existsSync(packageJsonLocation))
@@ -2758,15 +2759,15 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
  * @param sourcemap
  * @returns {Promise<unknown>}
  */
-const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, sourcemap = false} = {}) =>
+const minifyESMCode = async (entryPointPath, bundlePath, target, {minify = true, sourcemap = false} = {}) =>
 {
     try
     {
         const minifyDir = path.parse(bundlePath).dir;
         buildTargetDir(minifyDir);
 
-        entryPointPath = path.resolve(entryPointPath);
-        bundlePath = path.resolve(bundlePath);
+        entryPointPath = resolvePath(entryPointPath);
+        bundlePath = resolvePath(bundlePath);
 
         let platform;
         if (target === TARGET.ESM)
@@ -3176,9 +3177,9 @@ const convertCjsFiles = (list, {
             let destinationDir;
             if (outputDir)
             {
-                const fileDir = path.join(path.dirname(source));
+                const fileDir = joinPath(path.dirname(source));
                 const relativeDir = path.relative(rootDir, fileDir);
-                destinationDir = path.join(outputDir, relativeDir);
+                destinationDir = joinPath(outputDir, relativeDir);
 
                 if (!notOnDisk)
                 {
@@ -3187,10 +3188,10 @@ const convertCjsFiles = (list, {
             }
             else
             {
-                destinationDir = path.join(path.dirname(source));
+                destinationDir = joinPath(path.dirname(source));
             }
 
-            const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
+            const targetFilepath = joinPath(destinationDir, targetFile + ESM_EXTENSION);
 
             const parsingResult = parseEsm(source, converted);
             let reportSuccess = parsingResult.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
@@ -3276,7 +3277,7 @@ const detectESMConfigPath = () =>
         for (let i = 0; i < extensionList.length; ++i)
         {
             const extension = extensionList[i];
-            let esmPath = path.resolve(toEsmConfigName + extension);
+            let esmPath = resolvePath(toEsmConfigName + extension);
             esmPath = normalisePath(esmPath);
 
             if (fs.existsSync(esmPath) && fs.lstatSync(esmPath).isFile())
@@ -3425,7 +3426,7 @@ const convert = async (rawCliOptions = {}) =>
             }
             else
             {
-                rootDir = path.join(workingDir, path.dirname(list[0]));
+                rootDir = joinPath(workingDir, path.dirname(list[0]));
             }
 
             if (!cliOptions.entrypoint && !i && list.length === 1)
@@ -3449,7 +3450,7 @@ const convert = async (rawCliOptions = {}) =>
             entrypointPath = normalisePath(cliOptions.entrypoint);
             console.log({lid: 1402}, toAnsi.getTextFromHex(`Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
             let rootDir = path.parse(entrypointPath).dir;
-            rootDir = path.resolve(rootDir);
+            rootDir = resolvePath(rootDir);
             entryPointList = addFileToConvertingList({
                 source    : entrypointPath,
                 rootDir,
