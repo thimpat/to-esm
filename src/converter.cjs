@@ -2616,9 +2616,22 @@ const insertHeader = (converted, source, {noHeader = false} = {}) =>
  * @param useImportMaps
  * @param importMaps
  * @param bundlePath
+ * @param cjsBundlePath
+ * @param browserBundlePath
+ * @param useBundle
  * @returns {boolean}
  */
-const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps, importMaps, bundlePath} = {}) =>
+const updatePackageJson = async ({
+                                     entryPoint,
+                                     workingDir,
+                                     target,
+                                     useImportMaps,
+                                     importMaps,
+                                     bundlePath,
+                                     cjsBundlePath,
+                                     browserBundlePath,
+                                     useBundle
+                                 } = {}) =>
     {
         if (!entryPoint)
         {
@@ -2657,12 +2670,29 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
                 }
             }
 
+            let requireSource = entryPoint.source;
+            let importSource = entryPoint.target;
+
+            if (useBundle && bundlePath)
+            {
+                importSource = bundlePath;
+            }
+
+            if (useBundle && cjsBundlePath)
+            {
+                requireSource = cjsBundlePath;
+            }
+
             if (target === TARGET.BROWSER)
             {
                 const browserField = json.browser;
                 if (typeof browserField === "string" || !browserField)
                 {
-                    const target = bundlePath || entryPoint.target;
+                    let target = bundlePath || entryPoint.target;
+                    if (useBundle && browserBundlePath)
+                    {
+                        target = browserBundlePath;
+                    }
                     if (target)
                     {
                         json.browser = target;
@@ -2677,13 +2707,11 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
             else
             {
                 const entry = {
-                    "require": entryPoint.source,
-                    "import" : entryPoint.target
+                    "require": requireSource,
+                    "import" : importSource
                 };
 
-                json.module = entryPoint.target;
                 json.type = "module";
-
                 if (!json.exports)
                 {
                     /* istanbul ignore next */
@@ -2733,7 +2761,7 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
             let str = normaliseString(JSON.stringify(json, null, indent));
             fs.writeFileSync(packageJsonLocation, str, "utf8");
 
-            console.log({lid: 1412}, " ");
+            console.log({lid: 1412});
             console.log({lid: 1414}, " ================================================================");
             console.log({lid: 1416}, " package.json updated");
             console.log({lid: 1418}, " ----------------------------------------------------------------");
