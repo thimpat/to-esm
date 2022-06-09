@@ -1710,25 +1710,59 @@ const putBackRegexes = (str, extracted) =>
  * @param target
  * @param saved
  */
-const applyDirectives = (converted, {target = "all"} = {}) =>
+const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
 {
     let regexp;
 
-    const targets = target === "all" ? ["browser", "esm", "all"] : [target, "all"];
-
-    targets.forEach((target) =>
+    const directives = [TARGET.ALL];
+    if (target !== TARGET.ALL)
     {
-        // Remove => to-esm-browser: remove
-        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+        directives.push(target);
+    }
+
+    // Remove => to-esm-browser: remove
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+    converted = converted.replace(regexp, "");
+
+    // Insert => to-esm-browser: add
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(?:${directives.join("|")})\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
+    converted = converted.replace(regexp, "$1");
+
+    // Hide/skip => to-esm-browser: skip
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
+    converted = hideText(regexp, converted);
+
+    return converted;
+};
+
+/**
+ * Clean code from remaining directives
+ * @param converted
+ * @param target
+ * @returns {*}
+ */
+const cleanDirectives = (converted) =>
+{
+    let regexp;
+
+    [TARGET.ALL, TARGET.ESM, TARGET.BROWSER].forEach((currentTarget) =>
+    {
+        // Insert => to-esm-browser: add
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "");
 
-        // Insert => to-esm-browser: add
-        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
-        converted = converted.replace(regexp, "$1");
+        // Remove => to-esm-browser: remove
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*remove\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
 
-        // Hide/skip => to-esm-browser: skip
-        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
-        converted = hideText(regexp, converted);
+        // Remove => to-esm-browser: skip
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*skip\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
+
     });
 
     return converted;
@@ -3297,6 +3331,9 @@ const convertCjsFiles = (list, {
 
             converted = normaliseString(converted);
             dumpData(converted, source, "normaliseString");
+
+            converted = cleanDirectives(converted);
+            dumpData(converted, source, "clean-directives");
 
             converted = removeResidue(converted);
             dumpData(converted, source, "removeResidue");
