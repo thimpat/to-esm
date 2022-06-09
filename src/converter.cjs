@@ -774,7 +774,7 @@ const reviewEsmImports = (text, list, {
                 {
                     addFileToConvertingList({
                         source           : requiredPath,
-                        rootDir          : workingDir,
+                        rootDir,
                         outputDir,
                         workingDir,
                         followlinked,
