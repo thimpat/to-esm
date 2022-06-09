@@ -2798,7 +2798,11 @@ const updatePackageJson = async ({
  * @param sourcemap
  * @returns {Promise<unknown>}
  */
-const minifyESMCode = async (entryPointPath, bundlePath, target, {minify = true, sourcemap = false} = {}) =>
+const minifyESMCode = async (entryPointPath, bundlePath, target, {
+    minify = true,
+    sourcemap = false,
+    platform = ""
+} = {}) =>
 {
     try
     {
@@ -2808,21 +2812,15 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {minify = true,
         entryPointPath = resolvePath(entryPointPath);
         bundlePath = resolvePath(bundlePath);
 
-        let platform;
-        if (target === TARGET.ESM)
-        {
-            platform = "node";
-        }
-
         await esbuild.build({
-            entryPoints  : [entryPointPath],
-            bundle       : true,
-            outfile      : bundlePath,
+            entryPoints   : [entryPointPath],
+            bundle        : true,
+            outfile       : bundlePath,
             sourcemap,
-            format       : "esm",
-            target       : "es6",
+            format        : "esm",
+            target        : "esnext",
             minify,
-            legalComments: "eof",
+            legalComments : "eof",
             allowOverwrite: true,
             platform
         });
@@ -2838,7 +2836,7 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {minify = true,
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 1387}, `Fail to bundle: ${e.message}`);
+        console.error({lid: 1387, target: "DEBUG"}, `Fail to bundle: ${e.message}`);
     }
 
     return false;
@@ -2855,16 +2853,16 @@ const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true,
         bundlePath = resolvePath(bundlePath);
 
         await esbuild.build({
-            entryPoints  : [entryPointPath],
-            bundle       : true,
-            outfile      : bundlePath,
+            entryPoints   : [entryPointPath],
+            bundle        : true,
+            outfile       : bundlePath,
             sourcemap,
-            format       : "cjs",
-            target       : "node" + process.version.split(".")[0].replace("v", ""),
+            format        : "cjs",
+            target        : "node" + process.version.split(".")[0].replace("v", ""),
             minify,
-            legalComments: "eof",
+            legalComments : "eof",
             allowOverwrite: true,
-            platform     : "node"
+            platform      : "node"
         });
 
         let content = fs.readFileSync(bundlePath, "utf-8");
@@ -2930,7 +2928,11 @@ const bundleResults = async (entryPointPath, {
     cjsEntryPath = ""
 }) =>
 {
-    if (bundlePath && !await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {minify, sourcemap}))
+    if (bundlePath && !await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
+        minify,
+        sourcemap,
+        platform: "node"
+    }))
     {
         console.error({lid: 1743}, ` Failed to minify ${target}`);
         return false;
@@ -2952,7 +2954,11 @@ const bundleResults = async (entryPointPath, {
         }
     }
 
-    if (cjsBundlePath && !await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {minify, sourcemap}))
+    if (cjsBundlePath && !await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
+        minify,
+        sourcemap,
+        platform: "node"
+    }))
     {
         console.error({lid: 1749}, ` Failed to minify ${TARGET.CJS}`);
     }
