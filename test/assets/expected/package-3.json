@@ -1,7 +1,7 @@
 {
   "name": "something",
   "main": "./example/cjs/demo.cjs",
-  "module": "./actual/demo-test-14.mjs",
+  "module": "./generated/esm/demo.mjs",
   "type": "module",
   "exports": {
     ".": {

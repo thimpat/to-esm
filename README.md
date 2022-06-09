@@ -254,7 +254,7 @@ node generated/esm/example/code/demo.mjs
 
 <span style="font-size:40px;">📋</span>
 
-#### Remove automatic generated header
+#### Remove automatically generated header
 
 > --noheader
 
@@ -308,7 +308,7 @@ hi();
 
 ```shell
 # Command < 💻
-$> to-esm  example/cjs/input.cjs --output generated --target browser --bundle out.min.js
+$> to-esm  example/cjs/input.cjs --output generated --target browser
 ```
 ---
 
@@ -359,7 +359,7 @@ The browser will automatically load the other files.
 
 > **demo.mjs** is the entrypoint.
 
-All the related files are automatically loaded by the browser.
+The browser automatically loads all the related files.
 <br/>
 
 </details>
@@ -428,7 +428,7 @@ $> to-esm example/cjs/demo.cjs --html index.html
 ```
 
 > 🚫
-> **NOTE: When this option is used, the target is always "browser" even if a different one is passed via the option  
+> **NOTE: When this option is used, the target is always "browser".
 > --target.**
 
 
@@ -549,9 +549,9 @@ Will be converted to this path (or similar):
 > import toAnsi  from "../../node_modules/to-ansi/index.mjs";
 
 The path will be okay at conversion time. However, if the generated file (```source.mjs```) is required inside a 
-browser, it is possible that the path will no longer be valid. It will depend on your server configuration. 
+browser, the path may no longer be valid. It will depend on your server configuration. 
 
-The option ```--prefixpath``` allows to correct the issue by prepending a some value to the target path. 
+The option ```--prefixpath``` allows correcting the issue by prepending some value to the target path. 
 This way, you can redirect the converted path to point to the correct location on your server.
 
 ```
@@ -569,19 +569,24 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 ## Options (via command line)
 
 
-| **Options**    | **Description**                                                       | **Expect**               |
-|----------------|-----------------------------------------------------------------------|--------------------------|
-| filepath       | _File or pattern to convert_                                          | **Only required option** |
-| --output       | _Output directory_                                                    | directory path           |
-| --html         | _html files to receive importmaps_                                    | glob                     |
-| --noHeader     | _Options to not generate automatic header_                            |                          |
-| --keepExisting | _Options to skip already converted files_                             |                          |
-| --target       | _Setting the targeted environment_                                    | esm / browser / package  |  
-| --bundle       | _Generate minified bundle for browser environment_                    | file path                |  
-| --entrypoint   | _Path to .js entrypoint_                                              | file path                |  
-| --update-all   | _Automatically update package.json to set entry points_               |                          |  
-| --prefixpath   | _Add a path to paths targeting third party modules_                   | directory path <br/>     |  
-| --watch        | _Watch mode to automatically apply conversions when changes detected_ | directory path <br/>     |  
+| **Options**      | **Description**                                                         | **Expect**               |
+|------------------|-------------------------------------------------------------------------|--------------------------|
+| filepath         | _File or pattern to convert_                                            | **Only required option** |
+| --output         | _Output directory_                                                      | directory path           |
+| --html           | _html files to receive importmaps_                                      | glob                     |
+| --noHeader       | _Options to not generate automatic header_                              |                          |
+| --keepExisting   | _Options to skip already converted files_                               |                          |
+| --target         | _Setting the targeted environment_                                      | esm / browser / package  |  
+| --bundle         | _Generate minified bundle for esm environment_                          | file path                |  
+| --bundle-esm     | _Same as above_                                                         | file path                |  
+| --bundle-browser | _Generate minified bundle for browser environment_                      | file path                |  
+| --bundle-cjs     | _Generate minified bundle for cjs environment_                          | file path                |  
+| --entrypoint     | _Path to .js entrypoint_                                                | file path                |  
+| --update-all     | _Automatically update package.json to set entry points_                 |                          |  
+| --use-bundle     | _When updating package.json use bundled/minified code_                  |                          |  
+| --prefixpath     | _Add a path to paths targeting third party modules_                     | directory path <br/>     |  
+| --watch          | _Watch mode to automatically apply conversions when changes detected_   | directory path <br/>     |  
+| --entrypoint     | _Explicitely set entry point (otherwise use the first file set in cli)_ | file path                |  
 
 
 
@@ -597,7 +602,7 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 
 To apply advanced options, create a config file (.to-esm, .to-esm.json or .to-esm.cjs) and it will be automatically 
 loaded.
-Otherwise, you can create a file with a custom name and explicitely tell the system to load it.
+Otherwise, you can create a file with a custom name and explicitly tell the system to load it.
 
 ```shell
 to-esm --config=.my-to-esm-config.cjs
@@ -721,7 +726,7 @@ import rgbhex  from "rgb-hex";
 <br><br>
 
 
-### Options to set html sources and manipulate importmaps.
+### Options to set HTML sources and manipulate importmaps.
 
 > "html": ...
 
@@ -748,7 +753,7 @@ module.exports =
 | **Properties**   | **Description**                                    | 
 |------------------|----------------------------------------------------|
 | pattern          | _HTML file pattern where importmap needs updating_ |
-| importmap        | _value to add to html files_                       |
+| importmap        | _value to add to HTML files_                       |
 | importmapReplace | _Apply replacements on the importmap list_         |
 
 
@@ -777,8 +782,7 @@ Allowing to write this:
 import {add} from "my-project"
 ```
 
-> 🚫
-> **NOTE: All of the caching is handled by the browser. You only bundle your code.**
+> **NOTE: You can imagine improved caching offered by browsers soon **
 
  
 
@@ -840,7 +844,7 @@ this.realConsoleLog("LogToFile is not supported in this environment. ")
 ---
 
 
-### Directives to ignore code during the parsing, so it won't be converted by mistake.
+### Directives to ignore code during the parsing so that it won't be converted by mistake.
 
 ```javascript
 /** to-esm-all: skip **/
@@ -913,7 +917,7 @@ Here are a few guides to writing code easily convertible.
 For having the best compatibility between the two systems, it is best to use named exports.
 
 
-Replace structure like:
+Replace structures like:
 
 ```javascript
 
@@ -950,7 +954,7 @@ module.exports.otherKey = ...;
 
 ### Use simple "require"
 
-Rather than using requires like below (or more complex forms)
+Rather than using "requires" like below forms (or more complex ones)
 
 🤏 ↴
 ```javascript
@@ -965,7 +969,7 @@ import _toesmTemp1  from "electron-data-exchanger";
 const Something = _toesmTemp1.myThing;
 ```
 
-It is best to have them uncomplicated, so the conversion is straightforward
+It is best to have them uncomplicated, so the conversion is straightforward.
 
 <span style="font-size:18px;">👍</span> ↴
 ```javascript
@@ -987,7 +991,7 @@ const myAnything = require("electron-data-exchanger");
 <br><br>
 
 
-### 1- Use the .cjs extensions instead of .js
+### 1- Use the .cjs extension instead of .js
 
 ```
 📁project  
@@ -1009,10 +1013,10 @@ const myAnything = require("electron-data-exchanger");
 
 
 
-### 2- Run to-esm against the entry point
+### 2- Run to-esm against the entry point and update package.json
 
 ```shell
-$> to-esm --entrypoint index.cjs --update-all
+$> to-esm index.cjs --update-all
 ```
 
 > 🚫
@@ -1037,7 +1041,7 @@ _The option --update-all will modify your package.json to make it point to your 
   "name": "my-project",
   "main": "./index.cjs",
   "scripts": {
-    "build": "to-esm --entrypoint index.cjs"
+    "build": "to-esm index.cjs"
   },
   "devDependencies": {
     "to-esm": "file:.."
@@ -1073,7 +1077,7 @@ module.exports = hi;
   "name": "my-project",
   "main": "./index.cjs",
   "scripts": {
-    "build": "to-esm --entrypoint index.cjs"
+    "build": "to-esm index.cjs"
   },
   "devDependencies": {
     "to-esm": "file:.."
@@ -1180,47 +1184,15 @@ node index.mjs
 ###### For the browser
 
 ```shell
-$> to-esm --entrypoint index.cjs --output ./generated --target browser --bundle index.min.mjs
-```
-or
-```shell
-$> to-esm index.cjs --output ./generated --target browser --bundle index.min.mjs
+$> to-esm index.cjs --output ./generated --target browser --bundle-browser dist/index.min.js
 ```
 
 <br/>
 
-###### For Node
-
-> 🚫
-_If you are not targeting the browser, use ```--target esm``` and remove the --bundle option_
-> ```shell
-> $> to-esm --entrypoint index.cjs
-> ```
-> or
-> ```shell
-> $> to-esm index.cjs
-> ```
-
 ---
-
-
 
 ###### Click on the arrow to expand or collapse
 <details><summary><strong>⏳ Before...</strong></summary>
-
-📝 ./package.json ↴
-```json
-{
-  "name": "my-project",
-  "main": "./index.cjs",
-  "scripts": {
-    "build": "to-esm --entrypoint index.cjs"
-  },
-  "devDependencies": {
-    "to-esm": "file:.."
-  }
-}
-```
 
 📝 ./index.cjs ↴
 ```javascript
@@ -1243,30 +1215,6 @@ module.exports = hi;
 ---
 
 <details><summary><strong>⌛ After...</strong></summary>
-
-📝 **./package.json** ↴ _(Updated because of the --update-all option)_
-```json
-{
-  "name": "my-project",
-  "main": "./index.cjs",
-  "scripts": {
-    "build": "to-esm --entrypoint index.cjs"
-  },
-  "devDependencies": {
-    "to-esm": "file:.."
-  },
-  "module": "./index.mjs",
-  "type": "module",
-  "exports": {
-    ".": {
-      "require": "./index.cjs",   // ⬅ 
-      "import": "./index.mjs"     // ⬅ 
-    }
-  }
-}
-
-```
-
 
 📝 ./index.mjs ↴
 ```javascript
@@ -1327,25 +1275,190 @@ const c={"95c93":{}};c["95c93"].default=function(){console.log("I wanted to say 
          
 ```
 
-##### Insert the standard JavaScript version
+##### Insert the JavaScript browser version
 
 ```html
 ...
 <body>
-<script type="module" src="generated/index.mjs"></script>      ⬅ 🚩    
+<script type="module" src="generated/index.mjs"></script>  
 </body>
 ...
 ```
 
-##### or the bundled version into your HTML
+
+##### Usage for the ESM version
+
+```javascript
+import "..." from "index.mjs" 
+```
+
+
+
+---
+
+<span style="font-size:40px;">💡</span>
+
+## Make your CJS module ESM compatible in one go.
+
+
+<br><br>
+
+Start by creating a .cjs file (or migrate your code) to have this structure.
+
+```
+📁project  
+└─── 📝 package.json
+└─── 📁 cjs
+│    └── 📝 index.cjs
+         
+```
+
+<br/>
+
+
+#### Run to-esm against en entry point
+
+```shell
+$> to-esm cjs/index.cjs --output esm/ --bundle-esm bundle/mycode.min.mjs --bundle-cjs bundle/mycode.min.cjs 
+--bundle-browser dist/mycode-browser.min.js --update-all --use-bundle --watch
+```
+
+<br/>
+
+```
+📁project  
+└─── 📝 package.json
+└─── 📁 cjs
+│    └── 📝 index.cjs                       ⬅ 🚩 Original code
+└─── 📁 mjs
+│    └── 📝 mycode.mjs                      ⬅ ESM Converted code                     (--output esm/)
+└─── 📁 bundle
+│    └── 📝 mycode.min.mjs                  ⬅ Bundled and minified code for ESM      (--bundle-esm bundle/mycode.min.mjs)
+│    └── 📝 mycode.min.cjs                  ⬅ Bundled and minified code for CommonJs (--bundle-cjs bundle/mycode.min.mjs)
+└─── 📁 dist
+│    └── 📝 mycode-browser.min.mjs          ⬅ Bundled and minified code for browsers (--bundle-browser bundle/mycode.min.
+mjs)   
+         
+```
+
+* The option ```--update-all``` will automatically modify your package.json to make your module load the correct file 
+depending on the environment
+
+* The option ```--use-bundle``` will make --update-all configure the module to use minified and bundled versions 
+  ("mycode.min.mjs", "mycode.min.cjs") when a "require" or "import" is done against your module (Otherwise, it loads "index.
+  cjs" and "mycode.mjs")
+* The option ```--watch``` will automatically regenerate files when a change happens to the original cjs file (.
+  /cjs/index.cjs)
+<br/>
+
+
+<br/>
+
+#### This is it. Your module is fully hybrid, and you can keep working with CommonJs while not worrying about ESM.
+
+---
+
+###### Click on the arrow to expand or collapse
+<details><summary><strong>⏳ Before...</strong></summary>
+
+📝 ./index.cjs ↴
+```javascript
+const hi = require("./example/code/library.cjs");
+hi();
+```
+
+📝 ././example/code/library.cjs ↴
+```javascript
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+module.exports = hi;
+```
+
+</details>
+
+---
+
+<details><summary><strong>⌛ After...</strong></summary>
+
+📝 ./index.mjs ↴
+```javascript
+/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of
+ * [./index.cjs]{@link ./index.cjs}
+ *
+ **/
+import hi  from "./example/code/library.mjs";
+hi();
+```
+
+📝 ././example/code/library.mjs ↴
+```javascript
+/**
+ * DO NOT EDIT THIS FILE DIRECTLY.
+ * This file is generated following the conversion of
+ * [./example/code/library.cjs]{@link ./example/code/library.cjs}
+ *
+ **/
+function hi()
+{
+    console.log(`I wanted to say hi!`)
+}
+
+export default hi;
+```
+
+📝 **./dist/index.min.js** ↴ (Generated because of the --bundle option)
+```javascript
+const c={"95c93":{}};c["95c93"].default=function(){console.log("I wanted to say hi!")};{c.bbc7e={};let b=c["95c93"].default;b()}
+```
+
+
+</details>
+
+---
+
+<br/>
+
+
+
+### 3- Your code is generated.
+
+```
+📁project  
+└─── 📝 index.cjs                
+└─── 📝 package.json
+└─── 📁generated                 
+│    │
+│    └─── 📝 index.mjs          ⬅ 🚩
+│    │     
+│    └─── 📝 ...
+│
+└─── 📁 dist         
+│    └── index.min.js           ⬅ 🚩
+         
+```
+
+##### Insert the JavaScript browser version
 
 ```html
 ...
 <body>
-<script type="module" src="dist/index.min.mjs"></script>      ⬅ 🚩    
+<script type="module" src="generated/index.mjs"></script>  
 </body>
 ...
 ```
+
+
+##### Usage for the ESM version
+
+```javascript
+import "..." from "index.mjs" 
+```
+
 
 
 
@@ -1357,9 +1470,11 @@ const c={"95c93":{}};c["95c93"].default=function(){console.log("I wanted to say 
 
 ### Some thoughts
 
-When you bundle your code, you usually introduce code from other third parties. Therefore, it may create implicit code repetition. Tree shaking eliminates unnecessary code; however, it is done at "compile" time. This means it can not detect what has been repeated (Even though Tree shaking technics seem to go beyond simple dead code elimination).
+When you bundle your code, you usually introduce code from other third parties. Therefore, it may create implicit code repetition. 
 
-Also, most IDEs detect the use of dead code, which IMO also mitigate tree shaking greatness.
+Tree shaking eliminates unnecessary code; however, it is done at "compile" time. It means it can not detect what has been repeated (Even though Tree shaking technics seem to go beyond simple dead code elimination).
+
+Also, most IDEs detect the use of dead code, which also mitigates tree shaking greatness.
 
 For instance, let's say you use two libraries.
 Lib1.js and Lib2.js.
@@ -1368,7 +1483,7 @@ Lib1.js and Lib2.js.
 
 When you bundle your code containing lib1.js and lib2.js, you add lodash two times (or some functions of it).
 
-IMO, there are considerable advantages to not using bundled code.
+Therefore, there are advantages to not systematically using bundled code.
 
 > - 1- Letting the browser cache all shared libraries is one of them; therefore, having the best caching system
     > (Chrome or Firefox would surely know the best way to cache files coming from a common ground).
@@ -1380,17 +1495,14 @@ IMO, there are considerable advantages to not using bundled code.
 > - 3- Less painful and lengthy wait when the codebase becomes enormous.
 >
 >
-> - 4- Make Hot Reloading obsolete. Instead, use Cold Reloading (you reload when you save, when not the bundler has
+> - 4- Make Hot Reloading obsolete. Instead, use Cold Reloading (you reload when you save, when not, the bundler has
     finished its compilation).
 >
 >
-> - 5- Working directly on the "original code" rather than a defigured one (even using source maps sometimes may make
-    the experience not fantastic).
+> - 5- Working directly on the "original code" rather than an unmaintainable one (even using source maps sometimes 
+> does not solve all the issues).
 >
 >
-
-### In any case, ideally, **you would only bundle your code during production.**
-
 
 
 
@@ -1398,16 +1510,29 @@ IMO, there are considerable advantages to not using bundled code.
 
 ---
 
-<span style="font-size:30px;">💊🔥🧨🔥💊💥 </span>
+<span style="font-size:30px;">💊🔥</span>
+## Why use to-esm?
+
+* You can keep on working with CommonJs as usual and generates your ESM code when necessary
+* If CommonJs ever becomes obsolete, you can remove your CommonJs code and use the generated one directly
+* The generated ESM code (non-bundled) looks close to the original CommonJs one.
+
+
+<br/>
+
 ---
+
+<span style="font-size:30px;">🔥💥 </span>
+
 
 ## Plus
 
 > **Benefits:**
 >
-> - You do not need a sourcemap when working in development mode.
+> - You do not need a source map when working in development mode.
 > - You do not need to bundle your code in development.
 > - You benefit directly from your **browser caching ability** (No more bundling of shared libraries)
 > - The generated code looks like the original code.
 > - ...
+
 

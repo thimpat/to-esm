@@ -6,9 +6,9 @@
  **/
 
 
-abc/** to-esm-all: skip **/
+abc
 console.log("Skip this 1");
-/** to-esm-all: end-skip **/def
+def
 
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
@@ -25,9 +25,9 @@ console.log("3- LogToFile is not supported in this environment. ")
 const EOL =`
 `;
 
-ghi/** to-esm-browser: skip **/
+ghi
 console.log("Skip this 2");
-/** to-esm-browser: end-skip **/jkl
+jkl
 
 
 class Example

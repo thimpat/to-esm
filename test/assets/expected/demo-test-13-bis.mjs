@@ -6,13 +6,13 @@
  **/
 
 
-/** to-esm-esm: remove **/
-import os  from "os";
-/** to-esm-esm: end-remove **/
 
-abc/** to-esm-browser: skip **/
+import os  from "os";
+
+
+abc
 console.log("Skip this 1");
-/** to-esm-all: end-skip **/def
+def
 
 import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
@@ -20,9 +20,7 @@ import {COLOR_TABLE, SYSTEM}  from "./test/assets/given/constants.mjs";
 console.log("1- LogToFile is not supported in this environment. ")
  
 
-/** to-esm-esm: add
- console.log("2- LogToFile is not supported in this environment. ")
- **/
+
 
 console.log("3- LogToFile is not supported in this environment. ")
  
@@ -30,9 +28,9 @@ console.log("3- LogToFile is not supported in this environment. ")
 const EOL =`
 `;
 
-ghi/** to-esm-all: skip **/
+ghi
 console.log("Skip this 2");
-/** to-esm-all: end-skip **/jkl
+jkl
 
 
 class Example

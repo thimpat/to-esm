@@ -590,7 +590,7 @@ describe("The converter tool", function ()
                     "output"  : path.join(rootDir, "/actual"),
                     "noheader": false,
                     "target"  : TARGET.BROWSER,
-                    bundle    : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
+                    "bundle-browser"    : path.join(rootDir, "/actual/demo-test-29.min.mjs"),
                 };
 
                 let expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-29.min.mjs"), "utf8");
@@ -1099,6 +1099,60 @@ describe("The converter tool", function ()
                 const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-39.mjs"), "utf8");
                 await convert(options);
                 const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-39.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should remove code from the remove directive", async function ()
+            {
+                const input = "./test/assets/given/demo-test-40.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: false,
+                    target  : TARGET.ESM,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-40.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-40.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should apply correctly directives", async function ()
+            {
+                const input = "./test/assets/given/demo-test-41.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: false,
+                    target  : TARGET.ESM,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-41.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-41.mjs"), "utf8");
+
+                expect(converted).to.equal(expectedConversion);
+            }
+        );
+
+        it("should apply correctly multiple time same directives", async function ()
+            {
+                const input = "./test/assets/given/demo-test-42.cjs";
+                const options = {
+                    input,
+                    output  : path.join(rootDir, "/actual"),
+                    noheader: false,
+                    target  : TARGET.ESM,
+                };
+
+                const expectedConversion = fs.readFileSync(path.join(rootDir, "expected", "demo-test-42.mjs"), "utf8");
+                await convert(options);
+                const converted = fs.readFileSync(path.join(rootDir, "actual", "demo-test-42.mjs"), "utf8");
 
                 expect(converted).to.equal(expectedConversion);
             }

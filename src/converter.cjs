@@ -7,6 +7,7 @@ const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
+const {resolvePath, joinPath} = require("@thimpat/libutils");
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
 
@@ -247,7 +248,7 @@ const concatenatePaths = (source, requiredPath) =>
 {
     source = normalisePath(source);
     const sourceDir = isConventionalFolder(source) ? source : path.parse(source).dir;
-    let importPath = path.join(sourceDir, requiredPath);
+    let importPath = joinPath(sourceDir, requiredPath);
     return normalisePath(importPath);
 };
 
@@ -354,7 +355,7 @@ const dumpData = (converted, source, title = "") =>
         }
 
         const indexCounter = dumpCounter.toString().padStart(4, "0");
-        fs.writeFileSync(path.join(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
+        fs.writeFileSync(joinPath(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
     }
     catch (e)
     {
@@ -375,34 +376,46 @@ const dumpData = (converted, source, title = "") =>
  */
 const normalisePath = (somePath, {isFolder = false} = {}) =>
 {
-    somePath = somePath.replace(/\\/gm, "/");
-    if (isFolder)
+    try
     {
-        if (!isConventionalFolder(somePath))
+        if (somePath === undefined || somePath === null)
         {
-            somePath = somePath + "/";
+            return somePath;
+        }
+
+        somePath = somePath.replace(/\\/gm, "/");
+        if (isFolder)
+        {
+            if (!isConventionalFolder(somePath))
+            {
+                somePath = somePath + "/";
+            }
+        }
+
+        if (path.isAbsolute(somePath))
+        {
+            return somePath;
+        }
+
+        const firstChar = somePath.charAt(0);
+        if (!somePath)
+        {
+            somePath = "./";
+        }
+        else if (somePath === ".")
+        {
+            somePath = "./";
+        }
+        else if (!([".", "/"].includes(firstChar)))
+        {
+            somePath = "./" + somePath;
         }
     }
-
-    if (path.isAbsolute(somePath))
+    catch (e)
     {
-        return somePath;
+        console.error({lid: 1123}, e.message);
     }
 
-    const firstChar = somePath.charAt(0);
-    if (!somePath)
-    {
-        somePath = "./";
-    }
-    else if (somePath === ".")
-    {
-        somePath = "./";
-    }
-    else if (!([".", "/"].includes(firstChar)))
-    {
-        somePath = "./" + somePath;
-
-    }
     return somePath;
 };
 
@@ -506,16 +519,16 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
 {
     try
     {
-        const sourcePath = path.resolve(source);
-        rootDir = path.resolve(rootDir);
+        const sourcePath = resolvePath(source);
+        rootDir = resolvePath(rootDir);
 
         // Get mapped path by subtracting rootDir
         let {subPath, subDir} = subtractPath(sourcePath, rootDir);
 
-        let projectedDir = path.join(outputDir, subDir);
+        let projectedDir = joinPath(outputDir, subDir);
         projectedDir = normalisePath(projectedDir);
 
-        let projectedPath = path.join(outputDir, subPath);
+        let projectedPath = joinPath(outputDir, subPath);
         projectedPath = normalisePath(projectedPath);
 
         return {
@@ -542,7 +555,7 @@ const getProjectedPathAll = ({source, rootDir, outputDir}) =>
 const changePathExtensionToESM = (filepath) =>
 {
     const parsed = path.parse(filepath);
-    const renamed = path.join(parsed.dir, parsed.name + ESM_EXTENSION);
+    const renamed = joinPath(parsed.dir, parsed.name + ESM_EXTENSION);
     return normalisePath(renamed);
 };
 
@@ -668,7 +681,7 @@ const reviewEsmImports = (text, list, {
 
                                 if (moreOptions.prefixpath)
                                 {
-                                    relativePath = path.join(moreOptions.prefixpath, relativePath);
+                                    relativePath = joinPath(moreOptions.prefixpath, relativePath);
                                     relativePath = normalisePath(relativePath);
                                 }
 
@@ -796,14 +809,14 @@ const reviewEsmImports = (text, list, {
  */
 const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 {
-    const parsedFilePath = path.join(workingDir, fileProp.source);
+    const parsedFilePath = joinPath(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
 
     const re = /require\(["'`]([.\/][^)]+)["'`]\)/gmu;
 
     return text.replace(re, function (match, group)
     {
-        const target = path.join(parsedFileDir, group);
+        const target = joinPath(parsedFileDir, group);
         const extension = path.extname(target);
 
         const targets = [];
@@ -824,7 +837,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
 
         const index = list.findIndex(function ({source})
         {
-            const possibleFilePath = path.join(workingDir, source);
+            const possibleFilePath = joinPath(workingDir, source);
             return (targets.includes(possibleFilePath));
         });
 
@@ -834,16 +847,16 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
         }
 
         // current file's absolute path
-        const sourcePath = path.resolve(fileProp.outputDir);
+        const sourcePath = resolvePath(fileProp.outputDir);
 
         const {source, outputDir} = list[index];
         const basename = path.parse(source).name;
 
         // Absolute path in the "require"
-        const destinationPath = path.resolve(outputDir);
+        const destinationPath = resolvePath(outputDir);
 
         let relativePath = path.relative(sourcePath, destinationPath);
-        relativePath = path.join(relativePath, basename + ESM_EXTENSION);
+        relativePath = joinPath(relativePath, basename + ESM_EXTENSION);
         relativePath = relativePath.replace(/\\/g, "/");
         if (!([".", "/"].includes(relativePath.charAt(0))))
         {
@@ -1001,7 +1014,7 @@ const convertJsonImportToVars = (converted, {
     {
         const identifier = identifiers[i].trim();
         const filepath = files[i];
-        let absPath = path.resolve(source);
+        let absPath = resolvePath(source);
         let jsonPath = concatenatePaths(absPath, filepath);
         if (!fs.existsSync(jsonPath))
         {
@@ -1369,7 +1382,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
 
         if (debuginput)
         {
-            const debugPath = path.join(DEBUG_DIR, source + ".json");
+            const debugPath = joinPath(DEBUG_DIR, source + ".json");
             buildTargetDir(path.parse(debugPath).dir);
             writeStream = fs.createWriteStream(debugPath);
             readable = Readable.from([""]);
@@ -1697,25 +1710,59 @@ const putBackRegexes = (str, extracted) =>
  * @param target
  * @param saved
  */
-const applyDirectives = (converted, {target = "all"} = {}) =>
+const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
 {
     let regexp;
 
-    const targets = target === "all" ? ["browser", "esm", "all"] : [target, "all"];
-
-    targets.forEach((target) =>
+    const directives = [TARGET.ALL];
+    if (target !== TARGET.ALL)
     {
-        // Remove => to-esm-browser: remove
-        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+        directives.push(target);
+    }
+
+    // Remove => to-esm-browser: remove
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+    converted = converted.replace(regexp, "");
+
+    // Insert => to-esm-browser: add
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(?:${directives.join("|")})\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
+    converted = converted.replace(regexp, "$1");
+
+    // Hide/skip => to-esm-browser: skip
+    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
+    converted = hideText(regexp, converted);
+
+    return converted;
+};
+
+/**
+ * Clean code from remaining directives
+ * @param converted
+ * @param target
+ * @returns {*}
+ */
+const cleanDirectives = (converted) =>
+{
+    let regexp;
+
+    [TARGET.ALL, TARGET.ESM, TARGET.BROWSER].forEach((currentTarget) =>
+    {
+        // Insert => to-esm-browser: add
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "");
 
-        // Insert => to-esm-browser: add
-        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
-        converted = converted.replace(regexp, "$1");
+        // Remove => to-esm-browser: remove
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*remove\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
 
-        // Hide/skip => to-esm-browser: skip
-        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-${target}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
-        converted = hideText(regexp, converted);
+        // Remove => to-esm-browser: skip
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*skip\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
+        regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
+        converted = converted.replace(regexp, "");
+
     });
 
     return converted;
@@ -1735,7 +1782,7 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 {
     try
     {
-        let sourceAbs = path.join(workingDir, source);
+        let sourceAbs = joinPath(workingDir, source);
         sourceAbs = normalisePath(sourceAbs);
 
         rootDir = normalisePath(rootDir);
@@ -1743,13 +1790,13 @@ const formatConvertItem = ({source, rootDir, outputDir, workingDir}) =>
 
         let targetName = path.parse(subPath).name + ESM_EXTENSION;
 
-        let target = path.join(outputDir, subDir, targetName);
+        let target = joinPath(outputDir, subDir, targetName);
         target = normalisePath(target);
 
-        let targetAbs = path.join(workingDir, target);
+        let targetAbs = joinPath(workingDir, target);
 
         let extra = path.parse(source);
-        let sourceNoExt = path.join(extra.dir, extra.name);
+        let sourceNoExt = joinPath(extra.dir, extra.name);
         sourceNoExt = normalisePath(sourceNoExt);
 
         source = normalisePath(source);
@@ -1837,7 +1884,7 @@ const rewriteImportMapPaths = (newMaps, htmlPath) =>
         try
         {
             const root = path.relative(htmlPath, "./");
-            const jsPath = path.join(root, newMaps.imports[kk]);
+            const jsPath = joinPath(root, newMaps.imports[kk]);
             newMaps.imports[kk] = normalisePath(jsPath);
         }
         catch (e)
@@ -1906,7 +1953,7 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
 {
     try
     {
-        let fullHtmlPath = path.resolve(htmlPath);
+        let fullHtmlPath = resolvePath(htmlPath);
         /* istanbul ignore next */
         if (!fs.existsSync(fullHtmlPath))
         {
@@ -2023,7 +2070,7 @@ const getOptionsConfigFile = async (configPath) =>
 {
     let confFileOptions = {};
 
-    configPath = path.resolve(configPath);
+    configPath = resolvePath(configPath);
     if (fs.existsSync(configPath))
     {
         const extension = path.parse(configPath).ext;
@@ -2092,7 +2139,7 @@ const getLibraryInfo = (modulePackname) =>
             info.installed = true;
 
             const dir = path.parse(installed).dir;
-            const packageJsonPath = path.join(dir, "package.json");
+            const packageJsonPath = joinPath(dir, "package.json");
             const packageJson = require(packageJsonPath);
             info.version = packageJson.version;
         }
@@ -2166,7 +2213,7 @@ const installNonHybridModules = async (config = []) =>
     {
         const replaceModules = config.replaceModules || [];
 
-        let packageJsonPath = path.resolve("./package.json");
+        let packageJsonPath = resolvePath("./package.json");
         /* istanbul ignore next */
         if (!fs.existsSync(packageJsonPath))
         {
@@ -2365,10 +2412,9 @@ const isBrowserCompatible = (filepath, content = "") =>
         );
 
         content = stripComments(content);
-        content = clearStrings(content);
         content = stripRegexes(content);
 
-        const regexp = new RegExp(`\\bfrom\\b.+\\b(${nativeModules.join("|")})\\b`);
+        const regexp = new RegExp(`\\bfrom\\b +["'] *\\b(${nativeModules.join("|")})\\b *["']`);
         const hasCore = regexp.test(content);
         return !hasCore;
     }
@@ -2447,7 +2493,7 @@ const addFileToConvertingList = ({
         for (let i = 0; i < possibleCjsExtensions.length; ++i)
         {
             const extension = possibleCjsExtensions[i];
-            foundPath = path.join(source + extension);
+            foundPath = joinPath(source + extension);
             if (fs.existsSync(foundPath))
             {
                 found = true;
@@ -2615,9 +2661,22 @@ const insertHeader = (converted, source, {noHeader = false} = {}) =>
  * @param useImportMaps
  * @param importMaps
  * @param bundlePath
+ * @param cjsBundlePath
+ * @param browserBundlePath
+ * @param useBundle
  * @returns {boolean}
  */
-const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps, importMaps, bundlePath} = {}) =>
+const updatePackageJson = async ({
+                                     entryPoint,
+                                     workingDir,
+                                     target,
+                                     useImportMaps,
+                                     importMaps,
+                                     bundlePath,
+                                     cjsBundlePath,
+                                     browserBundlePath,
+                                     useBundle
+                                 } = {}) =>
     {
         if (!entryPoint)
         {
@@ -2625,7 +2684,7 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
             return false;
         }
 
-        const packageJsonLocation = path.join(workingDir, "./package.json");
+        const packageJsonLocation = joinPath(workingDir, "./package.json");
 
         /* istanbul ignore next */
         if (!fs.existsSync(packageJsonLocation))
@@ -2656,12 +2715,29 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
                 }
             }
 
+            let requireSource = entryPoint.source;
+            let importSource = entryPoint.target;
+
+            if (useBundle && bundlePath)
+            {
+                importSource = bundlePath;
+            }
+
+            if (useBundle && cjsBundlePath)
+            {
+                requireSource = cjsBundlePath;
+            }
+
             if (target === TARGET.BROWSER)
             {
                 const browserField = json.browser;
                 if (typeof browserField === "string" || !browserField)
                 {
-                    const target = bundlePath || entryPoint.target;
+                    let target = bundlePath || entryPoint.target;
+                    if (useBundle && browserBundlePath)
+                    {
+                        target = browserBundlePath;
+                    }
                     if (target)
                     {
                         json.browser = target;
@@ -2676,13 +2752,11 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
             else
             {
                 const entry = {
-                    "require": entryPoint.source,
-                    "import" : entryPoint.target
+                    "require": requireSource,
+                    "import" : importSource
                 };
 
-                json.module = entryPoint.target;
                 json.type = "module";
-
                 if (!json.exports)
                 {
                     /* istanbul ignore next */
@@ -2732,7 +2806,7 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
             let str = normaliseString(JSON.stringify(json, null, indent));
             fs.writeFileSync(packageJsonLocation, str, "utf8");
 
-            console.log({lid: 1412}, " ");
+            console.log({lid: 1412});
             console.log({lid: 1414}, " ================================================================");
             console.log({lid: 1416}, " package.json updated");
             console.log({lid: 1418}, " ----------------------------------------------------------------");
@@ -2758,31 +2832,30 @@ const updatePackageJson = async ({entryPoint, workingDir, target, useImportMaps,
  * @param sourcemap
  * @returns {Promise<unknown>}
  */
-const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, sourcemap = false} = {}) =>
+const minifyESMCode = async (entryPointPath, bundlePath, target, {
+    minify = true,
+    sourcemap = false,
+    platform = ""
+} = {}) =>
 {
     try
     {
         const minifyDir = path.parse(bundlePath).dir;
         buildTargetDir(minifyDir);
 
-        entryPointPath = path.resolve(entryPointPath);
-        bundlePath = path.resolve(bundlePath);
-
-        let platform;
-        if (target === TARGET.ESM)
-        {
-            platform = "node";
-        }
+        entryPointPath = resolvePath(entryPointPath);
+        bundlePath = resolvePath(bundlePath);
 
         await esbuild.build({
-            entryPoints  : [entryPointPath],
-            bundle       : true,
-            outfile      : bundlePath,
+            entryPoints   : [entryPointPath],
+            bundle        : true,
+            outfile       : bundlePath,
             sourcemap,
-            format       : "esm",
-            target       : "es6",
+            format        : "esm",
+            target        : "esnext",
             minify,
-            legalComments: "eof",
+            legalComments : "eof",
+            allowOverwrite: true,
             platform
         });
 
@@ -2790,15 +2863,86 @@ const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, s
         content = content.replace(/\/\*! [^*]+\*\//g, "");
         fs.writeFileSync(bundlePath, content);
 
+        displaySuccessBundleMessage(bundlePath, target);
+
         return true;
     }
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 1387}, " Fail to bundle.");
+        console.error({lid: 1387, target: "DEBUG"}, `Fail to bundle: ${e.message}`);
     }
 
     return false;
+};
+
+const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true, sourcemap = false} = {}) =>
+{
+    try
+    {
+        const minifyDir = path.parse(bundlePath).dir;
+        buildTargetDir(minifyDir);
+
+        entryPointPath = resolvePath(entryPointPath);
+        bundlePath = resolvePath(bundlePath);
+
+        await esbuild.build({
+            entryPoints   : [entryPointPath],
+            bundle        : true,
+            outfile       : bundlePath,
+            sourcemap,
+            format        : "cjs",
+            target        : "node" + process.version.split(".")[0].replace("v", ""),
+            minify,
+            legalComments : "eof",
+            allowOverwrite: true,
+            platform      : "node"
+        });
+
+        let content = fs.readFileSync(bundlePath, "utf-8");
+        content = content.replace(/\/\*! [^*]+\*\//g, "");
+        fs.writeFileSync(bundlePath, content);
+
+        displaySuccessBundleMessage(bundlePath, TARGET.CJS);
+
+        return true;
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error({lid: 1387}, `Fail to bundle: ${e.message}`);
+    }
+
+    return false;
+};
+
+const displaySeparator = ({width = 64} = {}) =>
+{
+    console.log({lid: 1514});
+    console.log({lid: 1518}, "".padEnd(width, "."));
+};
+
+const displaySuccessBundleMessage = (bundlePath, target) =>
+{
+    console.log({lid: 1312});
+    displaySeparator();
+    console.log({lid: 1316, color: "orange"}, ` Bundle generated for ${target} => ${bundlePath}`);
+    console.log({lid: 1320}, "Usage: ");
+
+    if (target === TARGET.CJS)
+    {
+        console.log({lid: 1322}, ` require("${bundlePath}")`);
+    }
+    else if (target === TARGET.ESM)
+    {
+        console.log({lid: 1324}, ` import ... from "${bundlePath}"`);
+    }
+    else if (target === TARGET.BROWSER)
+    {
+        console.log({lid: 1326}, ` <script type="module" src="${bundlePath}"></script>`);
+        console.log({lid: 1328}, " from your html code");
+    }
+
 };
 
 /**
@@ -2808,28 +2952,51 @@ const minifyCode = async (entryPointPath, bundlePath, target, {minify = false, s
  * @param target
  * @param bundlePath
  */
-const bundleResult = async (entryPointPath, {
+const bundleResults = async (entryPointPath, {
     target = TARGET.BROWSER,
     bundlePath = "./",
+    cjsBundlePath = "",
+    browserBundlePath = "",
     minify = false,
-    sourcemap = false
+    sourcemap = false,
+    cjsEntryPath = ""
 }) =>
 {
-    if (!await minifyCode(entryPointPath, bundlePath, target, {minify, sourcemap}))
+    if (bundlePath && !await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
+        minify,
+        sourcemap,
+        platform: "node"
+    }))
     {
-        console.error({lid: 1743}, " Failed to minify");
+        console.error({lid: 1743}, ` Failed to minify ${target}`);
         return false;
     }
 
-    console.log({lid: 1312}, " ");
-    console.log({lid: 1314}, " ================================================================");
-    console.log({lid: 1316}, " Bundle generated");
-    console.log({lid: 1318}, " ----------------------------------------------------------------");
-    console.log({lid: 1320}, " The bundle has been generated. Use");
-    console.log({lid: 1322}, ` require("./node_modules/${bundlePath}")`);
-    console.log({lid: 1324}, " or");
-    console.log({lid: 1326}, ` <script type="module" src="./node_modules/${bundlePath}"></script>`);
-    console.log({lid: 1328}, " from your html code to load it in the browser.");
+    if (browserBundlePath)
+    {
+        if (isBrowserCompatible(entryPointPath))
+        {
+            if (!await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {minify, sourcemap}))
+            {
+                console.error({lid: 1745}, ` Failed to minify ${TARGET.BROWSER}`);
+            }
+        }
+        else
+        {
+            displaySeparator();
+            console.error({lid: 1747}, `${entryPointPath} is not browser compatible. Skipping bundle generation for ${TARGET.BROWSER}`);
+        }
+    }
+
+    if (cjsBundlePath && !await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
+        minify,
+        sourcemap,
+        platform: "node"
+    }))
+    {
+        console.error({lid: 1749}, ` Failed to minify ${TARGET.CJS}`);
+    }
+
     return true;
 };
 
@@ -3165,6 +3332,9 @@ const convertCjsFiles = (list, {
             converted = normaliseString(converted);
             dumpData(converted, source, "normaliseString");
 
+            converted = cleanDirectives(converted);
+            dumpData(converted, source, "clean-directives");
+
             converted = removeResidue(converted);
             dumpData(converted, source, "removeResidue");
 
@@ -3176,9 +3346,9 @@ const convertCjsFiles = (list, {
             let destinationDir;
             if (outputDir)
             {
-                const fileDir = path.join(path.dirname(source));
+                const fileDir = joinPath(path.dirname(source));
                 const relativeDir = path.relative(rootDir, fileDir);
-                destinationDir = path.join(outputDir, relativeDir);
+                destinationDir = joinPath(outputDir, relativeDir);
 
                 if (!notOnDisk)
                 {
@@ -3187,10 +3357,10 @@ const convertCjsFiles = (list, {
             }
             else
             {
-                destinationDir = path.join(path.dirname(source));
+                destinationDir = joinPath(path.dirname(source));
             }
 
-            const targetFilepath = path.join(destinationDir, targetFile + ESM_EXTENSION);
+            const targetFilepath = joinPath(destinationDir, targetFile + ESM_EXTENSION);
 
             const parsingResult = parseEsm(source, converted);
             let reportSuccess = parsingResult.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
@@ -3243,7 +3413,7 @@ const convertCjsFiles = (list, {
                 report[source] = converted;
             }
 
-            console.log({lid: 1150}, " ");
+            console.log({lid: 1150});
 
         }
         catch (e)
@@ -3276,7 +3446,7 @@ const detectESMConfigPath = () =>
         for (let i = 0; i < extensionList.length; ++i)
         {
             const extension = extensionList[i];
-            let esmPath = path.resolve(toEsmConfigName + extension);
+            let esmPath = resolvePath(toEsmConfigName + extension);
             esmPath = normalisePath(esmPath);
 
             if (fs.existsSync(esmPath) && fs.lstatSync(esmPath).isFile())
@@ -3425,7 +3595,7 @@ const convert = async (rawCliOptions = {}) =>
             }
             else
             {
-                rootDir = path.join(workingDir, path.dirname(list[0]));
+                rootDir = joinPath(workingDir, path.dirname(list[0]));
             }
 
             if (!cliOptions.entrypoint && !i && list.length === 1)
@@ -3449,7 +3619,7 @@ const convert = async (rawCliOptions = {}) =>
             entrypointPath = normalisePath(cliOptions.entrypoint);
             console.log({lid: 1402}, toAnsi.getTextFromHex(`Entry Point: ${entrypointPath}`, {fg: "#00FF00"}));
             let rootDir = path.parse(entrypointPath).dir;
-            rootDir = path.resolve(rootDir);
+            rootDir = resolvePath(rootDir);
             entryPointList = addFileToConvertingList({
                 source    : entrypointPath,
                 rootDir,
@@ -3520,6 +3690,7 @@ const convert = async (rawCliOptions = {}) =>
         }
 
         // The first file parsed will be the entrypoint
+        let cjsEntryPath = cjsList[0].source;
         entrypointPath = cjsList[0].target;
 
         const success = convertCjsFiles(cjsList,
@@ -3538,23 +3709,38 @@ const convert = async (rawCliOptions = {}) =>
                 keepexisting
             });
 
-        if (cliOptions.bundle && entrypointPath)
+        let bundlePath = cliOptions.bundle || cliOptions["bundle-esm"];
+        let cjsBundlePath = cliOptions["bundle-cjs"];
+        let browserBundlePath = cliOptions["bundle-browser"];
+
+        bundlePath = normalisePath(bundlePath) || "";
+        cjsBundlePath = normalisePath(cjsBundlePath) || "";
+        browserBundlePath = normalisePath(browserBundlePath) || "";
+
+        if ((bundlePath || cjsBundlePath || browserBundlePath) && entrypointPath)
         {
-            await bundleResult(entrypointPath, {
-                target    : cliOptions.target,
-                bundlePath: cliOptions.bundle,
-                minify    : moreOptions.minify,
-                sourcemap : moreOptions.sourcemap
+            await bundleResults(entrypointPath, {
+                cjsEntryPath,
+                target   : cliOptions.target,
+                bundlePath,
+                cjsBundlePath,
+                browserBundlePath,
+                minify   : moreOptions.minify,
+                sourcemap: moreOptions.sourcemap
             });
         }
 
         if (cliOptions["update-all"])
         {
+            let useBundle = cliOptions["use-bundle"];
             updatePackageJson({
                 entryPoint: entryPointList,
-                bundlePath: cliOptions.bundle,
+                bundlePath,
+                cjsBundlePath,
+                browserBundlePath,
                 workingDir, ...moreOptions,
-                importMaps
+                importMaps,
+                useBundle
             });
         }
 
@@ -3581,7 +3767,7 @@ const convert = async (rawCliOptions = {}) =>
     }
     catch (e)
     {
-        console.error({lid: 1453}, e);
+        console.error({lid: 1453}, e.message);
     }
 
     return {cjsList, success: false};
