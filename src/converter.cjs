@@ -7,7 +7,7 @@ const glob = require("glob");
 const commonDir = require("commondir");
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
-const {resolvePath, joinPath} = require("@thimpat/libutils");
+const {resolvePath, joinPath, createAppDataDir, generateTempName} = require("@thimpat/libutils");
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
 
@@ -62,6 +62,8 @@ const IMPORT_MASK_END = EOL + "/** to-esm: import-end **/" + EOL;
 const EXPORT_KEYWORD_MASK = "🦊";
 
 const DEBUG_DIR = "./debug/";
+
+const DEFAULT_PREFIX_TEMP = ".tmp-toesm";
 
 let indexGeneratedTempVariable = 1;
 
@@ -2452,7 +2454,7 @@ const findEntry = (source, propertyName = "source") =>
  * @param rootDir
  * @param outputDir
  * @param workingDir
- * @param notOnDisk
+ * @param {boolean} notOnDisk
  * @param referrer
  * @param entryPoint
  * @param multiCsjExtension
@@ -3381,7 +3383,14 @@ const convertCjsFiles = (list, {
                 report = false;
             }
 
-            console.log({lid: 1060}, ` ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
+            if (moreOptions.onlyBundle)
+            {
+                console.log({lid: 1058}, ` ${reportSuccess}: [${source}] processed successfully`);
+            }
+            else
+            {
+                console.log({lid: 1060}, ` ${reportSuccess}: Converted [${source}] to [${targetFilepath}]`);
+            }
 
             list[dynamicIndex].converted = converted;
 
@@ -3469,19 +3478,38 @@ const detectESMConfigPath = () =>
  */
 const convert = async (rawCliOptions = {}) =>
 {
+    /**
+     * cliOptions are options set by the user
+     * moreOptions is used to define options that users can't control
+     * @type {{minify: boolean, sourcemap: boolean, useImportMaps: (boolean|*), prefixpath: (string|*), target: *,
+     *     nm: (string)}}
+     */
+    const cliOptions = {};
+    const moreOptions = {};
+
     try
     {
-        const workingDir = normalisePath(process.cwd(), {isFolder: true});
+        let workingDir = normalisePath(process.cwd(), {isFolder: true});
 
         console.log({lid: 1400}, `Current working directory: ${workingDir}`);
 
         resetFileList();
 
-        const cliOptions = {};
         Object.keys(rawCliOptions).forEach((key) =>
         {
             cliOptions[key.toLowerCase()] = rawCliOptions[key];
         });
+
+
+        if (!cliOptions.output)
+        {
+            // User only wants the bundle, not the generated full tree
+            if (cliOptions.bundle || cliOptions["bundle-esm"] || cliOptions["bundle-cjs"] || cliOptions["bundle-browser"])
+            {
+                moreOptions.onlyBundle = true;
+                cliOptions.output = "./" + generateTempName({prefix: DEFAULT_PREFIX_TEMP});
+            }
+        }
 
         let confFileOptions = {replace: []};
 
@@ -3560,7 +3588,7 @@ const convert = async (rawCliOptions = {}) =>
         cliOptions.prefixpath = cliOptions.prefixpath || "";
         cliOptions.prefixpath = cliOptions.prefixpath.trim();
 
-        // Output Files
+        // Output directory
         cliOptions.output = cliOptions.output || "./";
         const outputDirArr = Array.isArray(cliOptions.output) ? cliOptions.output : [cliOptions.output];
 
@@ -3675,14 +3703,23 @@ const convert = async (rawCliOptions = {}) =>
             cliOptions.sourcemap = false;
         }
 
-        const moreOptions = {
+        Object.assign(moreOptions, {
             useImportMaps: !!htmlOptions.pattern || cliOptions.useimportmaps,
             target       : cliOptions.target,
             nm           : cliOptions.nm || "node_modules",
             prefixpath   : cliOptions.prefixpath,
             minify       : !!cliOptions.minify,
             sourcemap    : !!cliOptions.sourcemap
-        };
+        });
+
+        if (!cliOptions.output)
+        {
+            // User only wants the bundle, not the generated full tree
+            if (cliOptions.bundle || cliOptions["bundle-esm"] || cliOptions["bundle-cjs"] || cliOptions["bundle-browser"])
+            {
+                moreOptions.onlyBundle = true;
+            }
+        }
 
         if (!cjsList.length)
         {
@@ -3768,6 +3805,13 @@ const convert = async (rawCliOptions = {}) =>
     catch (e)
     {
         console.error({lid: 1453}, e.message);
+    }
+    finally
+    {
+        if (moreOptions.onlyBundle && cliOptions.output && cliOptions.output.indexOf(DEFAULT_PREFIX_TEMP) > -1)
+        {
+            fs.rmSync(cliOptions.output, {recursive: true, force: true});
+        }
     }
 
     return {cjsList, success: false};
