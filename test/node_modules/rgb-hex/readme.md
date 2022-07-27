@@ -1,0 +1,35 @@
+# rgb-hex
+
+> Convert RGB(A) color to HEX
+
+## Install
+
+```
+$ npm install rgb-hex
+```
+
+## Usage
+
+```js
+import rgbHex from 'rgb-hex';
+
+rgbHex(65, 131, 196);
+//=> '4183c4'
+
+rgbHex('rgb(40, 42, 54)');
+//=> '282a36'
+
+rgbHex(65, 131, 196, 0.2);
+//=> '4183c433'
+
+rgbHex(40, 42, 54, '75%');
+//=> '282a36bf'
+
+rgbHex('rgba(40, 42, 54, 75%)');
+//=> '282a36bf'
+```
+
+## Related
+
+- [rgb-hex-cli](https://github.com/sindresorhus/rgb-hex-cli) - CLI for this module
+- [hex-rgb](https://github.com/sindresorhus/hex-rgb) - Convert HEX color to RGB

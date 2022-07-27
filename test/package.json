@@ -1,0 +1,12 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "dependencies": {
+    "commondir": "^1.0.1",
+    "flatted": "^3.2.5",
+    "rgb-hex": "^4.0.0",
+    "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
+    "to-ansi": "^1.4.3",
+    "window-size": "^1.1.1"
+  }
+}
