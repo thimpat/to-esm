@@ -345,10 +345,10 @@ const {COLOR_TABLE, SYSTEM} = require("./some-lib.js");
 └─── 📁 node_modules
 │    │
 │    └───📁 rgb-hex
-│    │        📝 index.js
+│    │        📝 index.cjs
 │    │            ...
 │    └───📁 to-ansi
-│             📝 index.js 
+│             📝 index.cjs 
 │                ...
 └───📁src
 └───📁unrelated
@@ -393,7 +393,7 @@ to-esm --input="example/cjs/demo.cjs" --output=generated/browser/ --config=".toe
     <script type="importmap">
         {
           "imports": {
-            "rgb-hex": "./node_modules/rgb-hex/index.js"
+            "rgb-hex": "./node_modules/rgb-hex/index.cjs"
           }
         }
     </script>
