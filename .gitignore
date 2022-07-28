@@ -80,3 +80,5 @@ test/assets/package.json
 /test/sandbox/generated/
 /test/sandbox/node_modules/
 /debug/
+/test/debug/
+/test/assets/given/my-test-class.cjs

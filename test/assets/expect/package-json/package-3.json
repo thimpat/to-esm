@@ -1,0 +1,12 @@
+{
+  "name": "something",
+  "main": "./example/cjs/demo.cjs",
+  "module": "./generated/esm/demo.mjs",
+  "type": "commonjs",
+  "exports": {
+    ".": {
+      "require": "./given/demo-test-14.cjs",
+      "import": "./actual/given/demo-test-14.mjs"
+    }
+  }
+}

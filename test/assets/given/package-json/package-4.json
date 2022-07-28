@@ -1,0 +1,8 @@
+{
+  "name": "something",
+  "version": "1.0.2",
+  "random": 123456,
+  "main": "./example/demo-test-xx.cjs",
+  "module": "./actual/demo-test-xx.mjs",
+  "type": "module"
+}

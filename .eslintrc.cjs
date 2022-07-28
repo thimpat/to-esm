@@ -3,9 +3,8 @@ module.exports = {
         browser: true,
         node: true
     },
-    parser: "@babel/eslint-parser",
     parserOptions: {
-        "ecmaVersion": 2020
+        "ecmaVersion": 2022
     },
     "ignorePatterns": ["example/**/*.*"],
     rules: {
