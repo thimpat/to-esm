@@ -14,6 +14,16 @@ switchToTestDirectory();
 const testDir = path.join(__dirname, "assets");
 
 
+/**
+ * The absolute paths on the project against paths on the CI when they are
+ * absolute, will not be the same.
+ * So, we need to add these absolutely referenced files into the CI system
+ */
+const generateFilesInAbsolutePaths = () =>
+{
+    fs.copyFileSync("./assets/given/my-test-class-0.cjs", "/projects/to-esm/test/assets/given/my-test-class.cjs");
+};
+
 const generateHTML = (number = 1) =>
 {
     // fs.copyFileSync(path.join(rootDir, "index.html"), path.join(rootDir, "actual", "index.html"));
@@ -890,6 +900,16 @@ describe("The converter tool", function ()
 
         describe("on anything", function ()
         {
+            before(() =>
+            {
+                generateFilesInAbsolutePaths();
+            });
+
+            beforeEach(async () =>
+            {
+                generatePackageJson("cases");
+            });
+
             /**
              * Testing:
              * $> toesm --input="assets/given/demo-test-x.cjs" --output=assets/actual/ --config="assets/.toesm.cjs"
@@ -1272,6 +1292,11 @@ describe("The converter tool", function ()
                         target  : TARGET.ESM,
                     };
 
+                    if (!fs.existsSync("/projects/to-esm/test/assets/given/my-test-class.cjs"))
+                    {
+                        fs.copyFileSync("./assets/given/my-test-class.cjs", "/projects/to-esm/test/assets/given/my-test-class.cjs");
+                    }
+
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-43.mjs"), "utf8");
@@ -1306,6 +1331,7 @@ describe("The converter tool", function ()
         {
             beforeEach(async () =>
             {
+                generateFilesInAbsolutePaths();
                 generatePackageJson("cases");
             });
 
