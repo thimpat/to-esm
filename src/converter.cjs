@@ -4653,10 +4653,9 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         if (cliOptions.resolveAbsolute === true)
         {
-            cliOptions.resolveAbsolute = "./node_modules";
+            cliOptions.resolveAbsolute = ["./node_modules"];
         }
-
-        if (cliOptions.resolveAbsolute)
+        else if (cliOptions.resolveAbsolute && !Array.isArray(cliOptions.resolveAbsolute))
         {
             cliOptions.resolveAbsolute = cliOptions.resolveAbsolute.split(",");
         }
