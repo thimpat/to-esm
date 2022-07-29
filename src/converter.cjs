@@ -462,6 +462,7 @@ const convertToSubRootDir = (wholePath) =>
  * Remove part of path by subtracting a given directory from a whole path
  * TODO: Re-Check this function goal
  * TODO: Use path.relative and swap parameters
+ * TODO: Try to not use this function at all. Remove it as soon as possible
  * @param wholePath Full File Path
  * @param pathToSubtract Subdirectory to remove from path
  * @returns {*}
@@ -797,6 +798,22 @@ const resolveReqPath = function (source, regexRequiredPath,
     return regexRequiredPath;
 };
 
+const isResolveAbsoluteMode = function (moreOptions)
+{
+    return !!moreOptions?.extras?.resolveAbsolute?.length;
+};
+
+const getLookUpDirs = function (moreOptions)
+{
+    return moreOptions?.extras?.resolveAbsolute;
+};
+
+const isExternalSource = function (moreOptions)
+{
+    // Don't create a copy of the referenced file
+    return !!moreOptions.extras?.keepExternal;
+};
+
 /**
  * Re-evaluate a require new path relative to the source is in
  * @param text
@@ -852,15 +869,15 @@ const resolveRelativeImport = (text, list, {
 };
 
 /**
- *
- * @param text
- * @param list
- * @param source
+ * Parse the absolute given paths
+ * @param {string} text Source content (likely already modified in the pipeline)
+ * @param {CjsInfoType[]} list File list already parsed
+ * @param {string} source Source file that contains the absolute required path to translate
  * @param rootDir
- * @param outputDir
- * @param workingDir
- * @param regexRequiredPath
- * @param moreOptions
+ * @param {string} outputDir Folder for the target file
+ * @param {string} workingDir
+ * @param {string} regexRequiredPath Absolute required path
+ * @param {*} moreOptions
  * @returns {string}
  */
 const resolveAbsoluteImport = (text, list, {
@@ -875,19 +892,44 @@ const resolveAbsoluteImport = (text, list, {
     // Source path of projected original source (the .cjs)
     try
     {
+        const lookupDirLists = getLookUpDirs(moreOptions);
+        let relativeRequiredPath, idRequiredPath;
+        relativeRequiredPath = regexRequiredPath;
+
+        let isAbsolutePath = true;
+
+        if (lookupDirLists)
+        {
+            const props = getRelativePathsAgainstSuggestedRoots(regexRequiredPath, source, rootDir, lookupDirLists);
+            if (props)
+            {
+                relativeRequiredPath = props.relativeRequiredPath;
+                idRequiredPath = props.idRequiredPath;
+                isAbsolutePath = false;
+            }
+        }
+
         // The required path from the source path above
         const entry = addFileToIndex({
-            source        : regexRequiredPath,
+            source        : relativeRequiredPath,
             rootDir,
             outputDir,
             workingDir,
             referrer      : source,
-            isAbsolutePath: true,
+            isAbsolutePath,
             moreOptions,
-            origin        : ORIGIN_ADDING_TO_INDEX.RESOLVE_ABSOLUTE
+            origin        : ORIGIN_ADDING_TO_INDEX.RESOLVE_ABSOLUTE,
+            externalSource: true
         });
 
-        regexRequiredPath = resolveReqPath(source, entry.mjsTarget, moreOptions);
+        if (isExternalSource(moreOptions))
+        {
+            regexRequiredPath = idRequiredPath;
+        }
+        else
+        {
+            regexRequiredPath = resolveReqPath(source, entry.mjsTarget, moreOptions);
+        }
         return regexRequiredPath;
     }
     catch (e)
@@ -920,7 +962,13 @@ const reviewEsmImports = (text, list, {
     // const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
     const re = /\bfrom\s+["']([^"']+?)["'];?/gmu;
 
-    return text.replace(re, function (match, regexRequiredPath)
+    const sourceExtractedComments = [];
+    text = stripCodeComments(text, sourceExtractedComments, commentMasks);
+
+    const sourceExtractedRegexes = [];
+    text = stripCodeRegexes(text, sourceExtractedRegexes);
+
+    text = text.replace(re, function (match, regexRequiredPath)
     {
         try
         {
@@ -988,6 +1036,11 @@ const reviewEsmImports = (text, list, {
 
     });
 
+    text = putBackComments(text, sourceExtractedComments, commentMasks);
+
+    text = putBackRegexes(text, sourceExtractedRegexes);
+
+    return text;
 };
 
 /**
@@ -1975,10 +2028,22 @@ const cleanDirectives = (converted) =>
  * @param {string} moduleName Only exists when the system detects a "require" to a third party
  * @param {string} workingDir We need the working dir to update the package.json "import" field as everything in it is
  * relative to the project root dir
+ * @param moreOptions
+ * @param externalSource
  * @returns {{pkgImportPath: string, sourceAbs: string, subDir, mjsTarget: (*), rootDir: string, weight: number,
  *     source: string, subPath: *, id: string}}
  */
-const formatIndexEntry = ({source, rootDir, outputDir, isAbsolutePath, origin, moduleName, workingDir}) =>
+const formatIndexEntry = ({
+                              source,
+                              rootDir,
+                              outputDir,
+                              isAbsolutePath,
+                              origin,
+                              moduleName,
+                              workingDir,
+                              moreOptions,
+                              externalSource
+                          }) =>
 {
     try
     {
@@ -1987,16 +2052,34 @@ const formatIndexEntry = ({source, rootDir, outputDir, isAbsolutePath, origin, m
 
         rootDir = normaliseDirPath(rootDir);
 
+        let targetName;
+
         if (isAbsolutePath)
         {
             sourceAbs = source;
             const infoPath = path.parse(source);
             const filename = infoPath.base;
 
-            // _root is the special folder that takes files external to rootDir
-            let subDir = normaliseDirPath(GENERATED_ROOT_FOLDER_NAME);
-            subDir = joinPath(subDir, infoPath.dir);
-            paths = {subDir, subPath: filename};
+            if (isResolveAbsoluteMode(moreOptions))
+            {
+                outputDir = resolvePath(outputDir);
+                let subPath = path.relative(outputDir, sourceAbs);
+                subPath = normalisePath(subPath);
+
+                let info = path.parse(subPath);
+                let subDir = info.dir;
+                subDir = normaliseDirPath(subDir);
+                targetName = info.base;
+                paths = {subDir, subPath};
+            }
+            else
+            {
+                // _root is the special folder where external files will be copied over
+                let subDir = normaliseDirPath(GENERATED_ROOT_FOLDER_NAME);
+                subDir = joinPath(subDir, infoPath.dir);
+                paths = {subDir, subPath: filename};
+            }
+
         }
         else
         {
@@ -2008,9 +2091,11 @@ const formatIndexEntry = ({source, rootDir, outputDir, isAbsolutePath, origin, m
 
         let {subPath, subDir} = paths;
 
-        let targetName = path.parse(subPath).name + ESM_EXTENSION;
+        targetName = targetName || path.parse(subPath).name + ESM_EXTENSION;
 
-        let mjsTarget = joinPath(subDir, targetName);
+        let mjsTarget;
+
+        mjsTarget = joinPath(subDir, targetName);
         subPath = joinPath(subDir, targetName);
 
         const mjsTargetAbs = joinPath(outputDir, subPath);
@@ -2043,7 +2128,8 @@ const formatIndexEntry = ({source, rootDir, outputDir, isAbsolutePath, origin, m
             subPath,
             subDir,
             id,
-            weight: 1
+            weight: 1,
+            externalSource
         };
     }
     catch (e)
@@ -2675,7 +2761,42 @@ const findEntry = (source, propertyName = "sourceAbs") =>
 };
 
 /**
- * Add a file to the list of files to parse.
+ * Look if the required file exists in one of the suggested folder,
+ * then if found calculate its path relatively to its source.
+ * @param {string} requiredPath Required path as written in the source file
+ * @param {string} source The source path file that does the import
+ * @param {string} rootDir
+ * @param {string[]} roots List of folders to look for the required file from
+ * @returns {null|{requiredAbsolutePath: (*), requiredRootDir: *, idRequiredPath: string, relativeRequiredPath: string}}
+ */
+const getRelativePathsAgainstSuggestedRoots = (requiredPath, source, rootDir, roots = []) =>
+{
+    let sourceAbs = joinPath(rootDir, source);
+    let rootDirs = JSON.parse(JSON.stringify(roots));
+
+    for (let i = 0; i < rootDirs.length; ++i)
+    {
+        let requiredRootDir = rootDirs[i];
+        requiredRootDir = resolvePath(requiredRootDir);
+        let requiredAbsolutePath = joinPath(requiredRootDir, requiredPath);
+        if (fs.existsSync(requiredAbsolutePath))
+        {
+            let relativeRequiredPath = path.relative(rootDir, requiredAbsolutePath);
+            relativeRequiredPath = normalisePath(relativeRequiredPath);
+
+            let idRequiredPath = path.relative(sourceAbs, requiredAbsolutePath);
+            idRequiredPath = normalisePath(idRequiredPath);
+            return {requiredRootDir, requiredAbsolutePath, idRequiredPath, relativeRequiredPath};
+        }
+    }
+
+    return null;
+};
+
+/**
+ * Add a file to the file list to parse. All added files must have their paths relative to rootDir.
+ * If a path cannot be calculated based on rootDir, it must be passed as absolute and a copy
+ * should be created in ./{rootDir}/__root/...
  * @param {string} source .cjs Source path (relative to rootDir)
  * @param {string} rootDir All .cjs Root dir
  * @param {string} outputDir .mjs Destination directory
@@ -2687,6 +2808,7 @@ const findEntry = (source, propertyName = "sourceAbs") =>
  * @param origin
  * @param moduleName
  * @param workingDir
+ * @param externalSource
  * @returns {CjsInfoType|null}
  */
 const addFileToIndex = ({
@@ -2700,7 +2822,8 @@ const addFileToIndex = ({
                             origin = "",
                             moduleName = null,
                             workingDir,
-                            outputDir
+                            outputDir,
+                            externalSource = false
                         }) =>
 {
     try
@@ -2761,7 +2884,8 @@ const addFileToIndex = ({
                 origin,
                 moduleName,
                 workingDir,
-                outputDir
+                outputDir,
+                externalSource
             });
         }
 
@@ -3270,20 +3394,27 @@ const bundleResults = async (entryPointPath, {
     return true;
 };
 
+const removeCommentLikeElement = (str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source = null) =>
+{
+    str = stripCodeComments(str, sourceExtractedComments, commentMasks);
+    source && dumpData(str, source, "hideKeyElementCode - stripCodeComments");
+
+    str = stripCodeStrings(str, sourceExtractedStrings);
+    source && dumpData(str, source, "hideKeyElementCode - stripCodeStrings");
+
+    str = stripCodeRegexes(str, sourceExtractedRegexes);
+    source && dumpData(str, source, "hideKeyElementCode - stripCodeRegexes");
+
+    return str;
+};
+
 const hideKeyElementCode = (str, source) =>
 {
     sourceExtractedComments = [];
     sourceExtractedStrings = [];
     sourceExtractedRegexes = [];
 
-    str = stripCodeComments(str, sourceExtractedComments, commentMasks);
-    dumpData(str, source, "hideKeyElementCode - stripCodeComments");
-
-    str = stripCodeStrings(str, sourceExtractedStrings);
-    dumpData(str, source, "hideKeyElementCode - stripCodeStrings");
-
-    str = stripCodeRegexes(str, sourceExtractedRegexes);
-    dumpData(str, source, "hideKeyElementCode - stripCodeRegexes");
+    str = removeCommentLikeElement(str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source);
 
     str = markBlocks(str).modifiedSource;
     dumpData(str, source, "hideKeyElementCode - markBlocks");
@@ -3605,7 +3736,10 @@ const writeResultOnDisk = (moreOptions) =>
                 {
                     if (mjsTargetAbs.indexOf(moreOptions.outputDir) === -1)
                     {
-                        console.error({lid: 3118}, `Source path miscalculation: [${mjsTargetAbs}]`);
+                        if (!isResolveAbsoluteMode(moreOptions))
+                        {
+                            console.error({lid: 3118}, `Source path miscalculation: [${mjsTargetAbs}]`);
+                        }
                     }
                     else
                     {
@@ -3696,19 +3830,19 @@ const convertCjsFiles = (list, {
             converted = applyReplaceFromConfig(converted, replaceStart);
             dumpData(converted, source, "replace-from-config-file");
 
-            converted = removeShebang(converted);
-            dumpData(converted, source, "remove-shebang");
-
-            converted = convertComplexRequiresToSimpleRequires(converted, source);
-            dumpData(converted, source, "convert-complex-requires-to-simple-requires");
-
-            converted = convertJsonImportToVars(converted, {
-                source,
-            });
-            dumpData(converted, source, "convert-json-import-to-vars");
-
             if (isCjsCompatible(sourceAbs, converted))
             {
+                converted = removeShebang(converted);
+                dumpData(converted, source, "remove-shebang");
+
+                converted = convertComplexRequiresToSimpleRequires(converted, source);
+                dumpData(converted, source, "convert-complex-requires-to-simple-requires");
+
+                converted = convertJsonImportToVars(converted, {
+                    source,
+                });
+                dumpData(converted, source, "convert-json-import-to-vars");
+
                 let result, success;
                 result = convertRequiresToImportsWithAST(converted, list,
                     {
@@ -3755,6 +3889,21 @@ const convertCjsFiles = (list, {
                         });
                     dumpData(converted, source, "convertToESMWithRegex");
                 }
+
+                converted = moveEmbeddedImportsToTop(converted, source);
+                dumpData(converted, source, "moveEmbeddedImportsToTop");
+
+                converted = putBackAmbiguous(converted);
+                dumpData(converted, source, "putBackAmbiguous");
+
+                converted = restoreText(converted);
+                dumpData(converted, source, "restoreText");
+
+                converted = insertDirname(converted);
+                dumpData(converted, source, "insertDirname");
+
+                converted = insertHeader(converted, cjsItem, {noHeader: noHeader});
+                dumpData(converted, source, "insertHeader");
             }
             else
             {
@@ -3765,21 +3914,6 @@ const convertCjsFiles = (list, {
                     });
                 dumpData(converted, source, "reviewEsmImports");
             }
-
-            converted = moveEmbeddedImportsToTop(converted, source);
-            dumpData(converted, source, "moveEmbeddedImportsToTop");
-
-            converted = putBackAmbiguous(converted);
-            dumpData(converted, source, "putBackAmbiguous");
-
-            converted = restoreText(converted);
-            dumpData(converted, source, "restoreText");
-
-            converted = insertDirname(converted);
-            dumpData(converted, source, "insertDirname");
-
-            converted = insertHeader(converted, cjsItem, {noHeader: noHeader});
-            dumpData(converted, source, "insertHeader");
 
             converted = applyReplaceFromConfig(converted, replaceEnd);
             dumpData(converted, source, "applyReplaceFromConfig");
@@ -4514,8 +4648,18 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         }
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
-            "rootDir, workingDir, noHeader, outputDir, entrypoint"
+            "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal"
         );
+
+        if (cliOptions.resolveAbsolute === true)
+        {
+            cliOptions.resolveAbsolute = "./node_modules";
+        }
+
+        if (cliOptions.resolveAbsolute)
+        {
+            cliOptions.resolveAbsolute = cliOptions.resolveAbsolute.split(",");
+        }
 
         // Extract working, root and output directories
         let {workingDir, rootDir, outputDir} = extractKeyDirectories(cliOptions);
