@@ -1,18 +1,11 @@
-/**
- * This file is to convert a Commonjs file into an ESM one.
- */
-
-// ===========================================================================
-// Imports
-// ---------------------------------------------------------------------------
-const path = require("path");
-const fs = require("fs");
-const glob = require("glob");
-let crypto = require("crypto");
-
-const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
-const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
-const {
+const __filename = fileURLToPath(import.meta.url);
+import path  from "path";
+import fs  from "fs";
+import glob  from "glob";
+import crypto  from "crypto";
+import {hideText, restoreText, beforeReplace, resetAll}  from "before-replace";
+import {stripStrings, stripComments, stripRegexes, clearStrings, parseString}  from "strip-comments-strings";
+import {
     resolvePath,
     joinPath,
     normalisePath,
@@ -20,19 +13,38 @@ const {
     isArgsDir,
     normaliseDirPath,
     importLowerCaseOptions,
-} = require("@thimpat/libutils");
-const {Readable} = require("stream");
-const toAnsi = require("to-ansi");
+}  from "@thimpat/libutils";
+import {Readable}  from "stream";
+import toAnsi  from "to-ansi";
+import {findPackageEntryPoint}  from "find-entry-point";
+import espree  from "espree";
+import estraverse  from "estraverse";
+import {anaLogger}  from "analogger";
+import esbuild  from "esbuild";
+import _toesmTemp1  from "os";
+import child_process  from "child_process";
+/**
+ * This file is to convert a Commonjs file into an ESM one.
+ */
 
-const {findPackageEntryPoint} = require("find-entry-point");
+// ===========================================================================
+// Imports
+// ---------------------------------------------------------------------------
 
-const espree = require("espree");
-const estraverse = require("estraverse");
-const {anaLogger} = require("analogger");
 
-const esbuild = require("esbuild");
 
-const toEsmPackageJson = require("../package.json");
+
+
+
+
+
+
+
+
+
+
+
+let toEsmPackageJson = {};
 
 // ===========================================================================
 // Constants
@@ -56,7 +68,7 @@ let dumpCounter = 0;
 let DEBUG_MODE = false;
 
 
-const TARGET = {
+export const TARGET  = {
     BROWSER: "browser",
     ESM    : "esm",
     CJS    : "cjs",
@@ -73,18 +85,20 @@ const STRING_MASK_END = "❉✎❖";
 const REGEX_MASK_START = "✋⛽⚒";
 const REGEX_MASK_END = "⚒⛽✋";
 
-const EOL = require("os").EOL;
+
+const EOL  = _toesmTemp1.EOL;
+
 const IMPORT_MASK_START = EOL + "/** to-esm: import-start **/" + EOL;
 const IMPORT_MASK_END = EOL + "/** to-esm: import-end **/" + EOL;
 const EXPORT_KEYWORD_MASK = "🦊";
 
-const DEBUG_DIR = "./debug/";
+export const DEBUG_DIR  = "./debug/";
 
 const GENERATED_ROOT_FOLDER_NAME = "_root";
 
 let indexGeneratedTempVariable = 1;
 
-const DEFAULT_PREFIX_TEMP = ".tmp-toesm";
+export const DEFAULT_PREFIX_TEMP  = ".tmp-toesm";
 
 const ORIGIN_ADDING_TO_INDEX = {
     START                  : "START",
@@ -100,12 +114,12 @@ const ORIGIN_ADDING_TO_INDEX = {
 const AMBIGUOUS = [
     {
         search  : /\bmodule\b/gm,
-        replace : "❖❖❖❖❖❖",
+        replace : "module",
         original: "module"
     },
     {
         search  : /\bexports\b/gm,
-        replace : "❉❉❉❉❉❉❉",
+        replace : "exports",
         original: "exports"
     }
 ];
@@ -157,13 +171,13 @@ const displayWarningOncePerModule = (function ()
 // ===========================================================================
 // Cores
 // ---------------------------------------------------------------------------
-const normaliseString = (content) =>
+export const normaliseString  = (content) =>
 {
     content = content.replace(/\r\n/gm, "\n").replace(/\n/gm, EOL);
     return content;
 };
 
-const setupConsole = () =>
+export const setupConsole  = () =>
 {
     try
     {
@@ -189,7 +203,7 @@ const setupConsole = () =>
  * @test Some parts are ignored for the coverage (needs to simulate conditions
  * linked to filesystem like root access or bad hard drive)
  */
-const buildTargetDir = (targetDir) =>
+export const buildTargetDir  = (targetDir) =>
 {
     try
     {
@@ -251,7 +265,7 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
  * @param source
  * @returns {*}
  */
-const convertNonTrivial = (converted, source) =>
+export const convertNonTrivial  = (converted, source) =>
 {
     let converted0;
     let regex = /((?<!export\s+)(?:const|let|var|class|function\s*\*?)\s+)(\w+)(\s+=.*\b(?:module\.)?exports\s*=\s*{[^}]*\2\b)/sgm;
@@ -276,7 +290,7 @@ const convertNonTrivial = (converted, source) =>
  * @param syntaxType
  * @returns {boolean}
  */
-const validateSyntax = (str, syntaxType = "commonjs") =>
+export const validateSyntax  = (str, syntaxType = "commonjs") =>
 {
     try
     {
@@ -306,7 +320,7 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
  * otherwise, it's not.
  * @returns {boolean}
  */
-const isConventionalFolder = (source) =>
+export const isConventionalFolder  = (source) =>
 {
     if (!source)
     {
@@ -321,7 +335,7 @@ const isConventionalFolder = (source) =>
  * @param requiredPath Relative path inside the require or import
  * @todo Change function name to more appropriate name
  */
-const concatenatePaths = (source, requiredPath) =>
+export const concatenatePaths  = (source, requiredPath) =>
 {
     source = normalisePath(source);
 
@@ -451,7 +465,7 @@ const dumpData = (converted, source, title = "") =>
  * @param wholePath
  * @returns {*|string[]}
  */
-const convertToSubRootDir = (wholePath) =>
+export const convertToSubRootDir  = (wholePath) =>
 {
     wholePath = normalisePath(wholePath);
     const arr = wholePath.split("/");
@@ -468,7 +482,7 @@ const convertToSubRootDir = (wholePath) =>
  * @param pathToSubtract Subdirectory to remove from path
  * @returns {*}
  */
-const subtractPath = (wholePath, pathToSubtract) =>
+export const subtractPath  = (wholePath, pathToSubtract) =>
 {
     let subPath, subDir;
 
@@ -527,7 +541,7 @@ const subtractPath = (wholePath, pathToSubtract) =>
  * @param list
  * @returns {{}|*}
  */
-const getTranslatedPath = (requiredPath, list) =>
+export const getTranslatedPath  = (requiredPath, list) =>
 {
     requiredPath = normalisePath(requiredPath);
     for (let i = 0; i < list.length; ++i)
@@ -550,7 +564,7 @@ const getTranslatedPath = (requiredPath, list) =>
  * @param outputDir
  * @returns {{}|{projectedPath: (*), subDir: *, projectedDir: (*), subPath: *, sourcePath: (*)}}
  */
-const getProjectedPathAll = ({source, outputDir}) =>
+export const getProjectedPathAll  = ({source, outputDir}) =>
 {
     try
     {
@@ -614,7 +628,7 @@ const reviewEntryImportMaps = (match/*, requestedRequired, moreOptions*/) =>
  * @param outputDir
  * @returns {string}
  */
-const calculateRequiredPath = ({sourcePath, requiredPath, list, outputDir}) =>
+export const calculateRequiredPath  = ({sourcePath, requiredPath, list, outputDir}) =>
 {
     let projectedRequiredPath;
 
@@ -949,7 +963,7 @@ const resolveAbsoluteImport = (text, list, {
  * @param fileProp
  * @returns {*}
  */
-const reviewEsmImports = (text, list, {
+export const reviewEsmImports  = (text, list, {
     source,
     rootDir,
     outputDir,
@@ -1052,7 +1066,7 @@ const reviewEsmImports = (text, list, {
  * @param workingDir
  * @returns {*}
  */
-const parseImportWithRegex = (text, list, fileProp, workingDir) =>
+export const parseImportWithRegex  = (text, list, fileProp, workingDir) =>
 {
     const parsedFilePath = joinPath(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
@@ -1198,14 +1212,11 @@ const restoreShebang = (converted) =>
  * @param source
  * @returns {*}
  */
-const convertModuleExportsToExport = (converted, source) =>
+export const convertModuleExportsToExport  = (converted, source) =>
 {
     converted = hideKeyElementCode(converted, source);
 
-    // Convert exports = module.exports = ... to module.exports =
     converted = converted.replace(/\bexports\b\s*=\s*module.exports\s*=/, "module.exports =");
-
-    // Convert module.exports = exports = ... to module.exports =
     converted = converted.replace(/\bmodule\.exports\b\s*=\s*exports\s*=/, "module.exports =");
 
     converted = converted.replace(
@@ -1225,13 +1236,13 @@ const convertModuleExportsToExport = (converted, source) =>
     while (converted !== converted0);
 
     // Convert module.exports to export default
-    converted = converted.replace(/(^\s*)(?:\bmodule\b\.)?\bexports\b\s*=/gm, "$1export default");
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
 
     // Convert module.exports.default to export default
-    converted = converted.replace(/(^\s*)(?:\bmodule\b\.)?\bexports\b\.default\s*=/gm, "$1export default");
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.default\s*=/gm, "export default");
 
     // Convert module.exports.something to export something
-    converted = converted.replace(/(^\s*)(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "$1export const $2 =");
+    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
 
     const arr = converted.split("export default");
     const defaultExportNumber = arr.length - 1;
@@ -1308,7 +1319,7 @@ const convertJsonImportToVars = (converted, {
  * @param converted
  * @returns {*}
  */
-const convertRequiresToImport = (converted) =>
+export const convertRequireToImport  = (converted) =>
 {
     converted = stripCodeComments(converted);
 
@@ -1580,7 +1591,7 @@ const findNearestBlock = (identifier, previouses) =>
  * @param debuginput
  * @returns {{converted, success: boolean}}
  */
-const convertRequiresToImportsWithAST = (converted, list, {
+export const convertRequiresToImportsWithAST  = (converted, list, {
     source,
     sourceAbs,
     outputDir,
@@ -1846,7 +1857,7 @@ const convertRequiresToImportsWithAST = (converted, list, {
  * @param COMMENT_MASK_END
  * @returns {*}
  */
-const stripCodeComments = (code, extracted = null, {
+export const stripCodeComments  = (code, extracted = null, {
     COMMENT_MASK_START = COMMENT_MASK,
     COMMENT_MASK_END = COMMENT_MASK
 } = {}) =>
@@ -1887,7 +1898,7 @@ const escapeDollar = function(text)
     return text.split("$").join("$$");
 };
 
-const putBackComments = (str, extracted, {
+export const putBackComments  = (str, extracted, {
     COMMENT_MASK_START = COMMENT_MASK,
     COMMENT_MASK_END = COMMENT_MASK
 } = {}) =>
@@ -2153,7 +2164,7 @@ const hasImportmap = (content) =>
     return match && match.length;
 };
 
-const getImportMapFromPage = (fullHtmlPath) =>
+export const getImportMapFromPage  = (fullHtmlPath) =>
 {
     let content = fs.readFileSync(fullHtmlPath, "utf-8");
 
@@ -2330,7 +2341,7 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
  * @param nonHybridModuleMap
  * @returns {*}
  */
-const convertToESMWithRegex = (converted, list, {
+export const convertToESMWithRegex  = (converted, list, {
     source,
     outputDir,
     rootDir,
@@ -2380,7 +2391,7 @@ const convertToESMWithRegex = (converted, list, {
     return converted;
 };
 
-const getOptionsConfigFile = async (configPath) =>
+export const getOptionsConfigFile  = async (configPath) =>
 {
     let confFileOptions = {};
 
@@ -2423,7 +2434,7 @@ const getOptionsConfigFile = async (configPath) =>
  * @param replace
  * @returns {*[]}
  */
-const regexifySearchList = (replace = []) =>
+export const regexifySearchList  = (replace = []) =>
 {
     replace.forEach((item) =>
     {
@@ -2440,7 +2451,7 @@ const regexifySearchList = (replace = []) =>
     return replace || [];
 };
 
-const getLibraryInfo = (modulePackname) =>
+export const getLibraryInfo  = (modulePackname) =>
 {
     const info = {
         installed: false
@@ -2477,7 +2488,7 @@ const getLibraryInfo = (modulePackname) =>
  * @param isCjs
  * @param packageJson
  */
-const installPackage =
+export const installPackage  =
     ({name, version, isDevDependencies, moduleName, isCjs} = {}) =>
     {
         try
@@ -2500,9 +2511,7 @@ const installPackage =
 
         const devOption = isDevDependencies ? " -D" : "";
 
-        const child_process = require("child_process");
-
-        const environment = isCjs ? "CommonJs modules" : "ES Modules";
+         const environment = isCjs ? "CommonJs modules" : "ES Modules";
 
         console.info({lid: 1142}, `Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
@@ -2521,7 +2530,7 @@ const installPackage =
  * @param config
  * @returns {Promise<{}|null>}
  */
-const installNonHybridModules = async (config = []) =>
+export const installNonHybridModules  = async (config = []) =>
 {
     try
     {
@@ -2929,7 +2938,7 @@ const addFileToIndex = ({
  * Reset references to converted files, so the system can redo conversions
  * multiple times (watchers)
  */
-const resetIndex = () =>
+export const resetIndex  = () =>
 {
     // Fastest way to clear an array and keep the reference
     cjsList.length = 0;
@@ -2937,7 +2946,7 @@ const resetIndex = () =>
     dumpCounter = 0;
 };
 
-const getIndexedItems = () =>
+export const getIndexedItems  = () =>
 {
     return cjsList;
 };
@@ -2963,7 +2972,7 @@ const getIndent = async (str) =>
  * @param replace
  * @returns {*}
  */
-const applyReplaceFromConfig = (converted, replace) =>
+export const applyReplaceFromConfig  = (converted, replace) =>
 {
     replace.forEach((item) =>
     {
@@ -3787,7 +3796,7 @@ const writeResultOnDisk = (moreOptions) =>
  * @param moreOptions
  * @param rootDir
  */
-const convertCjsFiles = (list, {
+export const convertCjsFiles  = (list, {
     replaceStart = [],
     replaceEnd = [],
     nonHybridModuleMap = {},
@@ -4186,7 +4195,7 @@ const parseCliInputs = (cliOptions) =>
  * @param workingDir
  * @returns {CjsInfoType[]}
  */
-const buildIndex = (cliOptions, {outputDir, rootDir, workingDir}) =>
+export const buildIndex  = (cliOptions, {outputDir, rootDir, workingDir}) =>
 {
     let list = [];
     try
@@ -4402,7 +4411,7 @@ const prepareDebugMode = (cliOptions, moreOptions = {}) =>
  * Use command line arguments to apply conversion
  * @param moreOptions
  */
-let convertFile = async (moreOptions) =>
+export let convertFile  = async (moreOptions) =>
 {
     let success = true;
     try
@@ -4630,7 +4639,7 @@ const extractKeyDirectories = function (cliOptions)
  * @param outputDir
  * @returns {boolean}
  */
-const updateOptions = function (cliOptions, {workingDir, outputDir})
+export const updateOptions  = function (cliOptions, {workingDir, outputDir})
 {
     if (outputDir.indexOf(DEFAULT_PREFIX_TEMP) > -1)
     {
@@ -4644,7 +4653,7 @@ const updateOptions = function (cliOptions, {workingDir, outputDir})
  * @param simplifiedCliOptions
  * @returns {Promise<{success: boolean}>}
  */
-const transpileFiles = async (simplifiedCliOptions = null) =>
+export const transpileFiles  = async (simplifiedCliOptions = null) =>
 {
     try
     {
@@ -4722,46 +4731,46 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports.buildTargetDir = buildTargetDir;
-module.exports.convertNonTrivial = convertNonTrivial;
-module.exports.reviewEsmImports = reviewEsmImports;
-module.exports.parseImportWithRegex = parseImportWithRegex;
-module.exports.applyReplaceFromConfig = applyReplaceFromConfig;
-module.exports.stripCodeComments = stripCodeComments;
-module.exports.convertModuleExportsToExport = convertModuleExportsToExport;
-module.exports.convertRequireToImport = convertRequiresToImport;
-module.exports.validateSyntax = validateSyntax;
-module.exports.convertRequiresToImportsWithAST = convertRequiresToImportsWithAST;
-module.exports.putBackComments = putBackComments;
-module.exports.convertCjsFiles = convertCjsFiles;
-module.exports.convertToESMWithRegex = convertToESMWithRegex;
-module.exports.getOptionsConfigFile = getOptionsConfigFile;
-module.exports.getLibraryInfo = getLibraryInfo;
-module.exports.installPackage = installPackage;
-module.exports.installNonHybridModules = installNonHybridModules;
-module.exports.isConventionalFolder = isConventionalFolder;
-module.exports.concatenatePaths = concatenatePaths;
-module.exports.convertToSubRootDir = convertToSubRootDir;
-module.exports.subtractPath = subtractPath;
-module.exports.getTranslatedPath = getTranslatedPath;
-module.exports.getProjectedPathAll = getProjectedPathAll;
-module.exports.calculateRequiredPath = calculateRequiredPath;
-module.exports.regexifySearchList = regexifySearchList;
-module.exports.getImportMapFromPage = getImportMapFromPage;
-module.exports.normaliseString = normaliseString;
 
-module.exports.setupConsole = setupConsole;
 
-module.exports.resetIndex = resetIndex;
-module.exports.buildIndex = buildIndex;
-module.exports.updateOptions = updateOptions;
 
-module.exports.getIndexedItems = getIndexedItems;
 
-module.exports.convertFile = convertFile;
-module.exports.transpileFiles = transpileFiles;
 
-module.exports.TARGET = TARGET;
-module.exports.DEBUG_DIR = DEBUG_DIR;
-module.exports.DEFAULT_PREFIX_TEMP = DEFAULT_PREFIX_TEMP;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
