@@ -1325,6 +1325,46 @@ describe("The converter tool", function ()
                 }
             );
 
+            it("should not take into account comments when converting .mjs files", async function ()
+                {
+                    const input = "./assets/given/demo-test-45.mjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-45.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-45.mjs"), "utf8");
+
+                    expect(actualConversion).to.equal(expectConversion);
+                }
+            );
+
+            it("should resolve absolute paths in .mjs files", async function ()
+                {
+                    const input = "./assets/given/demo-test-46.mjs";
+                    const options = {
+                        input,
+                        output      : path.join(testDir, "/actual"),
+                        noheader    : true,
+                        target      : TARGET.ESM,
+                        keepExternal: true,
+                        resolveAbsolute: ["./node_modules"]
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-46.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-46.mjs"), "utf8");
+
+                    expect(actualConversion).to.equal(expectConversion);
+                }
+            );
+
         });
 
         describe("on a directory", () =>
