@@ -1202,7 +1202,10 @@ const convertModuleExportsToExport = (converted, source) =>
 {
     converted = hideKeyElementCode(converted, source);
 
+    // Convert exports = module.exports = ... to module.exports =
     converted = converted.replace(/\bexports\b\s*=\s*module.exports\s*=/, "module.exports =");
+
+    // Convert module.exports = exports = ... to module.exports =
     converted = converted.replace(/\bmodule\.exports\b\s*=\s*exports\s*=/, "module.exports =");
 
     converted = converted.replace(
@@ -1222,13 +1225,13 @@ const convertModuleExportsToExport = (converted, source) =>
     while (converted !== converted0);
 
     // Convert module.exports to export default
-    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
+    converted = converted.replace(/(^\s*)(?:\bmodule\b\.)?\bexports\b\s*=/gm, "$1export default");
 
     // Convert module.exports.default to export default
-    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.default\s*=/gm, "export default");
+    converted = converted.replace(/(^\s*)(?:\bmodule\b\.)?\bexports\b\.default\s*=/gm, "$1export default");
 
     // Convert module.exports.something to export something
-    converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
+    converted = converted.replace(/(^\s*)(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "$1export const $2 =");
 
     const arr = converted.split("export default");
     const defaultExportNumber = arr.length - 1;
