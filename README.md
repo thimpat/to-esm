@@ -569,24 +569,26 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 ## Options (via command line)
 
 
-| **Options**      | **Description**                                                         | **Expect**               |
-|------------------|-------------------------------------------------------------------------|--------------------------|
-| filepath         | _File or pattern to convert_                                            | **Only required option** |
-| --output         | _Output directory_                                                      | directory path           |
-| --html           | _html files to receive importmaps_                                      | glob                     |
-| --noHeader       | _Options to not generate automatic header_                              |                          |
-| --keepExisting   | _Options to skip already converted files_                               |                          |
-| --target         | _Setting the targeted environment_                                      | esm / browser / package  |  
-| --bundle         | _Generate minified bundle for esm environment_                          | file path                |  
-| --bundle-esm     | _Same as above_                                                         | file path                |  
-| --bundle-browser | _Generate minified bundle for browser environment_                      | file path                |  
-| --bundle-cjs     | _Generate minified bundle for cjs environment_                          | file path                |  
-| --entrypoint     | _Path to .js entrypoint_                                                | file path                |  
-| --update-all     | _Automatically update package.json to set entry points_                 |                          |  
-| --use-bundle     | _When updating package.json use bundled/minified code_                  |                          |  
-| --prefixpath     | _Add a path to paths targeting third party modules_                     | directory path <br/>     |  
-| --watch          | _Watch mode to automatically apply conversions when changes detected_   | directory path <br/>     |  
-| --entrypoint     | _Explicitely set entry point (otherwise use the first file set in cli)_ | file path                |  
+| **Options**        | **Description**                                                          | **Expect**               |
+|--------------------|--------------------------------------------------------------------------|--------------------------|
+| filepath           | _File or pattern to convert_                                             | **Only required option** |
+| --output           | _Output directory_                                                       | directory path           |
+| --html             | _html files to receive importmaps_                                       | glob                     |
+| --noHeader         | _Options to not generate automatic header_                               |                          |
+| --keepExisting     | _Options to skip already converted files_                                |                          |
+| --target           | _Setting the targeted environment_                                       | esm / browser / package  |  
+| --bundle           | _Generate minified bundle for esm environment_                           | file path                |  
+| --bundle-esm       | _Same as above_                                                          | file path                |  
+| --bundle-browser   | _Generate minified bundle for browser environment_                       | file path                |  
+| --bundle-cjs       | _Generate minified bundle for cjs environment_                           | file path                |  
+| --entrypoint       | _Path to .js entrypoint_                                                 | file path                |  
+| --update-all       | _Automatically update package.json to set entry points_                  |                          |  
+| --use-bundle       | _When updating package.json use bundled/minified code_                   |                          |  
+| --prefixpath       | _Add a path to paths targeting third party modules_                      | directory path <br/>     |  
+| --watch            | _Watch mode to automatically apply conversions when changes detected_    | directory path <br/>     |  
+| --entrypoint       | _Explicitely set entry point (otherwise use the first file set in cli)_  | file path                |  
+| --resolve-absolute | _Extra folders to look for when trying to solve absolute imported paths_ | string         <br/>     |  
+| --keep-external    | _Do not try to copy files from absolute paths into generated folder_     | true                     |  
 
 
 
