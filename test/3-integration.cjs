@@ -1349,10 +1349,10 @@ describe("The converter tool", function ()
                     const input = "./assets/given/demo-test-46.mjs";
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        noheader    : true,
-                        target      : TARGET.ESM,
-                        keepExternal: true,
+                        output         : path.join(testDir, "/actual"),
+                        noheader       : true,
+                        target         : TARGET.ESM,
+                        keepExternal   : true,
                         resolveAbsolute: ["./node_modules"]
                     };
 
@@ -1360,6 +1360,27 @@ describe("The converter tool", function ()
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-46.mjs"), "utf8");
                     const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-46.mjs"), "utf8");
+
+                    expect(actualConversion).to.equal(expectConversion);
+                }
+            );
+
+            it("should compile itself", async function ()
+                {
+                    const input = "./assets/given/demo-test-50.cjs";
+                    const options = {
+                        input,
+                        output         : path.join(testDir, "/actual"),
+                        noheader       : true,
+                        target         : TARGET.ESM,
+                        keepExternal   : true,
+                        resolveAbsolute: ["./node_modules"]
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-50.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-50.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
