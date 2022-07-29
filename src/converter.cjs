@@ -8,6 +8,7 @@
 const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
+let crypto = require("crypto");
 
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
@@ -1229,10 +1230,12 @@ const convertModuleExportsToExport = (converted, source) =>
     // Convert module.exports.something to export something
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
 
-    const defaultExportNumber = converted.split("export default").length - 1;
+    const arr = converted.split("export default");
+    const defaultExportNumber = arr.length - 1;
     if (defaultExportNumber > 1)
     {
-        console.log({lid: 1016, color: "yellow"}, `${defaultExportNumber} default exports detected`);
+        const twiceExported = arr[1].trim().split(/\W/)[0];
+        console.log({lid: 1016, color: "yellow"}, `${defaultExportNumber} default exports detected => \`export default ${twiceExported}\` `);
         console.log({lid: 1018, color: "yellow"}, "Assure that you have only one export (or none) of type " +
             `"module.exports = ..."` +
             " and use named export if possible => i.e. \"module.exports.myValue = ...\"");
@@ -2113,7 +2116,7 @@ const formatIndexEntry = ({
 
         source = normalisePath(source);
 
-        let id = require("crypto")
+        let id = crypto
             .createHash("sha256")
             .update(source)
             .digest("hex");
@@ -4740,7 +4743,6 @@ module.exports.subtractPath = subtractPath;
 module.exports.getTranslatedPath = getTranslatedPath;
 module.exports.getProjectedPathAll = getProjectedPathAll;
 module.exports.calculateRequiredPath = calculateRequiredPath;
-module.exports.putBackComments = putBackComments;
 module.exports.regexifySearchList = regexifySearchList;
 module.exports.getImportMapFromPage = getImportMapFromPage;
 module.exports.normaliseString = normaliseString;
