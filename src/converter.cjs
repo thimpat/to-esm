@@ -901,7 +901,7 @@ const resolveAbsoluteImport = (text, list, {
 
         if (lookupDirLists)
         {
-            const props = getRelativePathsAgainstSuggestedRoots(regexRequiredPath, source, rootDir, lookupDirLists);
+            const props = getRelativePathsAgainstSuggestedRoots({regexRequiredPath, source, rootDir, lookupDirLists, outputDir});
             if (props)
             {
                 relativeRequiredPath = props.relativeRequiredPath;
@@ -2769,28 +2769,34 @@ const findEntry = (source, propertyName = "sourceAbs") =>
 /**
  * Look if the required file exists in one of the suggested folder,
  * then if found calculate its path relatively to its source.
- * @param {string} requiredPath Required path as written in the source file
+ * @param regexRequiredPath Required path as written in the source file
  * @param {string} source The source path file that does the import
  * @param {string} rootDir
- * @param {string[]} roots List of folders to look for the required file from
- * @returns {null|{requiredAbsolutePath: (*), requiredRootDir: *, idRequiredPath: string, relativeRequiredPath: string}}
+ * @param {string[]} lookupDirLists List of folders to look for the required file from
+ * @param outputDir
+ * @returns {{requiredAbsolutePath: (*), requiredRootDir: *, idRequiredPath: (*|string), relativeRequiredPath:
+ *     (*|string)}|null}
  */
-const getRelativePathsAgainstSuggestedRoots = (requiredPath, source, rootDir, roots = []) =>
+const getRelativePathsAgainstSuggestedRoots = ({regexRequiredPath, source, rootDir, lookupDirLists = [], outputDir}) =>
 {
-    let sourceAbs = joinPath(rootDir, source);
-    let rootDirs = JSON.parse(JSON.stringify(roots));
+    console.log(outputDir);
+    // let sourceAbs = joinPath(rootDir, source);
+    let targetAbs = joinPath(outputDir, source);
+    let targetDir = path.parse(targetAbs).dir;
+
+    let rootDirs = JSON.parse(JSON.stringify(lookupDirLists));
 
     for (let i = 0; i < rootDirs.length; ++i)
     {
         let requiredRootDir = rootDirs[i];
         requiredRootDir = resolvePath(requiredRootDir);
-        let requiredAbsolutePath = joinPath(requiredRootDir, requiredPath);
+        let requiredAbsolutePath = joinPath(requiredRootDir, regexRequiredPath);
         if (fs.existsSync(requiredAbsolutePath))
         {
             let relativeRequiredPath = path.relative(rootDir, requiredAbsolutePath);
             relativeRequiredPath = normalisePath(relativeRequiredPath);
 
-            let idRequiredPath = path.relative(sourceAbs, requiredAbsolutePath);
+            let idRequiredPath = path.relative(targetDir, requiredAbsolutePath);
             idRequiredPath = normalisePath(idRequiredPath);
             return {requiredRootDir, requiredAbsolutePath, idRequiredPath, relativeRequiredPath};
         }
