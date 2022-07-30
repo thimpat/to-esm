@@ -3271,7 +3271,7 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {
 
         displaySuccessBundleMessage(bundlePath, target);
 
-        return true;
+        return {success: true, content};
     }
     catch (e)
     {
@@ -3279,7 +3279,7 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {
         console.error({lid: 3096, target: "DEBUG"}, `Fail to bundle: ${e.message}`);
     }
 
-    return false;
+    return {success: false};
 };
 
 const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true, sourcemap = false} = {}) =>
@@ -3311,7 +3311,7 @@ const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true,
 
         displaySuccessBundleMessage(bundlePath, TARGET.CJS);
 
-        return true;
+        return {success: true, content};
     }
     catch (e)
     {
@@ -3319,7 +3319,7 @@ const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true,
         console.error({lid: 3098}, `Fail to bundle: ${e.message}`);
     }
 
-    return false;
+    return {success: false};
 };
 
 const displaySeparator = ({width = 64} = {}) =>
@@ -3365,48 +3365,83 @@ const bundleResults = async (entryPointPath, {
     browserBundlePath = "",
     minify = true,
     sourcemap = false,
-    cjsEntryPath = ""
+    cjsEntryPath = "",
+    extrasInfos = {}
 }) =>
 {
-    if (bundlePath && !await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
-        minify,
-        sourcemap,
-        platform: "node"
-    }))
+    try
     {
-        console.error({lid: 3100}, ` Failed to minify ${target}`);
-        return false;
-    }
-
-    if (browserBundlePath)
-    {
-        if (isBrowserCompatible(entryPointPath))
+        let resBundlePath;
+        if (bundlePath)
         {
-            if (!await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {minify, sourcemap}))
+            resBundlePath = await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
+                minify,
+                sourcemap,
+                platform: "node"
+            });
+
+            if (!resBundlePath.success)
             {
-                console.error({lid: 3102}, ` Failed to minify ${TARGET.BROWSER}`);
+                console.error({lid: 3100}, ` Failed to minify ${target}`);
+                return false;
             }
+
+            extrasInfos.esmBundleCode = resBundlePath.content;
         }
-        else
+
+        let resBrowserBundlePath;
+        if (browserBundlePath)
         {
-            displaySeparator();
-            console.error({lid: 3104}, `${entryPointPath} is not browser compatible. Skipping bundle generation for ${TARGET.BROWSER}`);
+            if (isBrowserCompatible(entryPointPath))
+            {
+                resBrowserBundlePath = await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {minify, sourcemap});
+                if (!resBrowserBundlePath.success)
+                {
+                    console.error({lid: 3102}, ` Failed to minify ${TARGET.BROWSER}`);
+                }
+            }
+            else
+            {
+                displaySeparator();
+                console.error({lid: 3104}, `${entryPointPath} is not browser compatible. Skipping bundle generation for ${TARGET.BROWSER}`);
+            }
+
+            extrasInfos.browserBundleCode = resBrowserBundlePath.content;
         }
-    }
 
-    if (cjsBundlePath && !await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
-        minify,
-        sourcemap,
-        platform: "node"
-    }))
+        let resCjsBundlePath;
+        if (cjsBundlePath)
+        {
+            resCjsBundlePath = await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
+                minify,
+                sourcemap,
+                platform: "node"
+            });
+
+            if (!resCjsBundlePath.success)
+            {
+                console.error({lid: 3106}, ` Failed to minify ${TARGET.CJS}`);
+                return false;
+            }
+
+            extrasInfos.cjsBundleCode = resCjsBundlePath.content;
+        }
+
+        return true;
+    }
+    catch (e)
     {
-        console.error({lid: 3106}, ` Failed to minify ${TARGET.CJS}`);
+        console.error({lid: 1000}, e.message);
     }
 
-    return true;
+    return false;
 };
 
-const removeCommentLikeElement = (str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source = null) =>
+const removeCommentLikeElement = (str, {
+    sourceExtractedComments,
+    sourceExtractedStrings,
+    sourceExtractedRegexes
+}, source = null) =>
 {
     str = stripCodeComments(str, sourceExtractedComments, commentMasks);
     source && dumpData(str, source, "hideKeyElementCode - stripCodeComments");
@@ -3426,7 +3461,11 @@ const hideKeyElementCode = (str, source) =>
     sourceExtractedStrings = [];
     sourceExtractedRegexes = [];
 
-    str = removeCommentLikeElement(str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source);
+    str = removeCommentLikeElement(str, {
+        sourceExtractedComments,
+        sourceExtractedStrings,
+        sourceExtractedRegexes
+    }, source);
 
     str = markBlocks(str).modifiedSource;
     dumpData(str, source, "hideKeyElementCode - markBlocks");
@@ -4408,7 +4447,7 @@ const prepareDebugMode = (cliOptions, moreOptions = {}) =>
  * Use command line arguments to apply conversion
  * @param moreOptions
  */
-let convertFile = async (moreOptions) =>
+let convertFile = async (moreOptions, extrasInfos = {}) =>
 {
     let success = true;
     try
@@ -4451,7 +4490,8 @@ let convertFile = async (moreOptions) =>
                 cjsBundlePath,
                 browserBundlePath,
                 minify      : moreOptions.extras.minify,
-                sourcemap   : moreOptions.extras.sourcemap
+                sourcemap   : moreOptions.extras.sourcemap,
+                extrasInfos
             });
         }
 
@@ -4711,9 +4751,10 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         prepareDebugMode(cliOptions, moreOptions);
 
         // Start conversion
-        const success = await convertFile(moreOptions);
+        const extrasInfos = {};
+        const success = await convertFile(moreOptions, extrasInfos);
 
-        return {cliOptions, originalOptions, moreOptions, success};
+        return {cliOptions, originalOptions, moreOptions, success, extrasInfos};
     }
     catch (e)
     {
