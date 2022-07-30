@@ -1238,7 +1238,10 @@ const convertModuleExportsToExport = (converted, source) =>
     if (defaultExportNumber > 1)
     {
         const twiceExported = arr[1].trim().split(/\W/)[0];
-        console.log({lid: 1016, color: "yellow"}, `${defaultExportNumber} default exports detected => \`export default ${twiceExported}\` `);
+        console.log({
+            lid  : 1016,
+            color: "yellow"
+        }, `${defaultExportNumber} default exports detected => \`export default ${twiceExported}\` `);
         console.log({lid: 1018, color: "yellow"}, "Assure that you have only one export (or none) of type " +
             `"module.exports = ..."` +
             " and use named export if possible => i.e. \"module.exports.myValue = ...\"");
@@ -1882,7 +1885,7 @@ const stripCodeComments = (code, extracted = null, {
     return code;
 };
 
-const escapeDollar = function(text)
+const escapeDollar = function (text)
 {
     return text.split("$").join("$$");
 };
