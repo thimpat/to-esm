@@ -2782,7 +2782,6 @@ const findEntry = (source, propertyName = "sourceAbs") =>
  */
 const getRelativePathsAgainstSuggestedRoots = ({regexRequiredPath, source, rootDir, lookupDirLists = [], outputDir}) =>
 {
-    console.log(outputDir);
     // let sourceAbs = joinPath(rootDir, source);
     let targetAbs = joinPath(outputDir, source);
     let targetDir = path.parse(targetAbs).dir;
@@ -4451,7 +4450,7 @@ const deleteTempFolder = (moreOptions) =>
     {
         if (moreOptions.extras.isTemporaryOutputDir && moreOptions.outputDir.indexOf(DEFAULT_PREFIX_TEMP) > -1)
         {
-            console.log(`Cleaning operations`);
+            console.log({lid: 1378}, `Cleaning operations`);
             fs.rmSync(moreOptions.outputDir, {recursive: true, force: true});
             moreOptions.outputDir = null;
         }
@@ -4672,15 +4671,15 @@ const extractKeyDirectories = function (cliOptions)
         {
             if (!(cliOptions.bundle || cliOptions["bundle-esm"] || cliOptions["bundle-cjs"] || cliOptions["bundle-browser"]))
             {
-                console.error(`There was no bundle path passed while the --only-bundle option was used.`);
-                console.log(`Use one of the options available to generate one. i.e. --bundle, --bundle-esm, --bundle-browser or --bundle-cjs `);
-                console.log(`Aborting`);
+                console.error({lid: 1377}, `There was no bundle path passed while the --only-bundle option was used.`);
+                console.log({lid: 1380}, `Use one of the options available to generate one. i.e. --bundle, --bundle-esm, --bundle-browser or --bundle-cjs `);
+                console.log({lid: 1382}, `Aborting`);
                 return null;
             }
 
             if (cliOptions.output)
             {
-                console.info(`The option --only-bundle was given. The output directory will be ignored.`);
+                console.info({lid: 1384}, `The option --only-bundle was given. The output directory will be ignored.`);
                 cliOptions.output = null;
             }
         }
