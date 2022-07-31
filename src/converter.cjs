@@ -4399,7 +4399,6 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
             bundlePath, cjsBundlePath, browserBundlePath,
         });
 
-
     }
     catch (e)
     {
@@ -4446,9 +4445,33 @@ const prepareDebugMode = (cliOptions, moreOptions = {}) =>
     }
 };
 
+const deleteTempFolder = (moreOptions) =>
+{
+    try
+    {
+        if (moreOptions.extras.isTemporaryOutputDir && moreOptions.outputDir.indexOf(DEFAULT_PREFIX_TEMP) > -1)
+        {
+            console.log(`Cleaning operations`);
+            fs.rmSync(moreOptions.outputDir, {recursive: true, force: true});
+            moreOptions.outputDir = null;
+        }
+
+        return true;
+    }
+    catch (e)
+    {
+        console.error({lid: 1000}, e.message);
+    }
+
+    return false;
+};
+
 /**
+ * Convert a file to es6 format. The function will also recursively
+ * parse and convert all detected import/require.
  * Use command line arguments to apply conversion
  * @param moreOptions
+ * @param extrasInfos
  */
 let convertFile = async (moreOptions, extrasInfos = {}) =>
 {
@@ -4472,8 +4495,6 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
                 // noHeader,
                 // importMaps,
                 // workingDir,
-                // fallback,
-                // debuginput,
             });
 
         if (!writeResultOnDisk(moreOptions))
@@ -4486,7 +4507,7 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
 
         if ((bundlePath || cjsBundlePath || browserBundlePath) && mjsEntrypointPath)
         {
-            await bundleResults(mjsEntrypointPath, {
+            const res = await bundleResults(mjsEntrypointPath, {
                 cjsEntryPath: cjsEntryPointPath,
                 target      : moreOptions.extras.target,
                 bundlePath,
@@ -4547,11 +4568,7 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
     }
     finally
     {
-        if (moreOptions.extras.isTemporaryOutputDir && moreOptions.outputDir.indexOf(DEFAULT_PREFIX_TEMP) > -1)
-        {
-            fs.rmSync(moreOptions.outputDir, {recursive: true, force: true});
-            moreOptions.outputDir = null;
-        }
+        deleteTempFolder(moreOptions);
     }
 
     return success;
@@ -4646,10 +4663,27 @@ const extractKeyDirectories = function (cliOptions)
         const rootDir = getRootDir(cliOptions);
         if (!rootDir)
         {
-            return {};
+            return null;
         }
 
         let outputDir = getOutputDirectory(cliOptions);
+
+        if (cliOptions.onlyBundle)
+        {
+            if (!(cliOptions.bundle || cliOptions["bundle-esm"] || cliOptions["bundle-cjs"] || cliOptions["bundle-browser"]))
+            {
+                console.error(`There was no bundle path passed while the --only-bundle option was used.`);
+                console.log(`Use one of the options available to generate one. i.e. --bundle, --bundle-esm, --bundle-browser or --bundle-cjs `);
+                console.log(`Aborting`);
+                return null;
+            }
+
+            if (cliOptions.output)
+            {
+                console.info(`The option --only-bundle was given. The output directory will be ignored.`);
+                cliOptions.output = null;
+            }
+        }
 
         if (!cliOptions.output)
         {
@@ -4703,7 +4737,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         }
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
-            "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal"
+            "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle"
         );
 
         if (cliOptions.resolveAbsolute === true)
@@ -4716,11 +4750,13 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         }
 
         // Extract working, root and output directories
-        let {workingDir, rootDir, outputDir} = extractKeyDirectories(cliOptions);
-        if (!rootDir)
+        const resultExtract = extractKeyDirectories(cliOptions);
+        if (!resultExtract)
         {
             return {success: false};
         }
+
+        let {workingDir, rootDir, outputDir} = resultExtract;
 
         // Save key directories to options
         updateOptions(cliOptions, {workingDir, outputDir});
