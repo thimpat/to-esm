@@ -901,7 +901,7 @@ const resolveAbsoluteImport = (text, list, {
 
         if (lookupDirLists)
         {
-            const props = getRelativePathsAgainstSuggestedRoots(regexRequiredPath, source, rootDir, lookupDirLists);
+            const props = getRelativePathsAgainstSuggestedRoots({regexRequiredPath, source, rootDir, lookupDirLists, outputDir});
             if (props)
             {
                 relativeRequiredPath = props.relativeRequiredPath;
@@ -1238,7 +1238,10 @@ const convertModuleExportsToExport = (converted, source) =>
     if (defaultExportNumber > 1)
     {
         const twiceExported = arr[1].trim().split(/\W/)[0];
-        console.log({lid: 1016, color: "yellow"}, `${defaultExportNumber} default exports detected => \`export default ${twiceExported}\` `);
+        console.log({
+            lid  : 1016,
+            color: "yellow"
+        }, `${defaultExportNumber} default exports detected => \`export default ${twiceExported}\` `);
         console.log({lid: 1018, color: "yellow"}, "Assure that you have only one export (or none) of type " +
             `"module.exports = ..."` +
             " and use named export if possible => i.e. \"module.exports.myValue = ...\"");
@@ -1882,7 +1885,7 @@ const stripCodeComments = (code, extracted = null, {
     return code;
 };
 
-const escapeDollar = function(text)
+const escapeDollar = function (text)
 {
     return text.split("$").join("$$");
 };
@@ -2769,28 +2772,33 @@ const findEntry = (source, propertyName = "sourceAbs") =>
 /**
  * Look if the required file exists in one of the suggested folder,
  * then if found calculate its path relatively to its source.
- * @param {string} requiredPath Required path as written in the source file
+ * @param regexRequiredPath Required path as written in the source file
  * @param {string} source The source path file that does the import
  * @param {string} rootDir
- * @param {string[]} roots List of folders to look for the required file from
- * @returns {null|{requiredAbsolutePath: (*), requiredRootDir: *, idRequiredPath: string, relativeRequiredPath: string}}
+ * @param {string[]} lookupDirLists List of folders to look for the required file from
+ * @param outputDir
+ * @returns {{requiredAbsolutePath: (*), requiredRootDir: *, idRequiredPath: (*|string), relativeRequiredPath:
+ *     (*|string)}|null}
  */
-const getRelativePathsAgainstSuggestedRoots = (requiredPath, source, rootDir, roots = []) =>
+const getRelativePathsAgainstSuggestedRoots = ({regexRequiredPath, source, rootDir, lookupDirLists = [], outputDir}) =>
 {
-    let sourceAbs = joinPath(rootDir, source);
-    let rootDirs = JSON.parse(JSON.stringify(roots));
+    // let sourceAbs = joinPath(rootDir, source);
+    let targetAbs = joinPath(outputDir, source);
+    let targetDir = path.parse(targetAbs).dir;
+
+    let rootDirs = JSON.parse(JSON.stringify(lookupDirLists));
 
     for (let i = 0; i < rootDirs.length; ++i)
     {
         let requiredRootDir = rootDirs[i];
         requiredRootDir = resolvePath(requiredRootDir);
-        let requiredAbsolutePath = joinPath(requiredRootDir, requiredPath);
+        let requiredAbsolutePath = joinPath(requiredRootDir, regexRequiredPath);
         if (fs.existsSync(requiredAbsolutePath))
         {
             let relativeRequiredPath = path.relative(rootDir, requiredAbsolutePath);
             relativeRequiredPath = normalisePath(relativeRequiredPath);
 
-            let idRequiredPath = path.relative(sourceAbs, requiredAbsolutePath);
+            let idRequiredPath = path.relative(targetDir, requiredAbsolutePath);
             idRequiredPath = normalisePath(idRequiredPath);
             return {requiredRootDir, requiredAbsolutePath, idRequiredPath, relativeRequiredPath};
         }
@@ -3265,7 +3273,7 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {
 
         displaySuccessBundleMessage(bundlePath, target);
 
-        return true;
+        return {success: true, content};
     }
     catch (e)
     {
@@ -3273,7 +3281,7 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {
         console.error({lid: 3096, target: "DEBUG"}, `Fail to bundle: ${e.message}`);
     }
 
-    return false;
+    return {success: false};
 };
 
 const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true, sourcemap = false} = {}) =>
@@ -3305,7 +3313,7 @@ const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true,
 
         displaySuccessBundleMessage(bundlePath, TARGET.CJS);
 
-        return true;
+        return {success: true, content};
     }
     catch (e)
     {
@@ -3313,7 +3321,7 @@ const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true,
         console.error({lid: 3098}, `Fail to bundle: ${e.message}`);
     }
 
-    return false;
+    return {success: false};
 };
 
 const displaySeparator = ({width = 64} = {}) =>
@@ -3359,48 +3367,83 @@ const bundleResults = async (entryPointPath, {
     browserBundlePath = "",
     minify = true,
     sourcemap = false,
-    cjsEntryPath = ""
+    cjsEntryPath = "",
+    extrasInfos = {}
 }) =>
 {
-    if (bundlePath && !await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
-        minify,
-        sourcemap,
-        platform: "node"
-    }))
+    try
     {
-        console.error({lid: 3100}, ` Failed to minify ${target}`);
-        return false;
-    }
-
-    if (browserBundlePath)
-    {
-        if (isBrowserCompatible(entryPointPath))
+        let resBundlePath;
+        if (bundlePath)
         {
-            if (!await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {minify, sourcemap}))
+            resBundlePath = await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
+                minify,
+                sourcemap,
+                platform: "node"
+            });
+
+            if (!resBundlePath.success)
             {
-                console.error({lid: 3102}, ` Failed to minify ${TARGET.BROWSER}`);
+                console.error({lid: 3100}, ` Failed to minify ${target}`);
+                return false;
             }
+
+            extrasInfos.esmBundleCode = resBundlePath.content;
         }
-        else
+
+        let resBrowserBundlePath;
+        if (browserBundlePath)
         {
-            displaySeparator();
-            console.error({lid: 3104}, `${entryPointPath} is not browser compatible. Skipping bundle generation for ${TARGET.BROWSER}`);
+            if (isBrowserCompatible(entryPointPath))
+            {
+                resBrowserBundlePath = await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {minify, sourcemap});
+                if (!resBrowserBundlePath.success)
+                {
+                    console.error({lid: 3102}, ` Failed to minify ${TARGET.BROWSER}`);
+                }
+            }
+            else
+            {
+                displaySeparator();
+                console.error({lid: 3104}, `${entryPointPath} is not browser compatible. Skipping bundle generation for ${TARGET.BROWSER}`);
+            }
+
+            extrasInfos.browserBundleCode = resBrowserBundlePath.content;
         }
-    }
 
-    if (cjsBundlePath && !await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
-        minify,
-        sourcemap,
-        platform: "node"
-    }))
+        let resCjsBundlePath;
+        if (cjsBundlePath)
+        {
+            resCjsBundlePath = await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
+                minify,
+                sourcemap,
+                platform: "node"
+            });
+
+            if (!resCjsBundlePath.success)
+            {
+                console.error({lid: 3106}, ` Failed to minify ${TARGET.CJS}`);
+                return false;
+            }
+
+            extrasInfos.cjsBundleCode = resCjsBundlePath.content;
+        }
+
+        return true;
+    }
+    catch (e)
     {
-        console.error({lid: 3106}, ` Failed to minify ${TARGET.CJS}`);
+        console.error({lid: 1000}, e.message);
     }
 
-    return true;
+    return false;
 };
 
-const removeCommentLikeElement = (str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source = null) =>
+const removeCommentLikeElement = (str, {
+    sourceExtractedComments,
+    sourceExtractedStrings,
+    sourceExtractedRegexes
+}, source = null) =>
 {
     str = stripCodeComments(str, sourceExtractedComments, commentMasks);
     source && dumpData(str, source, "hideKeyElementCode - stripCodeComments");
@@ -3420,7 +3463,11 @@ const hideKeyElementCode = (str, source) =>
     sourceExtractedStrings = [];
     sourceExtractedRegexes = [];
 
-    str = removeCommentLikeElement(str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source);
+    str = removeCommentLikeElement(str, {
+        sourceExtractedComments,
+        sourceExtractedStrings,
+        sourceExtractedRegexes
+    }, source);
 
     str = markBlocks(str).modifiedSource;
     dumpData(str, source, "hideKeyElementCode - markBlocks");
@@ -4351,7 +4398,6 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
             bundlePath, cjsBundlePath, browserBundlePath,
         });
 
-
     }
     catch (e)
     {
@@ -4398,11 +4444,35 @@ const prepareDebugMode = (cliOptions, moreOptions = {}) =>
     }
 };
 
+const deleteTempFolder = (moreOptions) =>
+{
+    try
+    {
+        if (moreOptions.extras.isTemporaryOutputDir && moreOptions.outputDir.indexOf(DEFAULT_PREFIX_TEMP) > -1)
+        {
+            console.log({lid: 1378}, `Cleaning operations`);
+            fs.rmSync(moreOptions.outputDir, {recursive: true, force: true});
+            moreOptions.outputDir = null;
+        }
+
+        return true;
+    }
+    catch (e)
+    {
+        console.error({lid: 1000}, e.message);
+    }
+
+    return false;
+};
+
 /**
+ * Convert a file to es6 format. The function will also recursively
+ * parse and convert all detected import/require.
  * Use command line arguments to apply conversion
  * @param moreOptions
+ * @param extrasInfos
  */
-let convertFile = async (moreOptions) =>
+let convertFile = async (moreOptions, extrasInfos = {}) =>
 {
     let success = true;
     try
@@ -4424,8 +4494,6 @@ let convertFile = async (moreOptions) =>
                 // noHeader,
                 // importMaps,
                 // workingDir,
-                // fallback,
-                // debuginput,
             });
 
         if (!writeResultOnDisk(moreOptions))
@@ -4438,14 +4506,15 @@ let convertFile = async (moreOptions) =>
 
         if ((bundlePath || cjsBundlePath || browserBundlePath) && mjsEntrypointPath)
         {
-            await bundleResults(mjsEntrypointPath, {
+            const res = await bundleResults(mjsEntrypointPath, {
                 cjsEntryPath: cjsEntryPointPath,
                 target      : moreOptions.extras.target,
                 bundlePath,
                 cjsBundlePath,
                 browserBundlePath,
                 minify      : moreOptions.extras.minify,
-                sourcemap   : moreOptions.extras.sourcemap
+                sourcemap   : moreOptions.extras.sourcemap,
+                extrasInfos
             });
         }
 
@@ -4498,11 +4567,7 @@ let convertFile = async (moreOptions) =>
     }
     finally
     {
-        if (moreOptions.extras.isTemporaryOutputDir && moreOptions.outputDir.indexOf(DEFAULT_PREFIX_TEMP) > -1)
-        {
-            fs.rmSync(moreOptions.outputDir, {recursive: true, force: true});
-            moreOptions.outputDir = null;
-        }
+        deleteTempFolder(moreOptions);
     }
 
     return success;
@@ -4597,10 +4662,27 @@ const extractKeyDirectories = function (cliOptions)
         const rootDir = getRootDir(cliOptions);
         if (!rootDir)
         {
-            return {};
+            return null;
         }
 
         let outputDir = getOutputDirectory(cliOptions);
+
+        if (cliOptions.onlyBundle)
+        {
+            if (!(cliOptions.bundle || cliOptions["bundle-esm"] || cliOptions["bundle-cjs"] || cliOptions["bundle-browser"]))
+            {
+                console.error({lid: 1377}, `There was no bundle path passed while the --only-bundle option was used.`);
+                console.log({lid: 1380}, `Use one of the options available to generate one. i.e. --bundle, --bundle-esm, --bundle-browser or --bundle-cjs `);
+                console.log({lid: 1382}, `Aborting`);
+                return null;
+            }
+
+            if (cliOptions.output)
+            {
+                console.info({lid: 1384}, `The option --only-bundle was given. The output directory will be ignored.`);
+                cliOptions.output = null;
+            }
+        }
 
         if (!cliOptions.output)
         {
@@ -4654,7 +4736,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         }
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
-            "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal"
+            "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle"
         );
 
         if (cliOptions.resolveAbsolute === true)
@@ -4667,11 +4749,13 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         }
 
         // Extract working, root and output directories
-        let {workingDir, rootDir, outputDir} = extractKeyDirectories(cliOptions);
-        if (!rootDir)
+        const resultExtract = extractKeyDirectories(cliOptions);
+        if (!resultExtract)
         {
             return {success: false};
         }
+
+        let {workingDir, rootDir, outputDir} = resultExtract;
 
         // Save key directories to options
         updateOptions(cliOptions, {workingDir, outputDir});
@@ -4705,9 +4789,10 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         prepareDebugMode(cliOptions, moreOptions);
 
         // Start conversion
-        const success = await convertFile(moreOptions);
+        const extrasInfos = {};
+        const success = await convertFile(moreOptions, extrasInfos);
 
-        return {cliOptions, originalOptions, moreOptions, success};
+        return {cliOptions, originalOptions, moreOptions, success, extrasInfos};
     }
     catch (e)
     {

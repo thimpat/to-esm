@@ -1,3 +1,3 @@
 
 
-import toAnsi from "../../../node_modules/to-ansi/index.mjs";
+import toAnsi from "../../../../node_modules/to-ansi/index.mjs";
