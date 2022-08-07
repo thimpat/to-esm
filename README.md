@@ -1,29 +1,3 @@
-# Table of contents
-
-  1. [Description](#description)
-  1. [Installation](#installation)
-  1. [Usage](#usage)
-  1. [Examples](#examples)
-      1. [Generate ESM code](#generate-esm-code)
-      1. [Generate code into a dedicated directory](#generate-code-into-a-dedicated-directory)
-      1. [Remove automatic generated header](#remove-automatic-generated-header)
-      1. [Generate code for the browser](#generate-code-for-the-browser)
-      1. [ Generate some importmap within html files](#generate-some-importmap-within-html-files)
-      1. [Convert files with patterns](#convert-files-with-patterns)
-  1. [Options (via command line)](#options-(via-command-line))
-  1. [Advanced Options (via config file)](#advanced-options-(via-config-file))
-  1. [Directives](#directives)
-  1. [Working with both CJS and ESM](#working-with-both-cjs-and-esm)
-  1. [Create a Hybrid Library with to.esm](#create-a-hybrid-library-with-to-esm)
-  1. [Create a Hybrid Library with to.esm supporting the browser](#create-a-hybrid-library-with-to-esm-supporting-the-browser)
-    1. [Some thoughts](#some-thoughts)
-  1. [Plus](#plus)
-
-
-
-<br/><br/>
-
----
 
 [![Test workflow](https://github.com/thimpat/to-esm/actions/workflows/test.yml/badge.svg)](https://github.com/thimpat/to-esm/blob/main/README.md)
 [![nycrc Coverage](https://img.shields.io/nycrc/thimpat/to-esm?preferredThreshold=lines)](https://github.com/thimpat/to-esm/blob/main/README.md)
@@ -40,6 +14,28 @@
 A tool to convert Commonjs files into ESM files.
 To-esm can be used for generating hybrid modules. Do all of your coding using CommonJs, then convert your code into 
 ESM at build or packaging times.
+
+<br>
+
+---
+
+## Notes
+
+> 🪛 "to-esm" allows generating ESM code from your existing CommonJs code **in the least destructive way possible**.
+> 
+> As the generated ESM code will still resemble the original code, you can still keep using cjs without worry. 
+You can generate a new ESM version whenever your system needs a build or set up a watcher.
+
+> 🚫 CommonJs offers many advantages by its dynamic nature as it seems very back-end oriented. On the other hand, ESM is 
+> more designed for a front-end approach and module bundling (which often hides the differences between the two systems). 
+> 
+> **V8** is likely developed around the idea that Chrome should not touch the OS file system for evident security 
+> matters. 
+Therefore, even though switching to ESM seems ideal, many "hiccups" still exist. 
+> 
+> Hybrid modules make things easier. Note that to-esm can help with this.
+
+
 
 <br>
 
