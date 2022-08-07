@@ -831,7 +831,8 @@ const resolveRelativeImport = (text, list, {
     rootDir,
     regexRequiredPath,
     moreOptions,
-    workingDir
+    workingDir,
+    subRootDir = ""
 }) =>
 {
     // Source path of projected original source (the .cjs)
@@ -857,7 +858,8 @@ const resolveRelativeImport = (text, list, {
             referrer : source,
             origin   : ORIGIN_ADDING_TO_INDEX.RESOLVE_RELATIVE_IMPORT,
             workingDir,
-            outputDir: moreOptions.outputDir
+            outputDir: moreOptions.outputDir,
+            subRootDir
         });
     }
     catch (e)
@@ -969,6 +971,8 @@ const reviewEsmImports = (text, list, {
     const sourceExtractedRegexes = [];
     text = stripCodeRegexes(text, sourceExtractedRegexes);
 
+    const subRootDir = moreOptions.subRootDir || "";
+
     text = text.replace(re, function (match, regexRequiredPath)
     {
         try
@@ -991,6 +995,7 @@ const reviewEsmImports = (text, list, {
                     workingDir,
                     moreOptions,
                     regexRequiredPath,
+                    subRootDir
                 });
 
                 match = match.replace(regexRequiredPath, solvedRelativeRequire);
@@ -1004,6 +1009,7 @@ const reviewEsmImports = (text, list, {
                     workingDir,
                     regexRequiredPath,
                     moreOptions,
+                    subRootDir
                 });
 
                 match = match.replace(regexRequiredPath, solvedAbsoluteRequire);
@@ -1019,7 +1025,8 @@ const reviewEsmImports = (text, list, {
                     nonHybridModuleMap,
                     regexRequiredPath,
                     moreOptions,
-                    match
+                    match,
+                    subRootDir
                 });
 
                 match = match.replace(regexRequiredPath, solvedPath);
@@ -2051,7 +2058,8 @@ const formatIndexEntry = ({
                               moduleName,
                               workingDir,
                               moreOptions,
-                              externalSource
+                              externalSource,
+                              subRootDir
                           }) =>
 {
     try
@@ -2103,6 +2111,12 @@ const formatIndexEntry = ({
         targetName = targetName || path.parse(subPath).name + ESM_EXTENSION;
 
         let mjsTarget;
+
+        if (subRootDir)
+        {
+            subDir = path.relative(subRootDir, subDir);
+            subDir = subDir || "./";
+        }
 
         mjsTarget = joinPath(subDir, targetName);
         subPath = joinPath(subDir, targetName);
@@ -2837,7 +2851,8 @@ const addFileToIndex = ({
                             moduleName = null,
                             workingDir,
                             outputDir,
-                            externalSource = false
+                            externalSource = false,
+                            subRootDir = ""
                         }) =>
 {
     try
@@ -2899,7 +2914,8 @@ const addFileToIndex = ({
                 moduleName,
                 workingDir,
                 outputDir,
-                externalSource
+                externalSource,
+                subRootDir
             });
         }
 
@@ -4141,7 +4157,7 @@ const findCjsSources = (inputFileMaskArr, {rootDir}) =>
  * @param inputFileMaskArr
  * @returns {CjsInfoType[]}
  */
-const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, workingDir}) =>
+const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, workingDir, subRootDir = ""}) =>
 {
     const validList = [];
     try
@@ -4162,7 +4178,8 @@ const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, working
                     outputDir,
                     isEntryPoint,
                     origin: ORIGIN_ADDING_TO_INDEX.START,
-                    workingDir
+                    workingDir,
+                    subRootDir
                 });
 
                 if (!entry)
@@ -4233,7 +4250,7 @@ const parseCliInputs = (cliOptions) =>
  * @param workingDir
  * @returns {CjsInfoType[]}
  */
-const buildIndex = (cliOptions, {outputDir, rootDir, workingDir}) =>
+const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir = ""}) =>
 {
     let list = [];
     try
@@ -4242,7 +4259,7 @@ const buildIndex = (cliOptions, {outputDir, rootDir, workingDir}) =>
 
         const inputFileMaskArr = parseCliInputs(cliOptions);
         const sources = findCjsSources(inputFileMaskArr, {rootDir});
-        list = populateCjsList(cliOptions.entrypoint, sources, {rootDir, outputDir, workingDir});
+        list = populateCjsList(cliOptions.entrypoint, sources, {rootDir, outputDir, workingDir, subRootDir});
     }
     catch (e)
     {
@@ -4259,7 +4276,7 @@ const buildIndex = (cliOptions, {outputDir, rootDir, workingDir}) =>
  * @param outputDir
  * @returns {EngineOptionType}
  */
-const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir}) =>
+const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir, subRootDir}) =>
 {
     const moreOptions = {};
     try
@@ -4276,7 +4293,8 @@ const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir})
             // The entrypoint is always the first element returned by buildIndex
             entryPointPath,
             outputDir,
-            workingDir
+            workingDir,
+            subRootDir
         });
 
         console.log({lid: 1076}, toAnsi.getTextFromHex(`Entry Point: ${moreOptions.entryPointPath}`, {fg: "green"}));
@@ -4695,7 +4713,9 @@ const extractKeyDirectories = function (cliOptions)
         outputDir = outputDir || "./";
         outputDir = normaliseDirPath(outputDir);
 
-        return {workingDir, rootDir, outputDir};
+        let subRootDir = cliOptions.subRootDir ? normaliseDirPath(cliOptions.subRootDir) : "";
+
+        return {workingDir, rootDir, outputDir, subRootDir};
     }
     catch (e)
     {
@@ -4736,7 +4756,8 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         }
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
-            "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle"
+            "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
+            " subRootDir"
         );
 
         if (cliOptions.resolveAbsolute === true)
@@ -4755,7 +4776,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             return {success: false};
         }
 
-        let {workingDir, rootDir, outputDir} = resultExtract;
+        let {workingDir, rootDir, outputDir, subRootDir} = resultExtract;
 
         // Save key directories to options
         updateOptions(cliOptions, {workingDir, outputDir});
@@ -4764,7 +4785,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         const originalOptions = Object.assign({}, cliOptions);
 
         // Build source info from glob(s)
-        const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir});
+        const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir, subRootDir});
         if (!sources.length)
         {
             console.log({lid: 1080}, `Bad arguments. No input file detected.`);
@@ -4777,7 +4798,8 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             rootDir,
             entryPointPath: entryPointPath,
             outputDir,
-            workingDir
+            workingDir,
+            subRootDir
         });
 
         // Config Files
