@@ -268,6 +268,7 @@ $> to-esm  example/cjs/input.cjs --output generated --noheader
 
 <details><summary><strong>⌛ --noheader in action</strong></summary>
 
+
 #### ⏳ - Without the --noheader option
 
 ```javascript
@@ -409,6 +410,40 @@ See the importmap section to have a more modular approach.
 
 </details>
 
+
+
+---
+
+<br/><br/>
+
+
+<span style="font-size:40px;">📋</span>
+
+####  Rewrite output directory
+
+> --subRootDir < dirpath >
+
+The option **--subRootDir** allows to reduce generated file depths
+
+For instance, if you do:
+
+```shell
+$> to-esm ./path1/path2/path3/my-entry-point.cjs --output ./esm 
+```
+
+The converted file will be at this location (increasing the depth where to find your file):
+
+> ./esm/path1/path2/path3/my-entry-point.mjs
+
+Now, if you do:
+
+```
+$> to-esm ./path1/path2/path3/my-entry-point.cjs --output ./esm --subRootDir ./path1/path2/path3
+```
+
+The new converted location will be
+
+> ./esm/my-entry-point.mjs
 
 
 ---
@@ -589,6 +624,7 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 | --entrypoint       | _Explicitely set entry point (otherwise use the first file set in cli)_  | file path                |  
 | --resolve-absolute | _Extra folders to look for when trying to solve absolute imported paths_ | string         <br/>     |  
 | --keep-external    | _Do not try to copy files from absolute paths into generated folder_     | true                     |  
+| --subRootDir       | _Allow to retarget the output sub-directory_                             | true              <br/>  |  
 
 
 
