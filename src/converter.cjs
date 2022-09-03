@@ -28,7 +28,6 @@ const {findPackageEntryPoint} = require("find-entry-point");
 
 const espree = require("espree");
 const estraverse = require("estraverse");
-const {anaLogger} = require("analogger");
 
 const esbuild = require("esbuild");
 
@@ -167,6 +166,7 @@ const setupConsole = () =>
 {
     try
     {
+        const {anaLogger} = require("analogger");
         anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
         anaLogger.overrideConsole();
         anaLogger.overrideError();
@@ -728,7 +728,7 @@ const resolveThirdParty = (text, list, {
                 }
 
                 displayWarningOncePerModule(
-                    {lid: 1236},
+                    {lid: 2238},
                     `The npm module '${moduleName}' is ESM compatible, but the target is set to ${moreOptions.extras.target}.` +
                     `(The system will try to generate a new one if possible)`);
 
@@ -903,7 +903,13 @@ const resolveAbsoluteImport = (text, list, {
 
         if (lookupDirLists)
         {
-            const props = getRelativePathsAgainstSuggestedRoots({regexRequiredPath, source, rootDir, lookupDirLists, outputDir});
+            const props = getRelativePathsAgainstSuggestedRoots({
+                regexRequiredPath,
+                source,
+                rootDir,
+                lookupDirLists,
+                outputDir
+            });
             if (props)
             {
                 relativeRequiredPath = props.relativeRequiredPath;
@@ -2457,6 +2463,11 @@ const regexifySearchList = (replace = []) =>
     return replace || [];
 };
 
+/**
+ * Returns information (version + whether it is installed) related to a module
+ * @param modulePackname
+ * @returns {{installed: boolean}}
+ */
 const getLibraryInfo = (modulePackname) =>
 {
     const info = {
@@ -2464,12 +2475,34 @@ const getLibraryInfo = (modulePackname) =>
     };
     try
     {
-        const installed = require.resolve(modulePackname);
-        if (installed)
+        let installedLocation, dir;
+        try
         {
+            delete require.cache[require.resolve(modulePackname)];
+
+            // Not reliable
+            installedLocation = require.resolve(modulePackname);
+        }
+        catch (e)
+        {
+        }
+
+        if (!installedLocation)
+        {
+            installedLocation = findPackageEntryPoint(modulePackname);
+            if (!installedLocation)
+            {
+                return;
+            }
+        }
+
+        if (installedLocation)
+        {
+            installedLocation = installedLocation.split(modulePackname)[0];
+            dir = joinPath(installedLocation, modulePackname);
             info.installed = true;
 
-            const dir = path.parse(installed).dir;
+            dir = dir || path.parse(installedLocation).dir;
             const packageJsonPath = joinPath(dir, "package.json");
             const packageJson = require(packageJsonPath);
             info.version = packageJson.version;
@@ -2478,7 +2511,7 @@ const getLibraryInfo = (modulePackname) =>
     }
     catch (e)
     {
-
+        console.error({lid: 2211}, e.message);
     }
     return info;
 };
@@ -2500,14 +2533,21 @@ const installPackage =
         try
         {
             const info = getLibraryInfo(name);
-            if (info.installed && (version.split(info.version).length === 1 || version.split(info.version).length === 2))
+            if (info.installed)
             {
-                return;
-            }
+                if (info.version)
+                {
+                    if (version.split(info.version).length === 1 || version.split(info.version).length === 2)
+                    {
+                        console.info({lid: 1142}, `The package [${moduleName}${version}] is already installed as [${name}]`);
+                        return;
+                    }
 
-            if (info.installed && info.version.indexOf("latest") > -1)
-            {
-                return;
+                    if (info.version.indexOf("latest") > -1)
+                    {
+                        return;
+                    }
+                }
             }
         }
         catch (e)
@@ -2523,7 +2563,7 @@ const installPackage =
 
         console.info({lid: 1142}, `Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
-        console.info({lid: 1142}, "✔ Success");
+        console.info({lid: 3144}, "✔ Success");
     };
 
 /**
@@ -2600,7 +2640,6 @@ const installNonHybridModules = async (config = []) =>
                 });
 
                 nonHybridModules[cjsName] = esmName;
-                return nonHybridModules;
             }
             catch (e)
             {
@@ -2609,7 +2648,7 @@ const installNonHybridModules = async (config = []) =>
             }
         }
 
-        return null;
+        return nonHybridModules;
     }
     catch (e)
     {
@@ -3412,7 +3451,10 @@ const bundleResults = async (entryPointPath, {
         {
             if (isBrowserCompatible(entryPointPath))
             {
-                resBrowserBundlePath = await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {minify, sourcemap});
+                resBrowserBundlePath = await minifyESMCode(entryPointPath, browserBundlePath, TARGET.BROWSER, {
+                    minify,
+                    sourcemap
+                });
                 if (!resBrowserBundlePath.success)
                 {
                     console.error({lid: 3102}, ` Failed to minify ${TARGET.BROWSER}`);
@@ -4524,7 +4566,7 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
 
         if ((bundlePath || cjsBundlePath || browserBundlePath) && mjsEntrypointPath)
         {
-            const res = await bundleResults(mjsEntrypointPath, {
+            await bundleResults(mjsEntrypointPath, {
                 cjsEntryPath: cjsEntryPointPath,
                 target      : moreOptions.extras.target,
                 bundlePath,
