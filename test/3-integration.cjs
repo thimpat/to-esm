@@ -1181,7 +1181,7 @@ describe("The converter tool", function ()
                     captureConsole.stopCapture();
                     const output = captureConsole.getCapturedText();
 
-                    console.rawLog(output);
+                    process.stdout.write(output + "\n");
                     expect(output.join("\n")).to.contain("2 default exports detected");
                 }
             );

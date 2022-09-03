@@ -667,7 +667,7 @@ const resolveThirdParty = (text, list, {
         let moduleName = regexRequiredPath;
         if (nonHybridModuleMap[moduleName])
         {
-            moduleName = nonHybridModuleMap[moduleName];
+            regexRequiredPath = moduleName = nonHybridModuleMap[moduleName];
         }
 
         let requiredPath;
