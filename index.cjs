@@ -112,7 +112,7 @@ const onChange = async (moreOptions, savedOptions, watcher, filepath) =>
  * "minimist" module.
  * @returns {*|minimist.ParsedArgs|null}
  */
-const simplifyCliOptions = function(argv = [])
+const simplifyCliOptions = function (argv = [])
 {
     try
     {
@@ -170,11 +170,14 @@ async function init(argv)
 {
     try
     {
-        // Replace console.log
-        setupConsole();
-
         // Simplify cli options
         const simplifiedCliOptions = simplifyCliOptions(argv);
+
+        if (!simplifiedCliOptions.noConsoleOverride)
+        {
+            // Replace console.log
+            setupConsole();
+        }
 
         // Process straightforward options
         if (processElementaryOptions(simplifiedCliOptions))
