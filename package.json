@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@thimpat/libutils": "^1.4.2",
-    "analogger": "^1.17.2",
+    "analogger": "^1.19.0",
     "before-replace": "^1.0.5",
     "chokidar": "^3.5.3",
     "commondir": "^1.0.1",
