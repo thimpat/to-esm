@@ -87,3 +87,9 @@ debug/
 /INFO.md
 /README-OLD.md
 /todo.js
+/builder.bak.cjs
+/conversion-tester.cjs
+/conversion-tester.mjs
+/example1.cjs
+/lid-generator.cjs
+/testgen.cjs
