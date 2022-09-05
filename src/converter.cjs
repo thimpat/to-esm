@@ -2148,7 +2148,13 @@ const formatIndexEntry = ({
 
         sourceAbs = normalisePath(sourceAbs);
 
+        // Extract destination folder and path
         let {subPath, subDir} = paths;
+        if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY && moreOptions.extras.nmBrowserImported !== "node_modules")
+        {
+            subPath = subPath.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
+            subDir = subDir.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
+        }
 
         targetName = targetName || path.parse(subPath).name + ESM_EXTENSION;
 
@@ -4488,6 +4494,7 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
             useImportMaps       : !!moreOptions.extras.htmlOptions.pattern || cliOptions.useImportMaps || false,
             target              : cliOptions.target,
             nm                  : cliOptions.nm || "node_modules",
+            nmBrowserImported       : cliOptions.nmBrowserImported || "node_modules",
             prefixpath          : cliOptions.prefixpath,
             sourcemap           : !!cliOptions.sourcemap,
             isTemporaryOutputDir: cliOptions.isTemporaryOutputDir || false,
@@ -4836,7 +4843,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " subRootDir, useImportMaps"
+            " subRootDir, useImportMaps, nmBrowserImported"
         );
 
         if (cliOptions.resolveAbsolute === true)
