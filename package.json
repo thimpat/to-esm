@@ -49,8 +49,6 @@
     "js-beautify": "^1.14.3",
     "markdown-include": "^0.4.3",
     "minimist": "^1.2.5",
-    "rgb-hex": "^4.0.0",
-    "rgb-hex-cjs": "npm:rgb-hex@^3.0.0",
     "strip-comments-strings": "^1.2.0",
     "to-ansi": "^1.0.5",
     "window-size": "^1.1.1"
