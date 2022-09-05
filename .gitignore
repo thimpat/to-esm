@@ -82,3 +82,8 @@ test/assets/package.json
 /debug/
 /test/debug/
 /test/assets/given/my-test-class.cjs
+/builder.bak.cjs
+/conversion-tester.cjs
+/conversion-tester.mjs
+/example1.cjs
+/testgen.cjs
