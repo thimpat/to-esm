@@ -51,7 +51,6 @@ web_modules/
 .cache
 .parcel-cache
 .next
-out
 .nuxt
 dist
 .cache/
@@ -67,12 +66,10 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .run/
-example/esm/
 /docs
 /example
 /test
 /.github
-.nyc_output/
 .nycrc
 .releaserc
 bump.js
