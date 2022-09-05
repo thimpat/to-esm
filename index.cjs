@@ -108,30 +108,10 @@ const onChange = async (moreOptions, savedOptions, watcher, filepath) =>
 };
 
 /**
- * Transform code line arguments into an easier-to-consume object with the
- * "minimist" module.
- * @returns {*|minimist.ParsedArgs|null}
- */
-const simplifyCliOptions = function (argv = [])
-{
-    try
-    {
-        return minimist(argv.slice(2));
-    }
-    catch (e)
-    {
-        console.error({lid: 1000}, e.message);
-    }
-
-    return null;
-};
-
-
-/**
  * Process version and help options
  * @returns {boolean}
  */
-const processElementaryOptions = function (simplifiedCliOptions = [])
+const stopOnHelpOrVersion = function (simplifiedCliOptions = [])
 {
     try
     {
@@ -170,8 +150,8 @@ async function init(argv)
 {
     try
     {
-        // Simplify cli options
-        const simplifiedCliOptions = simplifyCliOptions(argv);
+        // Apply minimist
+        const simplifiedCliOptions = minimist(argv.slice(2));
 
         if (!simplifiedCliOptions.noConsoleOverride)
         {
@@ -180,7 +160,7 @@ async function init(argv)
         }
 
         // Process straightforward options
-        if (processElementaryOptions(simplifiedCliOptions))
+        if (stopOnHelpOrVersion(simplifiedCliOptions))
         {
             return true;
         }
