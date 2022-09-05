@@ -620,6 +620,7 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 | --entrypoint       | _Explicitely set entry point (otherwise use the first file set in cli)_  | file path                |  
 | --resolve-absolute | _Extra folders to look for when trying to solve absolute imported paths_ | string         <br/>     |  
 | --keep-external    | _Do not try to copy files from absolute paths into generated folder_     | true                     |  
+| --nmBrowserImported    | _Destination folder for imported third parties when target is "browser"_ | directory path           |  
 | --subRootDir       | _Allow to retarget the output sub-directory_                             | true              <br/>  |  
 
 
