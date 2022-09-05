@@ -687,17 +687,17 @@ const resolveThirdParty = (text, list, {
             let isESM = isESMCompatible(requiredPath);
             if (isESM)
             {
+                // When the require is for Node (ESM)
+                // we return the original library name
                 if (moreOptions.extras.target === TARGET.ESM)
                 {
-                    // When the require is for Node (ESM)
-                    // we return the original library name
                     return regexRequiredPath;
                 }
+                // When the require is for browser,
+                // we need to solve the relative path to the browser script entry point
                 else if (moreOptions.extras.target === TARGET.BROWSER)
                 {
-                    // When the require is for browser,
-                    // we need to solve the relative path to the browser script entry point
-                    if (isBrowserCompatible(requiredPath))
+                     if (isBrowserCompatible(requiredPath))
                     {
                         let {projectedPath} = getProjectedPathAll({outputDir, source});
                         let relativePath = calculateRelativePath(projectedPath, requiredPath);
@@ -715,6 +715,42 @@ const resolveThirdParty = (text, list, {
                             relativePath = normalisePath(relativePath);
                         }
 
+                        // When the target is the browser, any third party modules linked to the processed file
+                        // need to be generated again.
+                        // The reason being is that there is no centralized modules repositories like in Node
+                        // (node_modules) in a browser environment, therefore no matter what we do, if our original file
+                        // linked itself to a third party module, this third party module won't exist in the browser.
+                        // It needs to be imported.
+                        // Now, if we consider module bundlers, they tend to mitigate this issue as they have access
+                        // to the whole project (depending on your set-up), so they can import any dependencies just once.
+                        // Now, Google has introduced something called importmaps. Imagine if they ever extend the
+                        // idea in making the system working like a whole centralized directory like in Node.
+                        // We could import automatically without bundling any third party library.
+                        // Let's take an example:
+                        // import lodash from lodash-min
+                        // With import map, the browser would know automatically where to download the library.
+                        // - Increasing security because they can monitor any eventual defect
+                        // - Increasing speed because it's easy to cache by the browser as no more hash id would be
+                        // abuse like it's often the case after bundling
+                        // - Increasing reactivity, as anything broken would be detected straight away
+                        // - And much much more...
+                        // -----------------------------------------------
+                        // Let's see what happen in the future.
+                        // // --------------------------------------------
+                        // TODO: Move this comment elsewhere. God bless!
+                        const entry = addFileToIndex({
+                            source   : requiredPath,
+                            rootDir  : workingDir,
+                            outputDir,
+                            workingDir,
+                            notOnDisk: false,
+                            referrer : source,
+                            origin   : ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY,
+                            moduleName,
+                            moreOptions
+                        });
+
+                        relativePath = calculateRelativePath(projectedPath, joinPath(outputDir, entry.mjsTarget));
                         return relativePath;
                     }
 
@@ -2876,6 +2912,7 @@ const getRelativePathsAgainstSuggestedRoots = ({regexRequiredPath, source, rootD
  * @param moduleName
  * @param workingDir
  * @param externalSource
+ * @param subRootDir
  * @returns {CjsInfoType|null}
  */
 const addFileToIndex = ({
@@ -4799,7 +4836,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " subRootDir"
+            " subRootDir, useImportMaps"
         );
 
         if (cliOptions.resolveAbsolute === true)

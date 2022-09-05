@@ -51,7 +51,6 @@ web_modules/
 .cache
 .parcel-cache
 .next
-out
 .nuxt
 dist
 .cache/
@@ -67,12 +66,10 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .run/
-example/esm/
 /docs
 /example
 /test
 /.github
-.nyc_output/
 .nycrc
 .releaserc
 bump.js
@@ -87,3 +84,9 @@ debug/
 /INFO.md
 /README-OLD.md
 /todo.js
+/builder.bak.cjs
+/conversion-tester.cjs
+/conversion-tester.mjs
+/example1.cjs
+/lid-generator.cjs
+/testgen.cjs
