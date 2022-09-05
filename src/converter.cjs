@@ -4799,7 +4799,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " subRootDir"
+            " subRootDir, useImportMaps"
         );
 
         if (cliOptions.resolveAbsolute === true)
