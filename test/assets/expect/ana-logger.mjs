@@ -4,7 +4,7 @@
  * @see [./assets/given/ana-logger.cjs]{@link ./assets/given/ana-logger.cjs}
  * 
  **/
-import toAnsi  from "../../../../node_modules/to-ansi/index.mjs";
+import toAnsi  from "../../node_modules/to-ansi/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
 import rgbHex  from "../../node_modules/rgb-hex-cjs/index.mjs";
 
