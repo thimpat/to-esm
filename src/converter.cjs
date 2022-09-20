@@ -652,7 +652,7 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, outputDir}) =>
  * and calculate its value
  * @param text
  * @param list
- * @param source
+ * @param {string} source Relative path to the source file being parsed
  * @param rootDir
  * @param workingDir
  * @param regexRequiredPath
@@ -663,6 +663,8 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, outputDir}) =>
  */
 const resolveThirdParty = (text, list, {
     source,
+    rootDir,
+    subRootDir,
     workingDir,
     regexRequiredPath,
     nonHybridModuleMap,
@@ -709,8 +711,15 @@ const resolveThirdParty = (text, list, {
                 {
                     if (isBrowserCompatible(requiredPath))
                     {
-                        let {projectedPath} = getProjectedPathAll({outputDir, source});
-                        let relativePath = calculateRelativePath(projectedPath, requiredPath);
+                        // Calculate project path for this source
+                        let {projectedPath} = getProjectedPathAll({outputDir, source, subRootDir});
+
+                        // Extract absolute path for error checking
+                        const absoluteProjectedPath = joinPath(workingDir, projectedPath);
+                        const absoluteRequiredPath = joinPath(workingDir, outputDir, requiredPath);
+
+                        // Render relative path
+                        let relativePath = calculateRelativePath(absoluteProjectedPath, absoluteRequiredPath);
 
                         importMaps[moduleName] = requiredPath;
 
@@ -756,7 +765,9 @@ const resolveThirdParty = (text, list, {
                             moreOptions
                         });
 
-                        relativePath = calculateRelativePath(projectedPath, joinPath(outputDir, entry.mjsTarget));
+                        const relativeTargetPath = joinPath(outputDir, entry.mjsTarget);
+                        const absoluteTargetPath = joinPath(workingDir, relativeTargetPath);
+                        relativePath = calculateRelativePath(absoluteProjectedPath, absoluteTargetPath);
                         return relativePath;
                     }
 
