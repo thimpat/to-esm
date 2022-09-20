@@ -9,6 +9,7 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 let crypto = require("crypto");
+const {anaLogger} = require("analogger");
 
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
@@ -20,6 +21,7 @@ const {
     isArgsDir,
     normaliseDirPath,
     importLowerCaseOptions,
+    calculateCommon
 } = require("@thimpat/libutils");
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
@@ -166,20 +168,19 @@ const setupConsole = () =>
 {
     try
     {
-        const {anaLogger} = require("analogger");
         anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
         anaLogger.overrideConsole();
         anaLogger.overrideError();
 
         console.log({lid: 1012}, "Console is set up");
-        return true;
+        return anaLogger;
     }
     catch (e)
     {
         console.error({lid: 3008}, e.message);
     }
 
-    return false;
+    return null;
 };
 
 /**
@@ -544,16 +545,23 @@ const getTranslatedPath = (requiredPath, list) =>
 };
 
 /**
- * TODO: Make this function obsolete. It's not obvious what it's trying to do.
+ * Calculate for a given source (usually a .cjs), its supposed destination path after a conversion
+ * i.e.
+ * ./my/cjs/path/item.cjs => ./output/item.mjs
  * @param source
  * @param rootDir
  * @param outputDir
  * @returns {{}|{projectedPath: (*), subDir: *, projectedDir: (*), subPath: *, sourcePath: (*)}}
  */
-const getProjectedPathAll = ({source, outputDir}) =>
+const getProjectedPathAll = ({source, outputDir, subRootDir = ""} = {}) =>
 {
     try
     {
+        if (subRootDir && source.indexOf(subRootDir) === 0)
+        {
+            source = source.substring(subRootDir.length);
+            // source = joinPath(outputDir, source);
+        }
         let projectedPath = joinPath(outputDir, source);
         projectedPath = normalisePath(projectedPath);
 
@@ -693,11 +701,11 @@ const resolveThirdParty = (text, list, {
                 {
                     return regexRequiredPath;
                 }
-                // When the require is for browser,
+                    // When the require is for browser,
                 // we need to solve the relative path to the browser script entry point
                 else if (moreOptions.extras.target === TARGET.BROWSER)
                 {
-                     if (isBrowserCompatible(requiredPath))
+                    if (isBrowserCompatible(requiredPath))
                     {
                         let {projectedPath} = getProjectedPathAll({outputDir, source});
                         let relativePath = calculateRelativePath(projectedPath, requiredPath);
@@ -718,26 +726,22 @@ const resolveThirdParty = (text, list, {
                         // When the target is the browser, any third party modules linked to the processed file
                         // need to be generated again.
                         // The reason being is that there is no centralized modules repositories like in Node
-                        // (node_modules) in a browser environment, therefore no matter what we do, if our original file
+                        // (node_modules) in a browser environment, therefore no matter what we do, if our original
+                        // file
                         // linked itself to a third party module, this third party module won't exist in the browser.
                         // It needs to be imported.
                         // Now, if we consider module bundlers, they tend to mitigate this issue as they have access
-                        // to the whole project (depending on your set-up), so they can import any dependencies just once.
-                        // Now, Google has introduced something called importmaps. Imagine if they ever extend the
-                        // idea in making the system working like a whole centralized directory like in Node.
-                        // We could import automatically without bundling any third party library.
-                        // Let's take an example:
-                        // import lodash from lodash-min
-                        // With import map, the browser would know automatically where to download the library.
-                        // - Increasing security because they can monitor any eventual defect
-                        // - Increasing speed because it's easy to cache by the browser as no more hash id would be
-                        // abuse like it's often the case after bundling
-                        // - Increasing reactivity, as anything broken would be detected straight away
-                        // - And much much more...
-                        // -----------------------------------------------
-                        // Let's see what happen in the future.
-                        // // --------------------------------------------
-                        // TODO: Move this comment elsewhere. God bless!
+                        // to the whole project (depending on your set-up), so they can import any dependencies just
+                        // once. Now, Google has introduced something called importmaps. Imagine if they ever extend
+                        // the idea in making the system working like a whole centralized directory like in Node. We
+                        // could import automatically without bundling any third party library. Let's take an example:
+                        // import lodash from lodash-min With import map, the browser would know automatically where to
+                        // download the library. - Increasing security because they can monitor any eventual defect -
+                        // Increasing speed because it's easy to cache by the browser as no more hash id would be abuse
+                        // like it's often the case after bundling - Increasing reactivity, as anything broken would be
+                        // detected straight away - And much much more...
+                        // ----------------------------------------------- Let's see what happen in the future. //
+                        // -------------------------------------------- TODO: Move this comment elsewhere. God bless!
                         const entry = addFileToIndex({
                             source   : requiredPath,
                             rootDir  : workingDir,
@@ -763,33 +767,40 @@ const resolveThirdParty = (text, list, {
                     requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
                 }
 
-                displayWarningOncePerModule(
-                    {lid: 2238},
-                    `The npm module '${moduleName}' is ESM compatible, but the target is set to ${moreOptions.extras.target}.` +
-                    `(The system will try to generate a new one if possible)`);
+                if (!moreOptions.firstPass)
+                {
+                    displayWarningOncePerModule(
+                        {lid: 2238},
+                        `The npm module '${moduleName}' is ESM compatible, but the target is set to ${moreOptions.extras.target}.` +
+                        `(The system will try to generate a new one if possible)`);
+                }
 
             }
         }
 
-        displayWarningOncePerModule(moduleName, `The npm module '${moduleName}' does not seem to be ESM compatible. (The system will try to generate a new one)`);
+        if (!moreOptions.firstPass)
+        {
+            displayWarningOncePerModule(moduleName, `The npm module '${moduleName}' does not seem to be ESM compatible. (The system will try to generate a new one)`);
+        }
 
         // Need conversion from .cjs because module is incompatible with ESM
         requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
-        let projectedRequiredPath = resolveReqPath(source, requiredPath, moreOptions);
+        let projectedRequiredPath = resolveReqPath(source, requiredPath, {outputDir, subRootDir: moreOptions.subRootDir});
         projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
 
         importMaps[moduleName] = requiredPath;
 
-        addFileToIndex({
-            source   : requiredPath,
-            rootDir  : workingDir,
+        const entry = addFileToIndex({
+            source    : requiredPath,
+            rootDir   : workingDir,
             outputDir,
             workingDir,
-            notOnDisk: moreOptions.extras.useImportMaps,
-            referrer : source,
-            origin   : ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY,
+            notOnDisk : moreOptions.extras.useImportMaps,
+            referrer  : source,
+            origin    : ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY,
             moduleName,
-            moreOptions
+            moreOptions,
+            subRootDir: moreOptions.subRootDir
         });
 
         // When importMaps is enabled, we return the original require
@@ -800,7 +811,11 @@ const resolveThirdParty = (text, list, {
             return regexRequiredPath;
         }
 
-        return projectedRequiredPath;
+        let {projectedPath} = getProjectedPathAll({outputDir, source, subRootDir: moreOptions.subRootDir});
+        const relativePath = calculateRelativePath(projectedPath, entry.mjsTargetAbs);
+
+        return relativePath;
+        // return projectedRequiredPath;
     }
     catch (e)
     {
@@ -812,18 +827,22 @@ const resolveThirdParty = (text, list, {
 };
 
 const resolveReqPath = function (source, regexRequiredPath,
-                                 moreOptions)
+                                 {outputDir, subRootDir})
 {
     try
     {
+        let {projectedPath} = getProjectedPathAll({outputDir, source, subRootDir});
+        // const relativePath = calculateRelativePath(projectedPath, entry.mjsTargetAbs);
+
+
         // Absolute path to source
-        let sourcePathAbs = joinPath(moreOptions.outputDir, source);
+        // let sourcePathAbs = joinPath(moreOptions.outputDir, source);
 
         // Absolute path to required
-        let mjsPathAbs = joinPath(moreOptions.outputDir, regexRequiredPath);
+        let mjsPathAbs = joinPath(outputDir, regexRequiredPath);
 
         // Distance
-        regexRequiredPath = calculateRelativePath(sourcePathAbs, mjsPathAbs);
+        regexRequiredPath = calculateRelativePath(projectedPath, mjsPathAbs);
 
         return regexRequiredPath;
     }
@@ -860,6 +879,9 @@ const isExternalSource = function (moreOptions)
  * @param regexRequiredPath
  * @param moreOptions
  * @param workingDir
+ * @param outputDir
+ * @param subRootDir
+ * @param origin
  * @returns {string}
  */
 const resolveRelativeImport = (text, list, {
@@ -868,31 +890,46 @@ const resolveRelativeImport = (text, list, {
     regexRequiredPath,
     moreOptions,
     workingDir,
-    subRootDir = ""
+    outputDir,
+    subRootDir,
+    origin = ""
 }) =>
 {
     // Source path of projected original source (the .cjs)
     try
     {
-        // The required path from the source
+        let controlSourceAbs;
+
+        if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY)
+        {
+            controlSourceAbs = joinPath(workingDir, source);
+            rootDir = workingDir;
+        }
+        else if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_RELATIVE_IMPORT)
+        {
+            controlSourceAbs = joinPath(rootDir, source);
+        }
+        else if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_ABSOLUTE)
+        {
+            controlSourceAbs = joinPath(source);
+        }
+        else
+        {
+            controlSourceAbs = joinPath(rootDir, source);
+        }
+
+        if (!fs.existsSync(controlSourceAbs))
+        {
+            console.error({lid: 5581}, `Source not found: ${controlSourceAbs}`);
+        }
+
         let requiredPath = concatenatePaths(source, regexRequiredPath);
-
-        // let sourcePathAbs = joinPath(moreOptions.outputDir, source);
-        // let mjsPathAbs = joinPath(moreOptions.outputDir, requiredPath);
-        // regexRequiredPath = calculateRelativePath(sourcePathAbs, mjsPathAbs);
-
-        regexRequiredPath = resolveReqPath(source, requiredPath, moreOptions);
-
-
-        // let source2 = path.parse(source).dir;
-        // let {projectedPath} = getProjectedPathAll({source: source2, rootDir, outputDir: moreOptions.outputDir});
-        // let relativePath = calculateRelativePath(projectedPath, requiredPath);
 
         addFileToIndex({
             source   : requiredPath,
             rootDir,
             referrer : source,
-            origin   : ORIGIN_ADDING_TO_INDEX.RESOLVE_RELATIVE_IMPORT,
+            origin   : origin || ORIGIN_ADDING_TO_INDEX.RESOLVE_RELATIVE_IMPORT,
             workingDir,
             outputDir: moreOptions.outputDir,
             subRootDir
@@ -925,7 +962,9 @@ const resolveAbsoluteImport = (text, list, {
     outputDir,
     workingDir,
     regexRequiredPath,
-    moreOptions
+    moreOptions,
+    subRootDir,
+    origin
 }) =>
 {
     // Source path of projected original source (the .cjs)
@@ -964,7 +1003,8 @@ const resolveAbsoluteImport = (text, list, {
             isAbsolutePath,
             moreOptions,
             origin        : ORIGIN_ADDING_TO_INDEX.RESOLVE_ABSOLUTE,
-            externalSource: true
+            externalSource: true,
+            subRootDir
         });
 
         if (isExternalSource(moreOptions))
@@ -973,7 +1013,7 @@ const resolveAbsoluteImport = (text, list, {
         }
         else
         {
-            regexRequiredPath = resolveReqPath(source, entry.mjsTarget, moreOptions);
+            regexRequiredPath = resolveReqPath(source, entry.mjsTarget, {outputDir, subRootDir});
         }
         return regexRequiredPath;
     }
@@ -1000,7 +1040,8 @@ const reviewEsmImports = (text, list, {
     importMaps,
     nonHybridModuleMap,
     workingDir,
-    moreOptions
+    moreOptions,
+    origin
 }) =>
 {
     // Locate third party
@@ -1037,7 +1078,8 @@ const reviewEsmImports = (text, list, {
                     workingDir,
                     moreOptions,
                     regexRequiredPath,
-                    subRootDir
+                    subRootDir,
+                    origin
                 });
 
                 match = match.replace(regexRequiredPath, solvedRelativeRequire);
@@ -1051,7 +1093,8 @@ const reviewEsmImports = (text, list, {
                     workingDir,
                     regexRequiredPath,
                     moreOptions,
-                    subRootDir
+                    subRootDir,
+                    origin
                 });
 
                 match = match.replace(regexRequiredPath, solvedAbsoluteRequire);
@@ -1068,7 +1111,8 @@ const reviewEsmImports = (text, list, {
                     regexRequiredPath,
                     moreOptions,
                     match,
-                    subRootDir
+                    subRootDir,
+                    origin
                 });
 
                 match = match.replace(regexRequiredPath, solvedPath);
@@ -1521,7 +1565,8 @@ const applyExtractedASTToImports = (converted, extracted, list, {
     importMaps,
     nonHybridModuleMap,
     workingDir,
-    moreOptions
+    moreOptions,
+    origin
 }) =>
 {
     try
@@ -1554,7 +1599,7 @@ const applyExtractedASTToImports = (converted, extracted, list, {
                 transformedLines = reviewEsmImports(transformedLines, list,
                     {
                         source, sourceAbs, outputDir, rootDir, importMaps,
-                        nonHybridModuleMap, workingDir, moreOptions
+                        nonHybridModuleMap, workingDir, moreOptions, origin
                     });
 
                 transformedLines = transformedLines.trim();
@@ -1641,7 +1686,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
     nonHybridModuleMap,
     workingDir,
     moreOptions,
-    debuginput
+    debuginput,
+    origin
 }) =>
 {
     let success = true;
@@ -1876,7 +1922,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
             importMaps,
             nonHybridModuleMap,
             workingDir,
-            moreOptions
+            moreOptions,
+            origin
         });
         converted = removeDeclarationForAST(converted, extracted);
         return {converted, success, detectedExported, detectedAmbiguous, detectedBlockFunctions};
@@ -2088,6 +2135,7 @@ const cleanDirectives = (converted) =>
  * relative to the project root dir
  * @param moreOptions
  * @param externalSource
+ * @param subRootDir
  * @returns {{pkgImportPath: string, sourceAbs: string, subDir, mjsTarget: (*), rootDir: string, weight: number,
  *     source: string, subPath: *, id: string}}
  */
@@ -2133,7 +2181,7 @@ const formatIndexEntry = ({
             }
             else
             {
-                // _root is the special folder where external files will be copied over
+                // _root is the special folder where external files will be copied
                 let subDir = normaliseDirPath(GENERATED_ROOT_FOLDER_NAME);
                 subDir = joinPath(subDir, infoPath.dir);
                 paths = {subDir, subPath: filename};
@@ -2150,19 +2198,25 @@ const formatIndexEntry = ({
 
         // Extract destination folder and path
         let {subPath, subDir} = paths;
-        if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY && moreOptions.extras.nmBrowserImported !== "node_modules")
+
+        let isThirdParty = false;
+        if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY)
         {
-            subPath = subPath.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
-            subDir = subDir.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
+            isThirdParty = true;
+            if (moreOptions.extras.nmBrowserImported !== "node_modules")
+            {
+                subPath = subPath.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
+                subDir = subDir.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
+            }
         }
 
         targetName = targetName || path.parse(subPath).name + ESM_EXTENSION;
 
         let mjsTarget;
 
-        if (subRootDir)
+        if (subRootDir && subDir.indexOf(subRootDir) === 0)
         {
-            subDir = path.relative(subRootDir, subDir);
+            subDir = subDir.substring(subRootDir.length);
             subDir = subDir || "./";
         }
 
@@ -2200,7 +2254,9 @@ const formatIndexEntry = ({
             subDir,
             id,
             weight: 1,
-            externalSource
+            externalSource,
+            isThirdParty,
+            origin
         };
     }
     catch (e)
@@ -3791,54 +3847,6 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
 };
 
 /**
- * Find the shortest common substring for all referenced rootDir in the index
- */
-const reviewRootDirIndexes = () =>
-{
-    let commonDir = "";
-    try
-    {
-        const list = [];
-
-        const n = cjsList.length;
-        if (!n)
-        {
-            return;
-        }
-
-        let smallestSubdir = cjsList[0].subDir;
-
-        // Find the shortest subdir
-        for (let i = 0; i < n; ++i)
-        {
-            const entry = cjsList[i];
-            list.push(entry.subDir);
-
-            if (entry.subDir.length < smallestSubdir)
-            {
-                smallestSubdir = entry.subDir;
-            }
-        }
-
-        // Find the shortest common subdir
-        commonDir = calculateRootDir(list);
-
-        const optimizable = commonDir.length < smallestSubdir.length;
-        if (optimizable)
-        {
-            // Do another pass with an updated outputDir
-            // moreOptions.rootDir = joinPath(moreOptions.outputDir, commonDir);
-            // convertFile(moreOptions)
-        }
-    }
-    catch (e)
-    {
-        console.error({lid: 3114}, e.message);
-    }
-
-};
-
-/**
  * Write all converted files on disk
  * @param moreOptions
  */
@@ -3846,12 +3854,6 @@ const writeResultOnDisk = (moreOptions) =>
 {
     try
     {
-        if (!moreOptions.secondPass)
-        {
-            moreOptions.secondPass = true;
-            reviewRootDirIndexes(moreOptions);
-        }
-
         const n = cjsList.length;
         for (let i = 0; i < n; ++i)
         {
@@ -3967,7 +3969,7 @@ const convertCjsFiles = (list, {
                 continue;
             }
 
-            let {source, sourceAbs} = cjsItem;
+            let {source, sourceAbs, origin} = cjsItem;
 
             console.log({lid: 1068}, " ================================================================");
             console.log({lid: 1070}, ` Processing: ${source}`);
@@ -4008,7 +4010,8 @@ const convertCjsFiles = (list, {
                         nonHybridModuleMap,
                         workingDir,
                         moreOptions,
-                        debuginput
+                        debuginput,
+                        origin
                     });
 
                 converted = result.converted;
@@ -4017,6 +4020,11 @@ const convertCjsFiles = (list, {
                 dumpData(converted, source, "convertRequiresToImportsWithAST");
 
                 list[dynamicIndex].exported = result.detectedExported;
+
+                if (moreOptions.firstPass)
+                {
+                    continue;
+                }
 
                 if (success)
                 {
@@ -4132,59 +4140,6 @@ const detectESMConfigPath = () =>
     catch (e)
     {
         console.error({lid: 3128}, "", e.message);
-    }
-
-    return "";
-};
-
-const getCommon = function (str1, str2)
-{
-    const max = Math.min(str1.length, str2.length);
-    for (let i = 0; i < max; ++i)
-    {
-        const char1 = str1[i];
-        const char2 = str2[i];
-
-        if (char1 !== char2)
-        {
-            return str1.substring(i);
-        }
-    }
-
-    return str1;
-};
-
-const calculateCommon = (files) =>
-{
-    const n = files.length;
-    let longestCommon = files[0];
-    for (let i = 1; i < n; ++i)
-    {
-        const filepath = files[i];
-        longestCommon = getCommon(filepath, longestCommon);
-    }
-    return longestCommon;
-};
-
-const calculateRootDir = (fileList) =>
-{
-    let rootDir = "";
-    try
-    {
-        if (fileList.length > 1)
-        {
-            rootDir = calculateCommon(fileList);
-        }
-        else
-        {
-            rootDir = "./";
-        }
-
-        return rootDir;
-    }
-    catch (e)
-    {
-        console.error({lid: 3130}, "", e.message);
     }
 
     return "";
@@ -4333,9 +4288,10 @@ const parseCliInputs = (cliOptions) =>
  * @param outputDir
  * @param rootDir
  * @param workingDir
+ * @param subRootDir
  * @returns {CjsInfoType[]}
  */
-const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir = ""}) =>
+const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir}) =>
 {
     let list = [];
     try
@@ -4361,7 +4317,7 @@ const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir = ""
  * @param outputDir
  * @returns {EngineOptionType}
  */
-const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir, subRootDir}) =>
+const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir, subRootDir, firstPass}) =>
 {
     const moreOptions = {};
     try
@@ -4379,7 +4335,8 @@ const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir, 
             entryPointPath,
             outputDir,
             workingDir,
-            subRootDir
+            subRootDir,
+            firstPass
         });
 
         console.log({lid: 1076}, toAnsi.getTextFromHex(`Entry Point: ${moreOptions.entryPointPath}`, {fg: "green"}));
@@ -4494,7 +4451,7 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
             useImportMaps       : !!moreOptions.extras.htmlOptions.pattern || cliOptions.useImportMaps || false,
             target              : cliOptions.target,
             nm                  : cliOptions.nm || "node_modules",
-            nmBrowserImported       : cliOptions.nmBrowserImported || "node_modules",
+            nmBrowserImported   : cliOptions.nmBrowserImported || "node_modules",
             prefixpath          : cliOptions.prefixpath,
             sourcemap           : !!cliOptions.sourcemap,
             isTemporaryOutputDir: cliOptions.isTemporaryOutputDir || false,
@@ -4599,6 +4556,11 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
                 // importMaps,
                 // workingDir,
             });
+
+        if (moreOptions.firstPass)
+        {
+            return success;
+        }
 
         if (!writeResultOnDisk(moreOptions))
         {
@@ -4843,7 +4805,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " subRootDir, useImportMaps, nmBrowserImported"
+            " useImportMaps, nmBrowserImported"
         );
 
         if (cliOptions.resolveAbsolute === true)
@@ -4862,7 +4824,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             return {success: false};
         }
 
-        let {workingDir, rootDir, outputDir, subRootDir} = resultExtract;
+        let {workingDir, rootDir, outputDir} = resultExtract;
 
         // Save key directories to options
         updateOptions(cliOptions, {workingDir, outputDir});
@@ -4870,35 +4832,63 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         // Clone options for watchers
         const originalOptions = Object.assign({}, cliOptions);
 
-        // Build source info from glob(s)
-        const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir, subRootDir});
-        if (!sources.length)
-        {
-            console.log({lid: 1080}, `Bad arguments. No input file detected.`);
-            return {success: false};
-        }
+        let success, subRootDir = "";
+        let moreOptions;
 
-        // Format option object
-        const entryPointPath = sources[0].sourceAbs;
-        const moreOptions = initialiseMainOptions({
-            rootDir,
-            entryPointPath: entryPointPath,
-            outputDir,
-            workingDir,
-            subRootDir
-        });
-
-        // Config Files
-        let configPath = cliOptions.config || detectESMConfigPath();
-
-        // Extract options from config file
-        await extractConfigFileOptions(configPath, cliOptions, moreOptions);
-        parseCliOptions(cliOptions, moreOptions);
-        prepareDebugMode(cliOptions, moreOptions);
-
-        // Start conversion
         const extrasInfos = {};
-        const success = await convertFile(moreOptions, extrasInfos);
+
+        anaLogger.setOptions({silent: true, hideError: true, hideHookMessage: true});
+
+        for (let pass = 1; pass <= 2; ++pass)
+        {
+            // Build source info from glob(s)
+            const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir, subRootDir});
+            if (!sources.length)
+            {
+                console.log({lid: 1080}, `Bad arguments. No input file detected.`);
+                return {success: false};
+            }
+
+            // Format option object
+            const entryPointPath = sources[0].sourceAbs;
+            moreOptions = initialiseMainOptions({
+                rootDir,
+                entryPointPath: entryPointPath,
+                outputDir,
+                workingDir,
+                subRootDir,
+                firstPass     : pass === 1
+            });
+
+            // Config Files
+            let configPath = cliOptions.config || detectESMConfigPath();
+
+            // Extract options from config file
+            await extractConfigFileOptions(configPath, cliOptions, moreOptions);
+            parseCliOptions(cliOptions, moreOptions);
+            prepareDebugMode(cliOptions, moreOptions);
+
+            // First pass is to populate cjsList
+            success = await convertFile(moreOptions, extrasInfos);
+
+            if (cjsList.length)
+            {
+                const sourceList = [];
+                cjsList.forEach(item =>
+                {
+                    if (item.isThirdParty || item.externalSource)
+                    {
+                        return;
+                    }
+                    sourceList.push(item.source);
+                });
+
+                subRootDir = calculateCommon(sourceList);
+                cjsList = cjsList.slice(0, 1);
+
+                anaLogger.setOptions({silent: false, hideError: false});
+            }
+        }
 
         return {cliOptions, originalOptions, moreOptions, success, extrasInfos};
     }

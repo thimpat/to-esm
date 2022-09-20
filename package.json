@@ -35,8 +35,8 @@
     "url": "https://github.com/thimpat/to-esm.git"
   },
   "dependencies": {
-    "@thimpat/libutils": "^1.4.2",
-    "analogger": "^1.19.0",
+    "@thimpat/libutils": "^1.9.2",
+    "analogger": "^1.21.4",
     "before-replace": "^1.0.5",
     "chokidar": "^3.5.3",
     "commondir": "^1.0.1",

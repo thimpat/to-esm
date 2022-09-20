@@ -1,4 +1,4 @@
-import isDescriptor  from "../is-descriptor/index.mjs";
+import isDescriptor  from "../../imported/is-descriptor/index.mjs";
 /*!
  * define-property <https://github.com/jonschlinkert/define-property>
  *

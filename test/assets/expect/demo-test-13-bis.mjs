@@ -14,7 +14,7 @@ abc
 console.log("Skip this 1");
 def
 
-import rgbHex  from "../../node_modules/rgb-hex-cjs/index.mjs";
+import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
 
 console.log("1- LogToFile is not supported in this environment. ")

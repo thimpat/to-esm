@@ -4,5 +4,5 @@
  * @see [./assets/given/demo-test-7.cjs]{@link ./assets/given/demo-test-7.cjs}
  * 
  **/
-import rgbhex  from "../../node_modules/rgb-hex-cjs/index.mjs";
+import rgbhex  from "./node_modules/rgb-hex-cjs/index.mjs";
 

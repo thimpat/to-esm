@@ -5,7 +5,7 @@
  * 
  **/
 import chalk  from "chalk-cjs";
-import rgbHex  from "../../node_modules/rgb-hex-cjs/index.mjs";
+import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
 
 

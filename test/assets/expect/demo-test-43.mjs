@@ -4,7 +4,7 @@
  * @see [./assets/given/demo-test-43.cjs]{@link ./assets/given/demo-test-43.cjs}
  * 
  **/
-import MyClass  from "../../_root/projects/to-esm/test/assets/given/my-test-class.mjs";
+import MyClass  from "./_root/projects/to-esm/test/assets/given/my-test-class.mjs";
 
 const instance = new MyClass();
 instance.someMethod();

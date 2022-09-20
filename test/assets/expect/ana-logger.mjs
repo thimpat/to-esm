@@ -6,7 +6,7 @@
  **/
 import toAnsi  from "../../node_modules/to-ansi/index.mjs";
 import {COLOR_TABLE, SYSTEM}  from "./constants.mjs";
-import rgbHex  from "../../node_modules/rgb-hex-cjs/index.mjs";
+import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 
 
 

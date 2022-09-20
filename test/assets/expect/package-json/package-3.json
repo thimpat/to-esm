@@ -6,7 +6,7 @@
   "exports": {
     ".": {
       "require": "./given/demo-test-14.cjs",
-      "import": "./actual/given/demo-test-14.mjs"
+      "import": "./actual/demo-test-14.mjs"
     }
   }
 }

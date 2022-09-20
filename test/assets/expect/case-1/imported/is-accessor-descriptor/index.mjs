@@ -1,4 +1,4 @@
-import typeOf  from "../kind-of/index.mjs";
+import typeOf  from "../../imported/kind-of/index.mjs";
 /*!
  * is-accessor-descriptor <https://github.com/jonschlinkert/is-accessor-descriptor>
  *
