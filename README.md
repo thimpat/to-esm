@@ -1542,11 +1542,7 @@ Therefore, there are advantages to not systematically using bundled code.
 
 ## Changelog
 
-*  Fix modules detected as installed
-*  Fix a broken directive
-*  Reduce output directories depth
-*  Update documentation
-*  Add option --nmBrowserImported to rename imported node_modules
+*  Fix wrong path calculations for browser third-party modules
 
 ---
 
