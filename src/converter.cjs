@@ -35,6 +35,8 @@ const esbuild = require("esbuild");
 
 const toEsmPackageJson = require("../package.json");
 
+const REGEXES = {};
+
 // ===========================================================================
 // Constants
 // ---------------------------------------------------------------------------
@@ -785,7 +787,10 @@ const resolveThirdParty = (text, list, {
 
         // Need conversion from .cjs because module is incompatible with ESM
         requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
-        let projectedRequiredPath = resolveReqPath(source, requiredPath, {outputDir, subRootDir: moreOptions.subRootDir});
+        let projectedRequiredPath = resolveReqPath(source, requiredPath, {
+            outputDir,
+            subRootDir: moreOptions.subRootDir
+        });
         projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
 
         importMaps[moduleName] = requiredPath;
@@ -2059,6 +2064,31 @@ const putBackRegexes = (str, extracted) =>
     return str;
 };
 
+
+const loadRegex = (regexName) =>
+{
+    if (REGEXES[regexName])
+    {
+        return REGEXES[regexName];
+    }
+
+    const regexPath = joinPath(__dirname, "regexes", "to-esm-" + regexName + ".txt");
+    let content = fs.readFileSync(regexPath, {encoding: "utf-8"});
+
+    REGEXES[regexName] = content;
+    return content;
+};
+
+const runRegex = (regexName, target, {content, replacement}) =>
+{
+    let regexString = loadRegex(regexName);
+    regexString = regexString.replaceAll("######", target);
+
+    const regexp = new RegExp(regexString, "gm");
+    const converted = content.replace(regexp, replacement);
+    return {converted, regexp};
+};
+
 /**
  * Apply command found in source code comments
  * @param converted
@@ -2067,21 +2097,19 @@ const putBackRegexes = (str, extracted) =>
  */
 const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
 {
-    let regexp;
-
     const directives = [TARGET.ALL];
     if (target !== TARGET.ALL)
     {
         directives.push(target);
     }
 
-    // Remove => to-esm-browser: remove
-    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
-    converted = converted.replace(regexp, "");
-
-    // Insert => to-esm-browser: add
-    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(?:${directives.join("|")})\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
-    converted = converted.replace(regexp, "$1");
+    let regexp;
+    for (let i = 0; i < directives.length; ++i)
+    {
+        const target = directives[i];
+        ({converted} = runRegex("remove", target, {content: converted, replacement: ""}));
+        ({converted} = runRegex("add", target, {content: converted, replacement: "$1"}));
+    }
 
     // Hide/skip => to-esm-browser: skip
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
@@ -2574,37 +2602,37 @@ const getLibraryInfo = (modulePackname) =>
     try
     {
         let installedLocation, dir;
-        try
-        {
-            delete require.cache[require.resolve(modulePackname)];
-
-            // Not reliable
-            installedLocation = require.resolve(modulePackname);
-        }
-        catch (e)
-        {
-        }
-
+        installedLocation = findPackageEntryPoint(modulePackname);
         if (!installedLocation)
         {
-            installedLocation = findPackageEntryPoint(modulePackname);
-            if (!installedLocation)
-            {
-                return;
-            }
+            return info;
         }
 
-        if (installedLocation)
+        installedLocation = installedLocation.split(modulePackname)[0];
+
+        // Module check
+        dir = joinPath(installedLocation, "..");
+        const packageJsonPath = joinPath(dir, "package.json");
+        const packageJson = require(packageJsonPath);
+
+        if (!packageJson?.dependencies)
         {
-            installedLocation = installedLocation.split(modulePackname)[0];
-            dir = joinPath(installedLocation, modulePackname);
-            info.installed = true;
-
-            dir = dir || path.parse(installedLocation).dir;
-            const packageJsonPath = joinPath(dir, "package.json");
-            const packageJson = require(packageJsonPath);
-            info.version = packageJson.version;
+            info.installed = false;
+            return info;
         }
+
+        info.installed = !!packageJson.dependencies[modulePackname];
+        if (!info.installed)
+        {
+            return info;
+        }
+
+        dir = dir || path.parse(installedLocation).dir;
+
+        // Dependency check
+        const dependencyPackageJsonPath = joinPath(dir, "package.json");
+        const dependencyPackageJson = require(dependencyPackageJsonPath);
+        info.version = dependencyPackageJson.version;
 
     }
     catch (e)
@@ -2637,7 +2665,7 @@ const installPackage =
                 {
                     if (version.split(info.version).length === 1 || version.split(info.version).length === 2)
                     {
-                        console.info({lid: 1142}, `The package [${moduleName}${version}] is already installed as [${name}]`);
+                        console.log({lid: 1142}, `The package [${moduleName}${version}] is already installed as [${name}]`);
                         return;
                     }
 

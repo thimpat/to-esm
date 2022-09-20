@@ -68,6 +68,8 @@ function writeResults(filepath, content, {same} = {})
             const infoFile = path.parse(filepath);
             const modifiedFilepath = path.join(process.cwd(), infoFile.name + ".bak" + infoFile.ext);
             fs.writeFileSync(modifiedFilepath, content, {encoding: "utf-8"});
+
+            console.log(`File generated to: ${modifiedFilepath}.`);
         }
 
         return true;
@@ -89,7 +91,7 @@ function writeResults(filepath, content, {same} = {})
  * @param duplicates
  * @returns {boolean|{errorCounter: number, logCounter: number}}
  */
-const writeLidsToFile = function (filepath, {logidstart, erroridstart, overwrite, duplicates})
+const writeLidsToFile = function (filepath, {logidstart, erroridstart, overwrite = true, duplicates} = {})
 {
     try
     {

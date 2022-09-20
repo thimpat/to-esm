@@ -1386,6 +1386,27 @@ describe("The converter tool", function ()
                 }
             );
 
+            it("should compile pageterm", async function ()
+                {
+                    const input = "./assets/given/demo-test-51.cjs";
+                    const options = {
+                        input,
+                        output         : path.join(testDir, "/actual"),
+                        noheader       : true,
+                        target         : TARGET.ESM,
+                        keepExternal   : true,
+                        resolveAbsolute: ["./node_modules"]
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-51.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-51.mjs"), "utf8");
+
+                    expect(actualConversion).to.equal(expectConversion);
+                }
+            );
+
         });
 
         describe("on a directory", () =>

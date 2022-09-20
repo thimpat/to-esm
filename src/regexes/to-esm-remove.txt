@@ -1,0 +1,1 @@
+\/\*\*\s*to-esm-(######)\s*:\s*remove\s*\*\*\/[\s\S]*?\/\*\*\s*to-esm-\1\s*:\s*end-remove\s*\*\*\/

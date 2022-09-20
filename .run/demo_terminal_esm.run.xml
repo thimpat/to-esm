@@ -1,5 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="demo:terminal:esm" type="NodeJSConfigurationType" path-to-js-file="generated/terminal/demo.mjs" working-dir="$PROJECT_DIR$/test/sandbox">
-    <method v="2" />
-  </configuration>
-</component>

@@ -87,3 +87,5 @@ test/assets/package.json
 /conversion-tester.mjs
 /example1.cjs
 /testgen.cjs
+/.github/
+/.run/*
