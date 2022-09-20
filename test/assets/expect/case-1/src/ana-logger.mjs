@@ -1,7 +1,7 @@
 import path  from "path";
 import fs  from "fs";
 import os  from "os";
-import terminalSize  from "../../node_modules/window-size/index.mjs";
+import terminalSize  from "../imported/window-size/index.mjs";
 import toAnsi  from "to-ansi";
 import {COLOR_TABLE, SYSTEM, MAX_CHILDREN_DOM_ANALOGGER, CLASS_REMOVED_NOTIF, ADD_TYPE, CONSOLE_AREA_CLASSNAME,
     PREDEFINED_FORMATS, ANALOGGER_NAME, LINE_CLASSNAME

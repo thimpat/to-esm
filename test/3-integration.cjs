@@ -281,7 +281,7 @@ describe("The converter tool", function ()
 
             it("should bundle input files", async function ()
                 {
-                    const input = "./given/demo-test-14.cjs";
+                    const input = "./assets/given/demo-test-14.cjs";
                     const options = {
                         input,
                         output      : "./assets/actual",
@@ -340,7 +340,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     // Assertions
-                    const actualConversion = fs.readFileSync("./assets/actual/assets/given/demo-test-2.mjs", "utf8");
+                    const actualConversion = fs.readFileSync("./assets/actual/demo-test-2.mjs", "utf8");
                     const expectConversion = fs.readFileSync("./assets/expect/demo-test-2.mjs", "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
@@ -362,7 +362,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     // Assertions
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-3.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-3.mjs"), "utf8");
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-3.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
@@ -396,7 +396,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-4.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-4.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-4.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -429,7 +429,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-6.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-6.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-6.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -458,7 +458,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-7.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-7.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-7.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -514,7 +514,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-9.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-9.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-9.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -544,7 +544,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-10.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-10.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-10.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -563,7 +563,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-12.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-12.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-12.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -582,7 +582,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-16.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-16.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-16.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -601,7 +601,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-17.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-17.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-17.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -620,7 +620,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-18.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-18.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-18.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -639,7 +639,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-19.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-19.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-19.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -658,7 +658,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-20.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-20.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-20.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -677,7 +677,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-21.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-21.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-21.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -696,7 +696,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-22.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-22.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-22.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -715,7 +715,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-23.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-23.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-23.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -750,7 +750,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-25.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-25.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-25.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -769,7 +769,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-26.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-26.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-26.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -788,7 +788,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-27.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-27.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-27.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -807,7 +807,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-28.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-28.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-28.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -829,7 +829,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "ana-logger.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "ana-logger.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "ana-logger.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -849,7 +849,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "analogger-test.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "analogger/analogger-test.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "analogger-test.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -872,7 +872,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-13.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-13.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-13.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -891,7 +891,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-13-bis.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-13-bis.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-13-bis.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1015,7 +1015,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-31.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-31.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-31.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1033,7 +1033,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-32.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-32.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-32.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1082,7 +1082,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-33.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-33.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-33.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1101,7 +1101,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-34.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-34.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-34.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1120,7 +1120,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-35.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-35.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-35.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1139,7 +1139,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-35.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-35.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-35.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1158,7 +1158,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-36.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-36.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-36.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1200,7 +1200,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-38.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-38.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-38.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1219,7 +1219,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-39.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-39.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-39.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1238,7 +1238,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-40.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-40.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-40.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1257,7 +1257,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-41.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-41.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-41.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1276,7 +1276,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-42.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-42.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-42.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1300,7 +1300,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-43.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-43.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-43.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1319,7 +1319,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-44.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-44.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-44.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1338,7 +1338,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-45.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-45.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-45.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1359,7 +1359,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-46.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-46.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-46.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1380,7 +1380,7 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-50.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "assets/given", "demo-test-50.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-50.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
@@ -1401,10 +1401,11 @@ describe("The converter tool", function ()
                     const input = path.resolve("./assets/given/case-1/deep1/deep2/deep3/models/example-1/more/demo.cjs");
                     const options = {
                         input,
-                        output  : path.join(testDir, "/actual"),
-                        target  : TARGET.ESM,
-                        rootDir : path.resolve("./assets/given/case-1"),
-                        noHeader: true
+                        output           : path.join(testDir, "/actual"),
+                        target           : TARGET.ESM,
+                        rootDir          : path.resolve("./assets/given/case-1"),
+                        noHeader         : true,
+                        nmBrowserImported: "imported"
                     };
 
                     await transpileFiles(options);

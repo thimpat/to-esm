@@ -1,4 +1,4 @@
-import define  from "../define-property/index.mjs";
+import define  from "../../imported/define-property/index.mjs";
 import utils  from "./utils.mjs";
 /*!
  * window-size <https://github.com/jonschlinkert/window-size>

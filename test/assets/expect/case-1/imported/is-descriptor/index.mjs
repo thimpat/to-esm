@@ -1,6 +1,6 @@
-import typeOf  from "../kind-of/index.mjs";
-import isAccessor  from "../is-accessor-descriptor/index.mjs";
-import isData  from "../is-data-descriptor/index.mjs";
+import typeOf  from "../../imported/kind-of/index.mjs";
+import isAccessor  from "../../imported/is-accessor-descriptor/index.mjs";
+import isData  from "../../imported/is-data-descriptor/index.mjs";
 /*!
  * is-descriptor <https://github.com/jonschlinkert/is-descriptor>
  *
