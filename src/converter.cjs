@@ -35,6 +35,8 @@ const esbuild = require("esbuild");
 
 const toEsmPackageJson = require("../package.json");
 
+const REGEXES = {};
+
 // ===========================================================================
 // Constants
 // ---------------------------------------------------------------------------
@@ -2059,6 +2061,31 @@ const putBackRegexes = (str, extracted) =>
     return str;
 };
 
+
+const loadRegex = (regexName) =>
+{
+    if (REGEXES[regexName])
+    {
+        return REGEXES[regexName];
+    }
+
+    const regexPath = joinPath(__dirname, "regexes", "to-esm-" + regexName + ".txt");
+    let content = fs.readFileSync(regexPath, {encoding: "utf-8"});
+
+    REGEXES[regexName] = content;
+    return content;
+};
+
+const runRegex = (regexName, target, {content, replacement}) =>
+{
+    let regexString = loadRegex(regexName);
+    regexString = regexString.replaceAll("######", target);
+
+    const regexp = new RegExp(regexString, "gm");
+    const converted = content.replace(regexp, replacement);
+    return {converted, regexp};
+};
+
 /**
  * Apply command found in source code comments
  * @param converted
@@ -2067,21 +2094,19 @@ const putBackRegexes = (str, extracted) =>
  */
 const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
 {
-    let regexp;
-
     const directives = [TARGET.ALL];
     if (target !== TARGET.ALL)
     {
         directives.push(target);
     }
 
-    // Remove => to-esm-browser: remove
-    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
-    converted = converted.replace(regexp, "");
-
-    // Insert => to-esm-browser: add
-    regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(?:${directives.join("|")})\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
-    converted = converted.replace(regexp, "$1");
+    let regexp;
+    for (let i = 0; i < directives.length; ++i)
+    {
+        const target = directives[i];
+        ({converted} = runRegex("remove", target, {content: converted, replacement: ""}));
+        ({converted} = runRegex("add", target, {content: converted, replacement: "$1"}));
+    }
 
     // Hide/skip => to-esm-browser: skip
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
