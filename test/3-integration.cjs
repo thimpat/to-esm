@@ -332,9 +332,9 @@ describe("The converter tool", function ()
                     const options = {
                         input,
                         output,
-                        config      : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
-                        noheader    : false,
-                        "withreport": true
+                        config    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
+                        noheader  : false,
+                        withreport: true
                     };
 
                     await transpileFiles(options);
@@ -352,11 +352,11 @@ describe("The converter tool", function ()
                     const input = "./assets/given/demo-test-3.cjs";
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
-                        target      : TARGET.BROWSER,
-                        noheader    : false,
-                        "withreport": true
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
+                        target    : TARGET.BROWSER,
+                        noheader  : false,
+                        withreport: true
                     };
 
                     await transpileFiles(options);
@@ -377,7 +377,7 @@ describe("The converter tool", function ()
                         output      : path.join(testDir, "/actual"),
                         config      : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
                         noheader    : false,
-                        "withreport": true,
+                        withreport  : true,
                         replaceStart: [
                             {
                                 "search" : "/const\\s+ttt\\s*=\\s*require\\(.mama-magnimus.\\);/g",
@@ -410,7 +410,7 @@ describe("The converter tool", function ()
                         output      : path.join(testDir, "/actual"),
                         config      : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
                         noheader    : false,
-                        "withreport": true,
+                        withreport  : true,
                         replaceStart: [
                             {
                                 "search" : "/const\\s+ttt\\s*=\\s*require\\(.mama-magnimus.\\);/g",
@@ -448,10 +448,10 @@ describe("The converter tool", function ()
                      */
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
-                        noheader    : false,
-                        "withreport": true,
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
+                        noheader  : false,
+                        withreport: true,
                     };
 
                     // Conversion Link
@@ -477,10 +477,10 @@ describe("The converter tool", function ()
                      */
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
-                        noheader    : false,
-                        "withreport": true,
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "assets/given/.toesm-nohtml-pattern.json"),
+                        noheader  : false,
+                        withreport: true,
                     };
 
                     await transpileFiles(options);
@@ -505,10 +505,10 @@ describe("The converter tool", function ()
                      */
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "assets/given/.toesm.json"),
-                        noheader    : false,
-                        "withreport": true,
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "assets/given/.toesm.json"),
+                        noheader  : false,
+                        withreport: true,
                     };
 
                     await transpileFiles(options);
@@ -534,11 +534,11 @@ describe("The converter tool", function ()
                      */
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "assets/given/.toesm-replace-modules.json"),
-                        noheader    : false,
-                        "withreport": true,
-                        target      : TARGET.BROWSER
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "assets/given/.toesm-replace-modules.json"),
+                        noheader  : false,
+                        withreport: true,
+                        target    : TARGET.BROWSER
                     };
 
                     await transpileFiles(options);
@@ -921,11 +921,11 @@ describe("The converter tool", function ()
                     const htmlPattern = "./assets/actual/*.html";
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "assets/given/.toesm.json"),
-                        noheader    : false,
-                        "withreport": true,
-                        "html"      : htmlPattern,
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "assets/given/.toesm.json"),
+                        noheader  : false,
+                        withreport: true,
+                        "html"    : htmlPattern,
                     };
 
                     generateHTML(1);
@@ -945,11 +945,11 @@ describe("The converter tool", function ()
                     const htmlPattern = "./assets/actual/index-2.html";
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "assets/given/.toesm-invalid.json"),
-                        noheader    : false,
-                        "withreport": true,
-                        "html"      : htmlPattern,
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "assets/given/.toesm-invalid.json"),
+                        noheader  : false,
+                        withreport: true,
+                        "html"    : htmlPattern,
                     };
 
                     generateHTML(2);
@@ -966,10 +966,10 @@ describe("The converter tool", function ()
                     const input = "./assets/given/demo-bad-syntax.cjs";
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual"),
-                        config      : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
-                        noheader    : false,
-                        "withreport": false,
+                        output    : path.join(testDir, "/actual"),
+                        config    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
+                        noheader  : false,
+                        withreport: false,
                     };
 
                     const success = (await transpileFiles(options)).success;
@@ -983,10 +983,10 @@ describe("The converter tool", function ()
                     const input = "./assets/given/multi/**/*.cjs";
                     const options = {
                         input,
-                        output      : path.join(testDir, "/actual/multi"),
-                        config      : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
-                        noheader    : false,
-                        "withreport": false,
+                        output    : path.join(testDir, "/actual/multi"),
+                        config    : path.join(__dirname, "given/.toesm-nohtml-pattern.json"),
+                        noheader  : false,
+                        withreport: false,
                     };
 
                     const success = (await transpileFiles(options)).success;
