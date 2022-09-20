@@ -787,7 +787,10 @@ const resolveThirdParty = (text, list, {
 
         // Need conversion from .cjs because module is incompatible with ESM
         requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
-        let projectedRequiredPath = resolveReqPath(source, requiredPath, {outputDir, subRootDir: moreOptions.subRootDir});
+        let projectedRequiredPath = resolveReqPath(source, requiredPath, {
+            outputDir,
+            subRootDir: moreOptions.subRootDir
+        });
         projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
 
         importMaps[moduleName] = requiredPath;
@@ -2599,37 +2602,37 @@ const getLibraryInfo = (modulePackname) =>
     try
     {
         let installedLocation, dir;
-        try
-        {
-            delete require.cache[require.resolve(modulePackname)];
-
-            // Not reliable
-            installedLocation = require.resolve(modulePackname);
-        }
-        catch (e)
-        {
-        }
-
+        installedLocation = findPackageEntryPoint(modulePackname);
         if (!installedLocation)
         {
-            installedLocation = findPackageEntryPoint(modulePackname);
-            if (!installedLocation)
-            {
-                return;
-            }
+            return info;
         }
 
-        if (installedLocation)
+        installedLocation = installedLocation.split(modulePackname)[0];
+
+        // Module check
+        dir = joinPath(installedLocation, "..");
+        const packageJsonPath = joinPath(dir, "package.json");
+        const packageJson = require(packageJsonPath);
+
+        if (!packageJson?.dependencies)
         {
-            installedLocation = installedLocation.split(modulePackname)[0];
-            dir = joinPath(installedLocation, modulePackname);
-            info.installed = true;
-
-            dir = dir || path.parse(installedLocation).dir;
-            const packageJsonPath = joinPath(dir, "package.json");
-            const packageJson = require(packageJsonPath);
-            info.version = packageJson.version;
+            info.installed = false;
+            return info;
         }
+
+        info.installed = !!packageJson.dependencies[modulePackname];
+        if (!info.installed)
+        {
+            return info;
+        }
+
+        dir = dir || path.parse(installedLocation).dir;
+
+        // Dependency check
+        const dependencyPackageJsonPath = joinPath(dir, "package.json");
+        const dependencyPackageJson = require(dependencyPackageJsonPath);
+        info.version = dependencyPackageJson.version;
 
     }
     catch (e)
@@ -2662,7 +2665,7 @@ const installPackage =
                 {
                     if (version.split(info.version).length === 1 || version.split(info.version).length === 2)
                     {
-                        console.info({lid: 1142}, `The package [${moduleName}${version}] is already installed as [${name}]`);
+                        console.log({lid: 1142}, `The package [${moduleName}${version}] is already installed as [${name}]`);
                         return;
                     }
 
