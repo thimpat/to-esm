@@ -1539,6 +1539,7 @@ Therefore, there are advantages to not systematically using bundled code.
 
 ## Changelog
 
+*  Allow skipping third-party module resolution with the --skipEsmResolution option
 *  Set length for displayed log ids to 4
 *  Display help with the pageterm module
 *  Fix --version and --help not displaying correctly
