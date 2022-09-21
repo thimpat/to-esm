@@ -9,6 +9,7 @@ const {
     transpileFiles,
     getIndexedItems
 } = require("./src/converter.cjs");
+const {showHelp} = require("pageterm");
 
 const WATCH_DELAY = 2000;
 
@@ -109,9 +110,8 @@ const onChange = async (moreOptions, savedOptions, watcher, filepath) =>
 
 /**
  * Process version and help options
- * @returns {boolean}
  */
-const stopOnHelpOrVersion = function (simplifiedCliOptions = [])
+const stopOnHelpOrVersion = async function (simplifiedCliOptions = [])
 {
     try
     {
@@ -119,15 +119,20 @@ const stopOnHelpOrVersion = function (simplifiedCliOptions = [])
         {
             // Tested with integration-cli but cannot be detected
             /* istanbul ignore next */
-            console.log({lid: 1002}, `v${packageJson.version}`);
+            console.log(`v${packageJson.version}`);
             return true;
         }
 
         if (simplifiedCliOptions.help || simplifiedCliOptions.h)
         {
-            // Tested with integration-cli but cannot be detected
             /* istanbul ignore next */
-            console.log({lid: 1004}, getHelp());
+            const content = getHelp();
+            await showHelp(content, {
+                windowTitle    : packageJson.name + " v" + packageJson.version + "❔" + " Help ",
+                topText        : "Press CTRL + C or Q to Quit",
+                topTextBg      : "",
+                topTextReversed: true
+            });
             return true;
         }
 
@@ -153,16 +158,16 @@ async function init(argv)
         // Apply minimist
         const simplifiedCliOptions = minimist(argv.slice(2));
 
+        // Process straightforward options
+        if (await stopOnHelpOrVersion(simplifiedCliOptions))
+        {
+            return true;
+        }
+
         if (!simplifiedCliOptions.noConsoleOverride)
         {
             // Replace console.log
             setupConsole();
-        }
-
-        // Process straightforward options
-        if (stopOnHelpOrVersion(simplifiedCliOptions))
-        {
-            return true;
         }
 
         // Transpile sources

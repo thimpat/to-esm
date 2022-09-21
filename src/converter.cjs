@@ -376,7 +376,8 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
         let entryPoint = findPackageEntryPoint(moduleName, targetDir, {
             isCjs,
             isBrowser       : target === TARGET.BROWSER,
-            useNativeResolve: false
+            useNativeResolve: false,
+            noAnsi: true
         });
 
         /* istanbul ignore next */
@@ -793,6 +794,12 @@ const resolveThirdParty = (text, list, {
 
         if (!moreOptions.firstPass)
         {
+            if (moreOptions.extras?.skipEsmResolution)
+            {
+                displayWarningOncePerModule(moduleName, `The npm module '${moduleName}' does not seem to be ESM compatible.`);
+                return moduleName;
+            }
+
             displayWarningOncePerModule(moduleName, `The npm module '${moduleName}' does not seem to be ESM compatible. (The system will try to generate a new one)`);
         }
 
@@ -2888,13 +2895,19 @@ const isESMCompatible = (filepath, content = "") =>
             return false;
         }
 
+        if (!fs.existsSync(filepath))
+        {
+            console.error({lid: 3075}, `Could not find ${filepath} for checking ESM compatibility`);
+            return false;
+        }
+
         content = content || fs.readFileSync(filepath, "utf-8");
         return !isCjsCompatible(filepath, content);
     }
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 3070}, e);
+        console.error({lid: 3073}, e);
     }
 
     /* istanbul ignore next */
@@ -4844,7 +4857,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " useImportMaps, nmBrowserImported"
+            " useImportMaps, nmBrowserImported, skipEsmResolution"
         );
 
         if (cliOptions.resolveAbsolute === true)
@@ -4876,7 +4889,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const extrasInfos = {};
 
-        anaLogger.setOptions({silent: true, hideError: true, hideHookMessage: true});
+        anaLogger.setOptions({silent: true, hideError: true, hideHookMessage: true, lidLenMax: 4});
 
         for (let pass = 1; pass <= 2; ++pass)
         {
@@ -4925,7 +4938,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
                 subRootDir = calculateCommon(sourceList);
                 cjsList = cjsList.slice(0, 1);
 
-                anaLogger.setOptions({silent: false, hideError: false});
+                anaLogger.setOptions({silent: false, hideError: false, lidLenMax: 4});
             }
         }
 
