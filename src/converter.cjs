@@ -3566,7 +3566,7 @@ const bundleResults = async (entryPointPath, {
 {
     try
     {
-        let resBundlePath;
+        let resBundlePath = {};
         if (bundlePath)
         {
             resBundlePath = await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
@@ -3584,7 +3584,7 @@ const bundleResults = async (entryPointPath, {
             extrasInfos.esmBundleCode = resBundlePath.content;
         }
 
-        let resBrowserBundlePath;
+        let resBrowserBundlePath = {};
         if (browserBundlePath)
         {
             if (isBrowserCompatible(entryPointPath))
@@ -3607,7 +3607,7 @@ const bundleResults = async (entryPointPath, {
             extrasInfos.browserBundleCode = resBrowserBundlePath.content;
         }
 
-        let resCjsBundlePath;
+        let resCjsBundlePath = {};
         if (cjsBundlePath)
         {
             resCjsBundlePath = await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
