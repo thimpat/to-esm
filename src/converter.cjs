@@ -4876,7 +4876,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const extrasInfos = {};
 
-        anaLogger.setOptions({silent: true, hideError: true, hideHookMessage: true});
+        anaLogger.setOptions({silent: true, hideError: true, hideHookMessage: true, lidLenMax: 4});
 
         for (let pass = 1; pass <= 2; ++pass)
         {
@@ -4925,7 +4925,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
                 subRootDir = calculateCommon(sourceList);
                 cjsList = cjsList.slice(0, 1);
 
-                anaLogger.setOptions({silent: false, hideError: false});
+                anaLogger.setOptions({silent: false, hideError: false, lidLenMax: 4});
             }
         }
 
