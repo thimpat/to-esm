@@ -33,13 +33,19 @@ describe("In the Terminal", function ()
         it("should display the help with --help option", function ()
         {
             let code = shell.exec("node ./../index.cjs --help");
-            expect(code.stdout).to.contain("to-esm <filepath> [--output <dirpath>] [--html <filepath>] [--noheader] [--target < browser|esm >] [--bundle <filepath>] [--update-all]");
+            expect(code.stdout)
+                .to.contain("Usage:")
+                .to.contain("to-esm <filepath> [--output <dirpath>] [--html <filepath>]")
+                .to.contain("to-esm should run from the project root folder");
         });
 
         it("should display the help with --h option", function ()
         {
             let code = shell.exec("node ./../index.cjs -h");
-            expect(code.stdout).to.contain("to-esm <filepath> [--output <dirpath>] [--html <filepath>] [--noheader] [--target < browser|esm >] [--bundle <filepath>] [--update-all]");
+            expect(code.stdout)
+                .to.contain("Usage:")
+                .to.contain("to-esm <filepath> [--output <dirpath>] [--html <filepath>]")
+                .to.contain("to-esm should run from the project root folder");
         });
 
         it("should generate a bundle only", function ()

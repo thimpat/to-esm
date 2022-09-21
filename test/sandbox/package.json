@@ -21,6 +21,6 @@
   "license": "ISC",
   "dependencies": {
     "analogger": "^1.21.4",
-    "to-esm": "file:../../to-esm-2.21.0.tgz"
+    "to-esm": "file:../../to-esm-2.22.3.tgz"
   }
 }
