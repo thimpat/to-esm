@@ -1542,7 +1542,13 @@ Therefore, there are advantages to not systematically using bundled code.
 
 ## Changelog
 
+*  Fix cjs minification not generated when conversion is not browser compatible
 *  Fix wrong path calculations for browser third-party modules
+*  Fix modules detected as installed
+*  Fix a broken directive
+*  Reduce output directories depth
+*  Update documentation
+*  Add option --nmBrowserImported to rename imported node_modules
 
 ---
 

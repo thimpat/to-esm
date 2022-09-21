@@ -3566,7 +3566,7 @@ const bundleResults = async (entryPointPath, {
 {
     try
     {
-        let resBundlePath;
+        let resBundlePath = {};
         if (bundlePath)
         {
             resBundlePath = await minifyESMCode(entryPointPath, bundlePath, TARGET.ESM, {
@@ -3584,7 +3584,7 @@ const bundleResults = async (entryPointPath, {
             extrasInfos.esmBundleCode = resBundlePath.content;
         }
 
-        let resBrowserBundlePath;
+        let resBrowserBundlePath = {};
         if (browserBundlePath)
         {
             if (isBrowserCompatible(entryPointPath))
@@ -3607,7 +3607,7 @@ const bundleResults = async (entryPointPath, {
             extrasInfos.browserBundleCode = resBrowserBundlePath.content;
         }
 
-        let resCjsBundlePath;
+        let resCjsBundlePath = {};
         if (cjsBundlePath)
         {
             resCjsBundlePath = await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
@@ -3629,7 +3629,7 @@ const bundleResults = async (entryPointPath, {
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        console.error({lid: 4515}, e.message);
     }
 
     return false;
@@ -4559,7 +4559,7 @@ const deleteTempFolder = (moreOptions) =>
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        console.error({lid: 4517}, e.message);
     }
 
     return false;
@@ -4691,7 +4691,7 @@ function getWorkingDir()
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        console.error({lid: 4519}, e.message);
     }
 
     return null;
@@ -4724,7 +4724,7 @@ function getRootDir(cliOptions)
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        console.error({lid: 4523}, e.message);
     }
 
     return false;
@@ -4746,7 +4746,7 @@ function getOutputDirectory(cliOptions)
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        console.error({lid: 4525}, e.message);
     }
 
     return false;
@@ -4806,7 +4806,7 @@ const extractKeyDirectories = function (cliOptions)
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        console.error({lid: 4527}, e.message);
     }
 
     return {};
