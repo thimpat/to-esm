@@ -9,6 +9,7 @@ const {
     transpileFiles,
     getIndexedItems
 } = require("./src/converter.cjs");
+const {showHelp} = require("pageterm");
 
 const WATCH_DELAY = 2000;
 
@@ -111,7 +112,7 @@ const onChange = async (moreOptions, savedOptions, watcher, filepath) =>
  * Process version and help options
  * @returns {boolean}
  */
-const stopOnHelpOrVersion = function (simplifiedCliOptions = [])
+const stopOnHelpOrVersion = async function (simplifiedCliOptions = [])
 {
     try
     {
@@ -125,9 +126,14 @@ const stopOnHelpOrVersion = function (simplifiedCliOptions = [])
 
         if (simplifiedCliOptions.help || simplifiedCliOptions.h)
         {
-            // Tested with integration-cli but cannot be detected
             /* istanbul ignore next */
-            console.log(getHelp());
+            const content = getHelp();
+            await showHelp(content, {
+                windowTitle    : packageJson.name + " v" + packageJson.version + "❔" + " Help ",
+                topText        : "Press CTRL + C or Q to Quit",
+                topTextBg      : "",
+                topTextReversed: true
+            });
             return true;
         }
 
