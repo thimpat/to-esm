@@ -110,7 +110,6 @@ const onChange = async (moreOptions, savedOptions, watcher, filepath) =>
 
 /**
  * Process version and help options
- * @returns {boolean}
  */
 const stopOnHelpOrVersion = async function (simplifiedCliOptions = [])
 {
@@ -160,7 +159,7 @@ async function init(argv)
         const simplifiedCliOptions = minimist(argv.slice(2));
 
         // Process straightforward options
-        if (stopOnHelpOrVersion(simplifiedCliOptions))
+        if (await stopOnHelpOrVersion(simplifiedCliOptions))
         {
             return true;
         }
