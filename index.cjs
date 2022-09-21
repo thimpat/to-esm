@@ -119,7 +119,7 @@ const stopOnHelpOrVersion = function (simplifiedCliOptions = [])
         {
             // Tested with integration-cli but cannot be detected
             /* istanbul ignore next */
-            console.log({lid: 1002}, `v${packageJson.version}`);
+            console.log(`v${packageJson.version}`);
             return true;
         }
 
@@ -127,7 +127,7 @@ const stopOnHelpOrVersion = function (simplifiedCliOptions = [])
         {
             // Tested with integration-cli but cannot be detected
             /* istanbul ignore next */
-            console.log({lid: 1004}, getHelp());
+            console.log(getHelp());
             return true;
         }
 
@@ -153,16 +153,16 @@ async function init(argv)
         // Apply minimist
         const simplifiedCliOptions = minimist(argv.slice(2));
 
-        if (!simplifiedCliOptions.noConsoleOverride)
-        {
-            // Replace console.log
-            setupConsole();
-        }
-
         // Process straightforward options
         if (stopOnHelpOrVersion(simplifiedCliOptions))
         {
             return true;
+        }
+
+        if (!simplifiedCliOptions.noConsoleOverride)
+        {
+            // Replace console.log
+            setupConsole();
         }
 
         // Transpile sources
