@@ -2903,6 +2903,12 @@ const isESMCompatible = (filepath, content = "") =>
             return false;
         }
 
+        if (fs.lstatSync(filepath).isDirectory())
+        {
+            console.error({lid: 3077}, `Cannot check ESM compatibility on directories: ${filepath}`);
+            return false;
+        }
+
         content = content || fs.readFileSync(filepath, "utf-8");
         return !isCjsCompatible(filepath, content);
     }
