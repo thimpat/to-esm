@@ -232,7 +232,8 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
         const item = detectedExported[i];
 
         const regexSentence =
-            `(class|const|let|var|class|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
+        // eslint-disable-next-line max-len
+            `(class|const|let|var|class|(?:\\basync \\s*)?function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
