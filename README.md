@@ -1539,10 +1539,21 @@ Therefore, there are advantages to not systematically using bundled code.
 
 ## Changelog
 
-*  Allow skipping third-party module resolution with the --skipEsmResolution option
+*  Fix an undefined source variable error during some parsing
+*  Fix undefined options errors
+*  Fix async functions exported incorrectly
+*  Allow skipping third-party module resolution with the skipEsmResolution option
+*  Fix no displayed output
 *  Set length for displayed log ids to 4
-*  Display help with the pageterm module
+*  Display help with the PageTerm module
 *  Fix --version and --help not displaying correctly
+*  Fix cjs minification not generated when conversion is not browser compatible
+*  Fix wrong path calculations for third-party browser modules
+*  Fix modules detected as installed
+*  Fix a broken directive
+*  Reduce output directories depth
+*  Update documentation
+*  Add option --nmBrowserImported to rename imported node_modules
 
 ---
 
