@@ -149,7 +149,8 @@ const displayWarningOncePerModule = (function ()
 
         console.warn({
             lid  : 1236,
-            color: "yellow"
+            color: "yellow",
+            symbol: "exclamation_mark"
         }, message);
 
         return true;
@@ -3917,6 +3918,7 @@ const writeResultOnDisk = (moreOptions) =>
         const n = cjsList.length;
         for (let i = 0; i < n; ++i)
         {
+            let source;
             try
             {
                 const entry = cjsList[i];
@@ -3926,7 +3928,8 @@ const writeResultOnDisk = (moreOptions) =>
                     continue;
                 }
 
-                const {source, subDir, notOnDisk, converted, mjsTarget} = entry;
+                source = entry.source;
+                const {subDir, notOnDisk, converted, mjsTarget} = entry;
                 if (notOnDisk)
                 {
                     continue;
@@ -3976,7 +3979,7 @@ const writeResultOnDisk = (moreOptions) =>
     }
     catch (e)
     {
-        console.error({lid: 3122}, e.message);
+        console.error({lid: 3125}, e.message);
     }
 
     return false;
