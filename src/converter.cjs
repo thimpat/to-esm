@@ -956,7 +956,8 @@ const resolveRelativeImport = (text, list, {
             origin   : origin || ORIGIN_ADDING_TO_INDEX.RESOLVE_RELATIVE_IMPORT,
             workingDir,
             outputDir: moreOptions.outputDir,
-            subRootDir
+            subRootDir,
+            moreOptions
         });
     }
     catch (e)
@@ -2250,7 +2251,7 @@ const formatIndexEntry = ({
         if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY)
         {
             isThirdParty = true;
-            if (moreOptions.extras.nmBrowserImported !== "node_modules")
+            if (moreOptions?.extras?.nmBrowserImported !== "node_modules")
             {
                 subPath = subPath.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
                 subDir = subDir.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
