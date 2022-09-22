@@ -2310,7 +2310,7 @@ const formatIndexEntry = ({
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 3046}, e.message);
+        console.error({lid: 3047}, e.message);
     }
 };
 
@@ -3875,10 +3875,10 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
         if (!parsingResult.success)
         {
             let e = parsingResult.error;
-            console.error({lid: 3108}, " " + toAnsi.getTextFromHex("ERROR: Conversion" +
+            console.error({lid: 3109}, " " + toAnsi.getTextFromHex("ERROR: Conversion" +
                 " may have failed even with fallback processing on" +
                 ` [${mjsTarget}]`, {fg: "#FF0000"}));
-            console.error({lid: 3110}, " " + toAnsi.getTextFromHex(`LINE:${e.lineNumber} COLUMN:${e.column}: ${e.message}`, {fg: "#FF2000"}));
+            console.error({lid: 3111}, " " + toAnsi.getTextFromHex(`LINE:${e.lineNumber} COLUMN:${e.column}: ${e.message}`, {fg: "#FF2000"}));
             reportSuccess = "❌ FAILED";
             console.log({lid: 1058}, " Note that the file is still generated to allow error checking and manual updates.");
         }
