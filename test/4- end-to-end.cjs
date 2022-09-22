@@ -11,7 +11,7 @@ const tgzName = `${packageJson.name}-${packageJson.version}.tgz`;
 const tgzDestination = "../../" + tgzName;
 const cwd = process.cwd();
 
-describe("In the sandbox folder", function ()
+describe.skip("In the sandbox folder", function ()
 {
     this.timeout(60000);
 
