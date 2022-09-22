@@ -149,7 +149,8 @@ const displayWarningOncePerModule = (function ()
 
         console.warn({
             lid  : 1236,
-            color: "yellow"
+            color: "yellow",
+            symbol: "exclamation_mark"
         }, message);
 
         return true;
@@ -232,7 +233,8 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
         const item = detectedExported[i];
 
         const regexSentence =
-            `(class|const|let|var|class|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
+        // eslint-disable-next-line max-len
+            `(class|const|let|var|class|(?:\\basync \\s*)?function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
             new RegExp(regexSentence, "gm");
@@ -955,7 +957,8 @@ const resolveRelativeImport = (text, list, {
             origin   : origin || ORIGIN_ADDING_TO_INDEX.RESOLVE_RELATIVE_IMPORT,
             workingDir,
             outputDir: moreOptions.outputDir,
-            subRootDir
+            subRootDir,
+            moreOptions
         });
     }
     catch (e)
@@ -2249,7 +2252,7 @@ const formatIndexEntry = ({
         if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY)
         {
             isThirdParty = true;
-            if (moreOptions.extras.nmBrowserImported !== "node_modules")
+            if (moreOptions?.extras?.nmBrowserImported !== "node_modules")
             {
                 subPath = subPath.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
                 subDir = subDir.replace(/\bnode_modules\b/, moreOptions.extras.nmBrowserImported);
@@ -2308,7 +2311,7 @@ const formatIndexEntry = ({
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 3046}, e.message);
+        console.error({lid: 3047}, e.message);
     }
 };
 
@@ -2898,6 +2901,12 @@ const isESMCompatible = (filepath, content = "") =>
         if (!fs.existsSync(filepath))
         {
             console.error({lid: 3075}, `Could not find ${filepath} for checking ESM compatibility`);
+            return false;
+        }
+
+        if (fs.lstatSync(filepath).isDirectory())
+        {
+            console.error({lid: 3077}, `Cannot check ESM compatibility on directories: ${filepath}`);
             return false;
         }
 
@@ -3873,10 +3882,10 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
         if (!parsingResult.success)
         {
             let e = parsingResult.error;
-            console.error({lid: 3108}, " " + toAnsi.getTextFromHex("ERROR: Conversion" +
+            console.error({lid: 3109}, " " + toAnsi.getTextFromHex("ERROR: Conversion" +
                 " may have failed even with fallback processing on" +
                 ` [${mjsTarget}]`, {fg: "#FF0000"}));
-            console.error({lid: 3110}, " " + toAnsi.getTextFromHex(`LINE:${e.lineNumber} COLUMN:${e.column}: ${e.message}`, {fg: "#FF2000"}));
+            console.error({lid: 3111}, " " + toAnsi.getTextFromHex(`LINE:${e.lineNumber} COLUMN:${e.column}: ${e.message}`, {fg: "#FF2000"}));
             reportSuccess = "❌ FAILED";
             console.log({lid: 1058}, " Note that the file is still generated to allow error checking and manual updates.");
         }
@@ -3909,6 +3918,7 @@ const writeResultOnDisk = (moreOptions) =>
         const n = cjsList.length;
         for (let i = 0; i < n; ++i)
         {
+            let source;
             try
             {
                 const entry = cjsList[i];
@@ -3918,7 +3928,8 @@ const writeResultOnDisk = (moreOptions) =>
                     continue;
                 }
 
-                const {source, subDir, notOnDisk, converted, mjsTarget} = entry;
+                source = entry.source;
+                const {subDir, notOnDisk, converted, mjsTarget} = entry;
                 if (notOnDisk)
                 {
                     continue;
@@ -3968,7 +3979,7 @@ const writeResultOnDisk = (moreOptions) =>
     }
     catch (e)
     {
-        console.error({lid: 3122}, e.message);
+        console.error({lid: 3125}, e.message);
     }
 
     return false;

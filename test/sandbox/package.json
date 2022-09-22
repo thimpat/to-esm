@@ -20,7 +20,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "analogger": "^1.21.4",
-    "to-esm": "file:../../to-esm-2.22.3.tgz"
+    "analogger": "^1.21.4"
   }
 }
