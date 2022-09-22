@@ -1407,6 +1407,26 @@ describe("The converter tool", function ()
                 }
             );
 
+            it("should convert functions of all sorts", async function ()
+                {
+                    const input = "./assets/given/demo-test-52.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                        debug   : true
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-52.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-52.mjs"), "utf8");
+
+                    expect(actualConversion).to.equal(expectConversion);
+                }
+            );
+
         });
 
         describe("on a directory", () =>
