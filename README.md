@@ -950,6 +950,9 @@ module.exports.TABLE2 = ...;
 module.exports.otherKey = ...;
 ```
 
+<br/>
+
+---
 
 ### Use simple "require"
 
@@ -978,7 +981,62 @@ const myAnything = require("electron-data-exchanger");
 // ... The code that uses what was required
 ```
 
+<br/>
 
+---
+
+### Assignment during declaration
+
+to-esm will not convert the below code as it would require some refactoring that would make the generated code
+not resemble the original code.
+
+##### Ambiguous form for to-esm
+
+```javascript
+let myVar = "something";
+
+// ...
+
+myVar = require("my-module")
+```
+
+##### Expected form:
+
+```javascript
+let myVar = require("my-module");
+```
+
+<br/>
+
+---
+
+### Use directives to solve issues with environments
+
+#### Library targeting both Node and the Browser
+
+If it needs to do an import in an ESM environment but not in the Browser, you can use directives to solve the issue.
+
+```javascript
+/** to-esm-browser: add
+ let myMod = () => { return "somethings"; };
+ **/
+
+/** to-esm-browser: remove **/
+let myMod = require("my-mod");
+/** to-esm-browser: end-remove **/
+```
+
+###### The code above will convert to:
+
+**Node**
+```javascript
+import myMod  from "my-mod";
+```
+
+**Browser**
+```javascript
+let myMod = () => { return "somethings"; };
+```
 
 
 <br><br>
