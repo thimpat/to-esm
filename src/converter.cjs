@@ -1558,7 +1558,7 @@ const removeDeclarationForAST = (converted, extracted) =>
         regexp = new RegExp(`(var|let|const)(.*)\\,\\s*${identifier}`);
         converted = converted.replace(regexp, "$1$2");
 
-        // Remove declaration of type `log something;`
+        // Remove declaration of type `let something;`
         regexp = new RegExp(`(?:var|let|const)\\s+${identifier}\\s*[;]`);
         converted = converted.replace(regexp, "");
     }
@@ -1701,6 +1701,7 @@ const findNearestBlock = (identifier, previouses) =>
  * @param workingDir
  * @param moreOptions
  * @param debuginput
+ * @param origin
  * @returns {{converted, success: boolean}}
  */
 const convertRequiresToImportsWithAST = (converted, list, {
