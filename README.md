@@ -1598,6 +1598,11 @@ Therefore, there are advantages to not systematically using bundled code.
 
 ## Changelog
 
+##### current:
+*  Add options --skipLinks to avoid following linked files
+
+
+##### 2.23.1:
 *  Fix an undefined source variable error during some parsing
 *  Fix undefined options errors
 *  Fix async functions exported incorrectly
