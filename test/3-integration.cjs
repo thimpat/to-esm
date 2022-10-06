@@ -1415,13 +1415,31 @@ describe("The converter tool", function ()
                         output  : path.join(testDir, "/actual"),
                         noheader: true,
                         target  : TARGET.ESM,
-                        debug   : true
                     };
 
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-52.mjs"), "utf8");
                     const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-52.mjs"), "utf8");
+
+                    expect(actualConversion).to.equal(expectConversion);
+                }
+            );
+
+            it("should export functions correctly", async function ()
+                {
+                    const input = "./assets/given/demo-test-53.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-53.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-53.mjs"), "utf8");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
