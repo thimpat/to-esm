@@ -662,17 +662,16 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, outputDir}) =>
  * @param nonHybridModuleMap
  * @param importMaps
  * @param moreOptions
- * @returns {string|(function(Mixed, RegExp, String))|*}
+ * @returns {string|*}
  */
 const resolveThirdParty = (text, list, {
     source,
-    rootDir,
     subRootDir,
     workingDir,
     regexRequiredPath,
     nonHybridModuleMap,
     importMaps,
-    moreOptions,
+    moreOptions
 }) =>
 {
     try
@@ -702,13 +701,13 @@ const resolveThirdParty = (text, list, {
             let isESM = isESMCompatible(requiredPath);
             if (isESM)
             {
-                // When the require is for Node (ESM)
+                // When the "require" is for Node (ESM)
                 // we return the original library name
                 if (moreOptions.extras.target === TARGET.ESM)
                 {
                     return regexRequiredPath;
                 }
-                    // When the require is for browser,
+                    // When the "require" is for browser,
                 // we need to solve the relative path to the browser script entry point
                 else if (moreOptions.extras.target === TARGET.BROWSER)
                 {
@@ -915,7 +914,6 @@ const resolveRelativeImport = (text, list, {
     regexRequiredPath,
     moreOptions,
     workingDir,
-    outputDir,
     subRootDir,
     origin = ""
 }) =>
@@ -989,8 +987,7 @@ const resolveAbsoluteImport = (text, list, {
     workingDir,
     regexRequiredPath,
     moreOptions,
-    subRootDir,
-    origin
+    subRootDir
 }) =>
 {
     // Source path of projected original source (the .cjs)
@@ -3138,7 +3135,10 @@ const addFileToIndex = ({
             }
         }
 
-        cjsList.push(entry);
+        if (!moreOptions?.extras?.skipLinks)
+        {
+            cjsList.push(entry);
+        }
         return entry;
     }
     catch (e)
@@ -4869,7 +4869,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " useImportMaps, nmBrowserImported, skipEsmResolution"
+            " useImportMaps, nmBrowserImported, skipEsmResolution, skipLinks"
         );
 
         if (cliOptions.resolveAbsolute === true)

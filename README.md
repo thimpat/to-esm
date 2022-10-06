@@ -567,29 +567,30 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 ## Options (via command line)
 
 
-| **Options**         | **Description**                                                               | **Expect**                     | default |
-|---------------------|-------------------------------------------------------------------------------|--------------------------------|---------|
-| filepath            | _File or pattern to convert_                                                  | file path                      |         |
-| --output            | _Output directory_                                                            | directory path                 |         |
-| --html              | _html files to receive importmaps_                                            | glob                           |         |
-| --noHeader          | _Options to not generate automatic header_                                    | boolean                        | false   |
-| --keepExisting      | _Options to skip already converted files_                                     |                                |         |
-| --target            | _Setting the targeted environment_                                            | esm / browser / package        | esm     |
-| --bundle            | _Generate minified bundle for esm environment_                                | file path                      |         |
-| --bundle-esm        | _Same as above_                                                               | file path                      |         |
-| --bundle-browser    | _Generate minified bundle for browser environment_                            | file path                      |         |
-| --bundle-cjs        | _Generate minified bundle for cjs environment_                                | file path                      |         |
-| --entrypoint        | _Path to .js entrypoint_                                                      | file path                      |         |
-| --update-all        | _Automatically update package.json to set entry points_                       |                                |         |
-| --use-bundle        | _When updating package.json use bundled/minified code_                        |                                |         |
-| --watch             | _Watch mode to automatically apply conversions when changes detected_         | directory path <br/>           |         |
-| --entrypoint        | _Explicitely set entry point (otherwise use the first file set in cli)_       | file path                      |         |
-| --resolve-absolute  | _Extra folders to look for when trying to solve absolute imported paths_      | string         <br/>           |         |
-| --keep-external     | _Do not try to copy files from absolute paths into generated folder_          | boolean                        | false   |
-| --nmBrowserImported | _Destination folder name for imported third parties when target is "browser"_ | directory <br/><br/>path <br/> |         |
-| --skipEsmResolution | _Do not try to resolve third party libraries_                                 | boolean                        | false   |
-| --prefixpath        | _Add a path to paths targeting third party modules_                           | directory path <br/>           |         |
-| ~~--subRootDir~~    | ~~Allow to retarget the output sub-directory~~                                | ~~true~~              <br/>    |         |
+| **Options**         | **Description**                                                                                       | **Expect**                     | default |
+|---------------------|-------------------------------------------------------------------------------------------------------|--------------------------------|---------|
+| filepath            | _File or pattern to convert_                                                                          | file path                      |         |
+| --output            | _Output directory_                                                                                    | directory path                 |         |
+| --html              | _html files to receive importmaps_                                                                    | glob                           |         |
+| --noHeader          | _Options to not generate automatic header_                                                            | boolean                        | false   |
+| --keepExisting      | _Options to skip already converted files_                                                             |                                |         |
+| --target            | _Setting the targeted environment_                                                                    | esm / browser / package        | esm     |
+| --bundle            | _Generate minified bundle for esm environment_                                                        | file path                      |         |
+| --bundle-esm        | _Same as above_                                                                                       | file path                      |         |
+| --bundle-browser    | _Generate minified bundle for browser environment_                                                    | file path                      |         |
+| --bundle-cjs        | _Generate minified bundle for cjs environment_                                                        | file path                      |         |
+| --entrypoint        | _Path to .js entrypoint_                                                                              | file path                      |         |
+| --update-all        | _Automatically update package.json to set entry points_                                               |                                |         |
+| --use-bundle        | _When updating package.json use bundled/minified code_                                                |                                |         |
+| --watch             | _Watch mode to automatically apply conversions when changes detected_                                 | directory path <br/>           |         |
+| --entrypoint        | _Explicitely set entry point (otherwise use the first file set in cli)_                               | file path                      |         |
+| --resolve-absolute  | _Extra folders to look for when trying to solve absolute imported paths_                              | string         <br/>           |         |
+| --keep-external     | _Do not try to copy files from absolute paths into generated folder_                                  | boolean                        | false   |
+| --nmBrowserImported | _Destination folder name for imported third parties when target is "browser"_                         | directory <br/><br/>path <br/> |         |
+| --skipEsmResolution | _Do not try to resolve third party libraries_                                                         | boolean                        | false   |
+| --skipLinks         | _Don't follow links (It will not convert linked files, but resulting links will need manual updates)_ | boolean                        | false   |
+| --prefixpath        | _Add a path to paths targeting third party modules_                                                   | directory path <br/>           |         |
+| ~~--subRootDir~~    | ~~Allow to retarget the output sub-directory~~                                                        | ~~true~~              <br/>    |         |
 
 <br><br>
 
@@ -828,7 +829,7 @@ It is also possible to add code.
 ```javascript
 /** to-esm-browser: add
     this.realConsoleLog("LogToFile is not supported in this environment. ")
-* **/
+**/
 ```
 
 In this example, after conversion, the above code will become this:
@@ -1597,6 +1598,11 @@ Therefore, there are advantages to not systematically using bundled code.
 
 ## Changelog
 
+##### current:
+*  Add options --skipLinks to avoid following linked files
+
+
+##### 2.23.1:
 *  Fix an undefined source variable error during some parsing
 *  Fix undefined options errors
 *  Fix async functions exported incorrectly
