@@ -1599,6 +1599,7 @@ Therefore, there are advantages to not systematically using bundled code.
 ## Changelog
 
 ##### current:
+*  Remove duplicate export on same line
 *  Add options --skipLinks to avoid following linked files
 
 
