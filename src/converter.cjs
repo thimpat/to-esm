@@ -1308,6 +1308,37 @@ const restoreShebang = (converted) =>
     return converted;
 };
 
+const removeDuplicateExports = function (converted)
+{
+    try
+    {
+        let oldArray = converted.split("\n");
+        let newArray = [];
+
+        oldArray.reverse().forEach(line =>
+        {
+            if (/\bexports?\b\./.test(line))
+            {
+                if (newArray.includes(line))
+                {
+                    return false;
+                }
+            }
+
+            newArray.unshift(line);
+            return true;
+        });
+
+        converted = newArray.join("\n");
+    }
+    catch (e)
+    {
+        console.error({lid: 6551}, e.message);
+    }
+
+    return converted;
+};
+
 /**
  * Will not work if a variable is named "exports"
  * @param converted
@@ -4054,6 +4085,9 @@ const convertCjsFiles = (list, {
             {
                 converted = removeShebang(converted);
                 dumpData(converted, source, "remove-shebang");
+
+                converted = removeDuplicateExports(converted);
+                dumpData(converted, source, "remote-duplicate-exports");
 
                 converted = convertComplexRequiresToSimpleRequires(converted, source);
                 dumpData(converted, source, "convert-complex-requires-to-simple-requires");
