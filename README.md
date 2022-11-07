@@ -1636,8 +1636,19 @@ Therefore, there are advantages to not systematically using bundled code.
 
 ##### current:
 
-* Remove duplicate export on same line
+*  Add option --no-bundle-minify to not minify generated bundled files
+*  Add --minify option to minify non-bundled generated files
+*  Add --no-comments option to remove comments from generated code
+*  Add --force-lf option to replace CLRF with LF
+
+##### 2.24.1:
+
+* Remove duplicate export on the same line
 * Add options --skipLinks to avoid following linked files
+
+
+##### 2.24.0:
+*  Add options --skipLinks to avoid following linked files
 
 ##### 2.23.1:
 
@@ -1653,7 +1664,7 @@ Therefore, there are advantages to not systematically using bundled code.
 * Fix wrong path calculations for third-party browser modules
 * Fix modules detected as installed
 * Fix a broken directive
-* Reduce output directories depth
+* Reduce output directories' depth
 * Update documentation
 * Add option --nmBrowserImported to rename imported node_modules
 
