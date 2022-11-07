@@ -1635,6 +1635,11 @@ Therefore, there are advantages to not systematically using bundled code.
 ## Changelog
 
 ##### current:
+*  Add support for some Uglify options on non-bundled generated files
+   --beautify, --braces, --comments, --dead_code, --drop_debugger, --drop_console, --inline, --indent_level, --indent_start, --keep_fargs,
+   --keep_fnames, --keep_quoted, --max_line_len, --preserve_line, --quote_keys, --quote_style, --v8, --expression, 
+   --reserved, --ie, --annotations, --module, --nameCache, --semicolons, --sourcemap, --toplevel, --warnings, --webkit, --width, 
+   --wrap_iife
 
 *  Add option --no-bundle-minify to not minify generated bundled files
 *  Add --minify option to minify non-bundled generated files
