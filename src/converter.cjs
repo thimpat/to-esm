@@ -4025,6 +4025,7 @@ const writeResultOnDisk = (moreOptions) =>
                         const destinationDir = joinPath(moreOptions.outputDir, subDir);
                         buildTargetDir(destinationDir);
 
+                        conversion = removeWhiteSpaces(conversion);
                         if (moreOptions?.extras?.minify === true)
                         {
                             const {
@@ -4073,8 +4074,8 @@ const writeResultOnDisk = (moreOptions) =>
                                 toplevel,
                                 warnings,
                                 webkit,
-                                output   : {
-                                    beautify     : beautify || true,
+                                output   : beautify && {
+                                    beautify,
                                     braces,
                                     comments     : comments || false,
                                     indent_level : indent_level || 4,
@@ -4116,7 +4117,6 @@ const writeResultOnDisk = (moreOptions) =>
                             }
                         }
 
-                        conversion = removeWhiteSpaces(conversion);
                         fs.writeFileSync(targetAbs, conversion, "utf-8");
                     }
                 }
