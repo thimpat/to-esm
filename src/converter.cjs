@@ -4025,9 +4025,9 @@ const writeResultOnDisk = (moreOptions) =>
                         const destinationDir = joinPath(moreOptions.outputDir, subDir);
                         buildTargetDir(destinationDir);
 
-                        conversion = removeWhiteSpaces(conversion);
                         if (moreOptions?.extras?.minify === true)
                         {
+                            conversion = removeWhiteSpaces(conversion);
                             const {
                                 beautify,
                                 braces,
