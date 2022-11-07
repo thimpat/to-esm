@@ -4731,13 +4731,18 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
 
         if ((bundlePath || cjsBundlePath || browserBundlePath) && mjsEntrypointPath)
         {
+            if (moreOptions.extras["bundle-minify"] === undefined)
+            {
+                moreOptions.extras["bundle-minify"] = true;
+            }
+
             await bundleResults(mjsEntrypointPath, {
                 cjsEntryPath: cjsEntryPointPath,
                 target      : moreOptions.extras.target,
                 bundlePath,
                 cjsBundlePath,
                 browserBundlePath,
-                minify      : moreOptions.extras.minify,
+                minify      : moreOptions.extras["bundle-minify"],
                 sourcemap   : moreOptions.extras.sourcemap,
                 extrasInfos
             });
