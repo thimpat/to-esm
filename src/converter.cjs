@@ -4808,7 +4808,7 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
                 // workingDir,
             });
 
-        if (moreOptions.firstPass && moreOptions.extras.target !== TARGET.CJS)
+        if (moreOptions.firstPass)
         {
             return success;
         }
