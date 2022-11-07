@@ -58,7 +58,7 @@ npm install to-esm -g
 ```shell
 
 to-esm <filepath> [--output=<dirpath>] [--html=<filepath>] [--noheader] [--target=< browser|esm|package >] 
-[--prefixpath=<dirpath>] [--bundle=<filepath>] [--watch] [--update-all]
+[--prefixpath=<dirpath>] [--bundle=<filepath>] [--watch] [--update-all] [--minify] [--no-bundle-minify]
 
 ```
 
