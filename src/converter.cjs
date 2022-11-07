@@ -3951,6 +3951,14 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
     }
 };
 
+const removeWhiteSpaces = (text) =>
+{
+    text = text.replace(/\r\n/g, "\n");
+    text = text.replace(/\n+/g, "\n");
+    text = text.trim();
+    return text;
+};
+
 /**
  * Write all converted files on disk
  * @param moreOptions
@@ -3987,6 +3995,7 @@ const writeResultOnDisk = (moreOptions) =>
 
                 let overwrite = true;
 
+                const targetRel = isCjs ? path.basename(cjsTarget) : path.basename(mjsTarget);
                 const targetAbs = isCjs ? cjsTargetAbs : mjsTargetAbs;
                 if (fs.existsSync(targetAbs))
                 {
@@ -4018,13 +4027,96 @@ const writeResultOnDisk = (moreOptions) =>
 
                         if (moreOptions?.extras?.minify === true)
                         {
-                            const result = UglifyJS.minify(conversion);
+                            const {
+                                beautify,
+                                braces,
+                                comments,
+                                dead_code,
+                                drop_debugger,
+                                drop_console,
+                                inline,
+                                indent_level,
+                                indent_start,
+                                keep_fargs,
+                                keep_fnames,
+                                keep_quoted,
+                                max_line_len,
+                                preserve_line,
+                                quote_keys,
+                                quote_style,
+                                v8,
+                                expression,
+                                reserved,
+                                ie,
+                                annotations,
+                                module,
+                                nameCache,
+                                semicolons,
+                                sourcemap,
+                                toplevel,
+                                warnings,
+                                webkit,
+                                width,
+                                wrap_iife
+                            } = moreOptions?.extras || {};
+
+                            const uglifyOptions = {
+                                v8, expression,
+                                ie,
+                                annotations,
+                                module,
+                                nameCache,
+                                sourceMap: sourcemap && {
+                                    filename: targetRel,
+                                    url     : targetRel + ".map"
+                                },
+                                toplevel,
+                                warnings,
+                                webkit,
+                                output   : {
+                                    beautify     : beautify || true,
+                                    braces,
+                                    comments     : comments || false,
+                                    indent_level : indent_level || 4,
+                                    indent_start : indent_start || 0,
+                                    max_line_len : max_line_len || false,
+                                    preserve_line: preserve_line || false,
+                                    quote_keys   : quote_keys || false,
+                                    quote_style  : quote_style || 0,
+                                    semicolons,
+                                    width        : width || 80,
+                                    wrap_iife    : wrap_iife || false
+                                },
+                                mangle   : {
+                                    keep_fargs : keep_fargs || false,
+                                    keep_fnames: keep_fnames || false,
+                                    keep_quoted: keep_quoted || false,
+                                    reserved   : reserved || []
+                                },
+                                compress : {
+                                    inline: inline || 0,
+                                    dead_code,
+                                    drop_debugger,
+                                    drop_console
+                                }
+                            };
+
+                            const result = UglifyJS.minify(conversion, {
+                                ...uglifyOptions
+                            });
+
+                            if (result.map)
+                            {
+                                fs.writeFileSync(targetAbs + ".map", result.map, {encoding: "utf-8"});
+                            }
+
                             if (!result.error)
                             {
                                 conversion = result.code;
                             }
                         }
 
+                        conversion = removeWhiteSpaces(conversion);
                         fs.writeFileSync(targetAbs, conversion, "utf-8");
                     }
                 }
