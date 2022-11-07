@@ -1439,7 +1439,8 @@ describe("The converter tool", function ()
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-53.mjs"), "utf8");
-                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-53.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-53.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
 
                     expect(actualConversion).to.equal(expectConversion);
                 }
