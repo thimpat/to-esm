@@ -67,6 +67,7 @@ const TARGET = {
     ALL    : "all"
 };
 const ESM_EXTENSION = ".mjs";
+const CJS_EXTENSION = ".cjs";
 
 const COMMENT_MASK = "❖✎🔏❉";
 
@@ -2237,7 +2238,7 @@ const formatIndexEntry = ({
 
         rootDir = normaliseDirPath(rootDir);
 
-        let targetName;
+        let mjsTargetName, cjsTargetName;
 
         if (isAbsolutePath)
         {
@@ -2254,7 +2255,7 @@ const formatIndexEntry = ({
                 let info = path.parse(subPath);
                 let subDir = info.dir;
                 subDir = normaliseDirPath(subDir);
-                targetName = info.base;
+                mjsTargetName = info.base;
                 paths = {subDir, subPath};
             }
             else
@@ -2288,9 +2289,10 @@ const formatIndexEntry = ({
             }
         }
 
-        targetName = targetName || path.parse(subPath).name + ESM_EXTENSION;
+        mjsTargetName = mjsTargetName || path.parse(subPath).name + ESM_EXTENSION;
+        cjsTargetName = cjsTargetName || path.parse(subPath).name + CJS_EXTENSION;
 
-        let mjsTarget;
+        let mjsTarget, cjsTarget;
 
         if (subRootDir && subDir.indexOf(subRootDir) === 0)
         {
@@ -2298,10 +2300,14 @@ const formatIndexEntry = ({
             subDir = subDir || "./";
         }
 
-        mjsTarget = joinPath(subDir, targetName);
-        subPath = joinPath(subDir, targetName);
+        mjsTarget = joinPath(subDir, mjsTargetName);
+        cjsTarget = joinPath(subDir, cjsTargetName);
 
-        const mjsTargetAbs = joinPath(outputDir, subPath);
+        subPath = joinPath(subDir, mjsTargetName);
+        const cjsSubPath = joinPath(subDir, cjsTargetName);
+
+        let mjsTargetAbs = joinPath(outputDir, subPath);
+        let cjsTargetAbs = joinPath(outputDir, cjsSubPath);
 
         let pkgImportPath = path.relative(workingDir, mjsTargetAbs);
         pkgImportPath = normalisePath(pkgImportPath);
@@ -2321,11 +2327,16 @@ const formatIndexEntry = ({
             .update(source)
             .digest("hex");
 
+        mjsTargetAbs = resolvePath(mjsTargetAbs);
+        cjsTargetAbs = resolvePath(cjsTargetAbs);
+
         return {
             source,
             sourceAbs,
             mjsTarget,
             mjsTargetAbs,
+            cjsTarget,
+            cjsTargetAbs,
             pkgImportPath,
             rootDir,
             subPath,
@@ -3947,6 +3958,8 @@ const writeResultOnDisk = (moreOptions) =>
 {
     try
     {
+        const isCjs = moreOptions?.extras?.target === TARGET.CJS;
+
         const n = cjsList.length;
         for (let i = 0; i < n; ++i)
         {
@@ -3961,17 +3974,22 @@ const writeResultOnDisk = (moreOptions) =>
                 }
 
                 source = entry.source;
-                const {subDir, notOnDisk, converted, mjsTarget} = entry;
+                const {subDir, notOnDisk, converted, mjsTarget, cjsTarget, cjsConverted} = entry;
                 if (notOnDisk)
                 {
                     continue;
                 }
 
+                const conversion = isCjs ? cjsConverted : converted;
                 const mjsTargetAbs = joinPath(moreOptions.outputDir, mjsTarget);
+                const cjsTargetAbs = joinPath(moreOptions.outputDir, cjsTarget);
+
                 let overwrite = true;
-                if (fs.existsSync(mjsTargetAbs))
+
+                const targetAbs = isCjs ? cjsTargetAbs : mjsTargetAbs;
+                if (fs.existsSync(targetAbs))
                 {
-                    const content = fs.readFileSync(mjsTargetAbs, "utf-8");
+                    const content = fs.readFileSync(mjsTargetAbs, {encoding: "utf-8"});
                     const regexp = new RegExp("\\/\\*\\*\\s*to-esm-\\w+:\\s*do-not-overwrite", "gm");
                     if (regexp.test(content))
                     {
@@ -3996,7 +4014,7 @@ const writeResultOnDisk = (moreOptions) =>
                     {
                         const destinationDir = joinPath(moreOptions.outputDir, subDir);
                         buildTargetDir(destinationDir);
-                        fs.writeFileSync(mjsTargetAbs, converted, "utf-8");
+                        fs.writeFileSync(targetAbs, conversion, "utf-8");
                     }
                 }
             }
@@ -4017,6 +4035,20 @@ const writeResultOnDisk = (moreOptions) =>
     return false;
 };
 
+const removeCommentFromConverted = function (converted)
+{
+    try
+    {
+        converted = stripCodeComments(converted);
+
+    }
+    catch (e)
+    {
+        console.error({lid: 3127}, e.message);
+    }
+
+    return converted;
+};
 
 /**
  * Convert cjs file into esm
@@ -4070,6 +4102,7 @@ const convertCjsFiles = (list, {
             console.log({lid: 1070}, ` Processing: ${source}`);
             console.log({lid: 1072}, " ----------------------------------------------------------------");
 
+
             resetAll();
 
             let converted = fs.readFileSync(sourceAbs, "utf-8");
@@ -4080,6 +4113,17 @@ const convertCjsFiles = (list, {
 
             converted = applyReplaceFromConfig(converted, replaceStart);
             dumpData(converted, source, "replace-from-config-file");
+
+            if (moreOptions?.extras?.comments === false)
+            {
+                converted = removeCommentFromConverted(converted);
+            }
+
+            if (moreOptions?.extras?.target === TARGET.CJS)
+            {
+                cjsItem.cjsConverted = removeCommentFromConverted(converted);
+                continue;
+            }
 
             if (isCjsCompatible(sourceAbs, converted))
             {
@@ -4655,7 +4699,7 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
                 // workingDir,
             });
 
-        if (moreOptions.firstPass)
+        if (moreOptions.firstPass && moreOptions.extras.target !== TARGET.CJS)
         {
             return success;
         }
