@@ -51,6 +51,7 @@
     "pageterm": "^1.0.4",
     "strip-comments-strings": "^1.2.0",
     "to-ansi": "^1.0.5",
+    "uglify-js": "^3.17.4",
     "window-size": "^1.1.1"
   },
   "devDependencies": {
