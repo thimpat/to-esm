@@ -10,6 +10,7 @@ const fs = require("fs");
 const glob = require("glob");
 let crypto = require("crypto");
 const {anaLogger} = require("analogger");
+const UglifyJS = require("uglify-js");
 
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
@@ -3980,7 +3981,7 @@ const writeResultOnDisk = (moreOptions) =>
                     continue;
                 }
 
-                const conversion = isCjs ? cjsConverted : converted;
+                let conversion = isCjs ? cjsConverted : converted;
                 const mjsTargetAbs = joinPath(moreOptions.outputDir, mjsTarget);
                 const cjsTargetAbs = joinPath(moreOptions.outputDir, cjsTarget);
 
@@ -3989,7 +3990,7 @@ const writeResultOnDisk = (moreOptions) =>
                 const targetAbs = isCjs ? cjsTargetAbs : mjsTargetAbs;
                 if (fs.existsSync(targetAbs))
                 {
-                    const content = fs.readFileSync(mjsTargetAbs, {encoding: "utf-8"});
+                    const content = fs.readFileSync(targetAbs, {encoding: "utf-8"});
                     const regexp = new RegExp("\\/\\*\\*\\s*to-esm-\\w+:\\s*do-not-overwrite", "gm");
                     if (regexp.test(content))
                     {
@@ -4003,17 +4004,27 @@ const writeResultOnDisk = (moreOptions) =>
 
                 if (overwrite && !moreOptions.extras.keepexisting)
                 {
-                    if (mjsTargetAbs.indexOf(moreOptions.outputDir) === -1)
+                    if (targetAbs.indexOf(moreOptions.outputDir) === -1)
                     {
                         if (!isResolveAbsoluteMode(moreOptions))
                         {
-                            console.error({lid: 3118}, `Source path miscalculation: [${mjsTargetAbs}]`);
+                            console.error({lid: 3118}, `Source path miscalculation: [${targetAbs}]`);
                         }
                     }
                     else
                     {
                         const destinationDir = joinPath(moreOptions.outputDir, subDir);
                         buildTargetDir(destinationDir);
+
+                        if (moreOptions?.extras?.minify === true)
+                        {
+                            const result = UglifyJS.minify(conversion);
+                            if (!result.error)
+                            {
+                                conversion = result.code;
+                            }
+                        }
+
                         fs.writeFileSync(targetAbs, conversion, "utf-8");
                     }
                 }
@@ -4040,7 +4051,6 @@ const removeCommentFromConverted = function (converted)
     try
     {
         converted = stripCodeComments(converted);
-
     }
     catch (e)
     {
@@ -4108,6 +4118,8 @@ const convertCjsFiles = (list, {
             let converted = fs.readFileSync(sourceAbs, "utf-8");
             dumpData(converted, source, "read-file");
 
+            let isTargetCjs = moreOptions?.extras?.target === TARGET.CJS;
+
             converted = applyDirectives(converted, {...moreOptions.extras});
             dumpData(converted, source, "apply-directives");
 
@@ -4119,9 +4131,14 @@ const convertCjsFiles = (list, {
                 converted = removeCommentFromConverted(converted);
             }
 
-            if (moreOptions?.extras?.target === TARGET.CJS)
+            if (moreOptions?.extras["force-lf"])
             {
-                cjsItem.cjsConverted = removeCommentFromConverted(converted);
+                converted = converted.replace(/\r\n/g, "\n");
+            }
+
+            if (isTargetCjs)
+            {
+                cjsItem.cjsConverted = converted;
                 continue;
             }
 
@@ -4572,8 +4589,6 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
         moreOptions.extras.fallback = !!cliOptions.fallback;
         moreOptions.extras.importMaps = {};
 
-        moreOptions.extras.minify = !["false", "no", "non"].includes(cliOptions.minify);
-
         if (["false", "no", "non"].includes(cliOptions.sourcemap))
         {
             moreOptions.extras.sourcemap = false;
@@ -4586,6 +4601,8 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
         bundlePath = normalisePath(bundlePath) || "";
         cjsBundlePath = normalisePath(cjsBundlePath) || "";
         browserBundlePath = normalisePath(browserBundlePath) || "";
+
+        moreOptions.extras.minify = !!cliOptions.minify;
 
         Object.assign(moreOptions.extras, {...cliOptions});
 
