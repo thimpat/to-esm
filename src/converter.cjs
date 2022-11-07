@@ -150,8 +150,8 @@ const displayWarningOncePerModule = (function ()
         convertedModuleList[moduleName] = true;
 
         console.warn({
-            lid  : 1236,
-            color: "yellow",
+            lid   : 1236,
+            color : "yellow",
             symbol: "exclamation_mark"
         }, message);
 
@@ -235,7 +235,7 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
         const item = detectedExported[i];
 
         const regexSentence =
-        // eslint-disable-next-line max-len
+            // eslint-disable-next-line max-len
             `(class|const|let|var|class|(?:\\basync \\s*)?function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
 
         const regexp =
@@ -381,7 +381,7 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
             isCjs,
             isBrowser       : target === TARGET.BROWSER,
             useNativeResolve: false,
-            noAnsi: true
+            noAnsi          : true
         });
 
         /* istanbul ignore next */
