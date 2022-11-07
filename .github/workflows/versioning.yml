@@ -18,7 +18,7 @@ jobs:
         uses: thimpat/to-esm/.github/actions/checkout@main
       - name: Install dependencies
         shell: powershell
-        run: npm cigit lo
+        run: npm ci
       - name: Upgrade version
         shell: powershell
         run: |
