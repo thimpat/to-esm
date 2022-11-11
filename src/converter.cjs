@@ -37,6 +37,7 @@ const esbuild = require("esbuild");
 const toEsmPackageJson = require("../package.json");
 
 const REGEXES = {};
+const SOME_REPLACER = "****";
 
 // ===========================================================================
 // Constants
@@ -3360,13 +3361,16 @@ const updatePackageJson = async ({
         try
         {
             let content = fs.readFileSync(packageJsonLocation, "utf-8") || "";
+            let trimmedContent = content.trim();
             /* istanbul ignore next */
-            if (!content.trim())
+            if (!trimmedContent)
             {
                 console.error({lid: 3090}, " package.json is empty or invalid.");
                 return false;
             }
+
             json = JSON.parse(content);
+            let newContent = content.replace(trimmedContent, SOME_REPLACER);
 
             if (useImportMaps)
             {
@@ -3470,6 +3474,7 @@ const updatePackageJson = async ({
             }
 
             let str = normaliseString(JSON.stringify(json, null, indent));
+            str = newContent.replace(SOME_REPLACER, str);
             fs.writeFileSync(packageJsonLocation, str, "utf8");
 
             console.log({lid: 1028});
