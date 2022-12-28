@@ -4364,10 +4364,10 @@ const convertCjsFiles = (list, {
             converted = removeResidue(converted);
             dumpData(converted, source, "removeResidue");
 
-            converted = restoreShebang(converted);
-
             // ******************************************
             writeConvertedIntoIndex(converted, cjsItem, moreOptions);
+
+            converted = restoreShebang(converted);
 
             // Newline
             console.log({lid: 1074});
