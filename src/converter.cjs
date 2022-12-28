@@ -2148,7 +2148,7 @@ const runRegex = (regexName, target, {content, replacement}) =>
  * @param target
  * @param saved
  */
-const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
+const applyDirectivesRemoveAndSkip = (converted, {target = TARGET.ALL} = {}) =>
 {
     const directives = [TARGET.ALL];
     if (target !== TARGET.ALL)
@@ -2161,12 +2161,28 @@ const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
     {
         const target = directives[i];
         ({converted} = runRegex("remove", target, {content: converted, replacement: ""}));
-        ({converted} = runRegex("add", target, {content: converted, replacement: "$1"}));
     }
 
     // Hide/skip => to-esm-browser: skip
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
     converted = hideText(regexp, converted);
+
+    return converted;
+};
+
+const applyDirectivesAdd = (converted, {target = TARGET.ALL} = {}) =>
+{
+    const directives = [TARGET.ALL];
+    if (target !== TARGET.ALL)
+    {
+        directives.push(target);
+    }
+
+    for (let i = 0; i < directives.length; ++i)
+    {
+        const target = directives[i];
+        ({converted} = runRegex("add", target, {content: converted, replacement: "$1"}));
+    }
 
     return converted;
 };
@@ -4217,8 +4233,8 @@ const convertCjsFiles = (list, {
 
             let isTargetCjs = moreOptions?.extras?.target === TARGET.CJS;
 
-            converted = applyDirectives(converted, {...moreOptions.extras});
-            dumpData(converted, source, "apply-directives");
+            converted = applyDirectivesRemoveAndSkip(converted, {...moreOptions.extras});
+            dumpData(converted, source, "apply-directives-remove-and-skip");
 
             converted = applyReplaceFromConfig(converted, replaceStart);
             dumpData(converted, source, "replace-from-config-file");
@@ -4332,6 +4348,9 @@ const convertCjsFiles = (list, {
                     });
                 dumpData(converted, source, "reviewEsmImports");
             }
+
+            converted = applyDirectivesAdd(converted, {...moreOptions.extras});
+            dumpData(converted, source, "apply-directives-add");
 
             converted = applyReplaceFromConfig(converted, replaceEnd);
             dumpData(converted, source, "applyReplaceFromConfig");
