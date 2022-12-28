@@ -44,6 +44,11 @@ import child_process  from "child_process";
 
 
 
+
+
+
+
+
 let toEsmPackageJson = {};
 
 // ===========================================================================
@@ -2511,7 +2516,9 @@ export const installPackage  =
 
         const devOption = isDevDependencies ? " -D" : "";
 
-         const environment = isCjs ? "CommonJs modules" : "ES Modules";
+        
+
+        const environment = isCjs ? "CommonJs modules" : "ES Modules";
 
         console.info({lid: 1142}, `Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});

@@ -10,6 +10,7 @@ import rgbHex  from "./node_modules/rgb-hex-cjs/index.mjs";
 
 
 
+
 const EOL =`
 `;
 
@@ -399,7 +400,8 @@ class AnaLogger
 
         if (converted.color.toLowerCase().indexOf("rgb") > -1)
         {
-             converted.color = "#" + rgbHex(converted.color);
+            
+            converted.color = "#" + rgbHex(converted.color);
         }
 
         return converted;

@@ -21,6 +21,7 @@ _terminalSize = terminalSize;
 
 
 
+
 const PREDEFINED_CONTEXT_NAMES = {
     "DEFAULT": "DEFAULT",
     // "LOG"      : "LOG",
@@ -29,6 +30,7 @@ const PREDEFINED_CONTEXT_NAMES = {
     // "ATTENTION": "ATTENTION",
     "ERROR": "ERROR"
 };
+
 
 
 

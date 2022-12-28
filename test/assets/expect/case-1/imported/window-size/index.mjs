@@ -11,6 +11,11 @@ import utils  from "./utils.mjs";
 
 
 
+
+/**
+ * Expose `windowSize`
+ */
+
 export default utils.get();
 
 if (module.exports) {
