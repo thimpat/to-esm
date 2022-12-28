@@ -3943,6 +3943,8 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
         const parsingResult = parseEsm(source, converted);
         entry.success = parsingResult.success;
 
+        converted = restoreShebang(converted);
+
         let reportSuccess = parsingResult.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
         if (!parsingResult.success)
         {
@@ -4366,8 +4368,6 @@ const convertCjsFiles = (list, {
 
             // ******************************************
             writeConvertedIntoIndex(converted, cjsItem, moreOptions);
-
-            converted = restoreShebang(converted);
 
             // Newline
             console.log({lid: 1074});
