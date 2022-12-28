@@ -13,7 +13,8 @@ const {setupConsole, buildTargetDir, normaliseString, transpileFiles, TARGET} = 
 switchToTestDirectory();
 const testDir = path.join(__dirname, "assets");
 
-const eol = (text) => {
+const eol = (text) =>
+{
     text = text.replace(/\r\n/g, "\n");
     text = text.replace(/\n+/g, "\n");
     text = text.trim();
@@ -570,6 +571,25 @@ describe("The converter tool", function ()
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-12.mjs"), "utf8");
                     const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-12.mjs"), "utf8");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should apply the directive to-esm-add correctly", async function ()
+                {
+                    const input = "./assets/given/demo-test-54.cjs";
+                    const options = {
+                        input,
+                        output           : path.join(testDir, "/actual"),
+                        noheader         : false,
+                        target           : TARGET.ESM
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-54.mjs"), "utf8");
+                    const actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-54.mjs"), "utf8");
 
                     expect(eol(actualConversion)).to.equal(eol(expectConversion));
                 }

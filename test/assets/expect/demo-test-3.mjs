@@ -16,7 +16,8 @@ import INFO5  from "./something.mjs";
 import path  from "path";
 import {DIRECTION, MESSAGE}  from "./dep-1.mjs";
 /** const chalk001 = require("chalk-cjs"); **/
-
+         // const path = require("path");
+// const chalk002 = require("chalk-cjs");
 const aa = "const chalk003 = require(\"chalk-cjs\");"
 
 
@@ -33,6 +34,16 @@ const bb = `
 
 
 
+/**
+ * Multi line comment
+ */
+
+
+// ----
+
+/**
+ * @class SomeClass
+ */
 class SomeClass
 {
     constructor()

@@ -9,6 +9,7 @@ import typeOf  from "../../imported/kind-of/index.mjs";
 'use strict';
 
 
+
 export default function isNumber(num) {
   var type = typeOf(num);
 

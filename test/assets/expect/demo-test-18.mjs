@@ -21,6 +21,26 @@ import _toesmTemp1  from "electron-data-exchanger";
 
 
 
+// Modules to control application life and create native browser window
+
+
+
+// const LOG_CONTEXT = {STANDARD: null, TEST: {color: "#B18904", symbol: "⏰"}, C1: null, C2: null, C3: null, DEFAULT: {}}
+// const LOG_TARGETS = {ALL: "ALL", DEV1: "TOM", DEV2: "TIM", USER: "USER"};
+//
+// const {anaLogger} = require("analogger");
+//
+// anaLogger.setContexts(LOG_CONTEXT);
+// anaLogger.setTargets(LOG_TARGETS);
+// anaLogger.setOptions({silent: false, hideError: false})
+//
+// console.log("==========================");
+// anaLogger.log(LOG_CONTEXT.C1, `Test Log example C1`);
+// anaLogger.log(LOG_CONTEXT.C2, `Test Log example C2`);
+// anaLogger.log(LOG_CONTEXT.C3, `Test Log example C3`);
+//
+// anaLogger.overrideConsole()
+
 
 
 

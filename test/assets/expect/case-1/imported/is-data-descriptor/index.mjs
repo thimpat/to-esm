@@ -9,6 +9,7 @@ import typeOf  from "../../imported/kind-of/index.mjs";
 'use strict';
 
 
+
 export default function isDataDescriptor(obj, prop) {
   // data descriptor properties
   var data = {

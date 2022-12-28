@@ -9,6 +9,8 @@ import typeOf  from "../../imported/kind-of/index.mjs";
 'use strict';
 
 
+
+// accessor descriptor properties
 var accessor = {
   get: 'function',
   set: 'function',

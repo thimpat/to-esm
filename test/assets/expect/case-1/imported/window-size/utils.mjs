@@ -14,6 +14,7 @@ var tty = options.tty || require('tty');
 
 
 
+
 function windowSize(options) {
   options = options || {};
   return streamSize(options, 'stdout') ||
@@ -62,7 +63,8 @@ function envSize() {
 }
 
 function ttySize(options, stdout) {
-   if (tty && typeof tty.getWindowSize === 'function') {
+  
+  if (tty && typeof tty.getWindowSize === 'function') {
     var size = tty.getWindowSize(stdout);
     if (isSize(size)) {
       return {

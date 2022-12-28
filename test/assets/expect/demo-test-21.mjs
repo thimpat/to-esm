@@ -26,6 +26,7 @@ export default {
 'use strict';
 
 
+
 function concat(list, totalLength) {
 }
 
@@ -67,7 +68,9 @@ function toBuffer(data) {
 }
 
 try {
-     
+    
+
+    
 } catch (e) /* istanbul ignore next */ {
     
 }

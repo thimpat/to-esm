@@ -2,6 +2,12 @@ import DATA_EXCHANGE_INFO  from "./data-exchanger.mjs";
 import {DIRECTION, MESSAGE_TYPE, SYSTEM_TYPE}  from "./specificities.mjs";
 
 
+
+// ----
+
+/**
+ * @class CommonFeatureExchanger
+ */
 class CommonFeatureExchanger
 {
     // One exchanger to send then receive data

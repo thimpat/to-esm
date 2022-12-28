@@ -13,6 +13,7 @@ import isData  from "../../imported/is-data-descriptor/index.mjs";
 
 
 
+
 export default function isDescriptor(obj, key) {
   if (typeOf(obj) !== 'object') {
     return false;
