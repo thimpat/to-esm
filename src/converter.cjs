@@ -1843,8 +1843,8 @@ const convertRequiresToImportsWithAST = (converted, list, {
                         if (!lastFound.wholeLine)
                         {
                             lastFound.wholeLine = true;
-                            lastFound.end = node.range[0] - 1;
-                            lastFound.text = converted.substring(lastFound.start, lastFound.end);
+                            lastFound.endAll = node.range[0] - 1;
+                            lastFound.textAll = converted.substring(lastFound.start, lastFound.end);
                         }
                     }
 
