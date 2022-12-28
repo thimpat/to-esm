@@ -162,34 +162,6 @@ describe("converter.cjs", function ()
     });
 
     /**
-     * @link normalisePath
-     * No longer part of this module (moved to libutils)
-     */
-    describe.skip("#normalisePath()", function ()
-    {
-        it("should transform path following conventions", function ()
-        {
-            const sourcePath = "./generated/browser\\src/cjs/ana-logger.cjs";
-            const result = normalisePath(sourcePath);
-            expect(result).to.equal("./generated/browser/src/cjs/ana-logger.cjs");
-        });
-
-        it("should transform folders following conventions", function ()
-        {
-            const sourcePath = "./generated/browser\\src/cjs";
-            const result = normalisePath(sourcePath, {isFolder: true});
-            expect(result).to.equal("./generated/browser/src/cjs/");
-        });
-
-        it("should return ./ when given path is empty", function ()
-        {
-            const sourcePath = "";
-            const result = normalisePath(sourcePath);
-            expect(result).to.equal("./");
-        });
-    });
-
-    /**
      * @link convertToSubRootDir
      */
     describe("#convertToSubRootDir()", function ()
