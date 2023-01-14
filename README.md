@@ -575,6 +575,7 @@ to-esm source.cjs --output out/ --prefixpath ../somewhere/
 | --bundle-cjs        | _Generate minified bundle for cjs environment_                                                        | file path                      |         |
 | --bundle-esm        | _Same as above_                                                                                       | file path                      |         |
 | --entrypoint        | _Explicitely set entry point (otherwise use the first file set in cli)_                               | file path                      |         |
+| --extension         | _Set generated files extension_                                                                       | string                         | .mjs    | 
 | --force-lf          | _Replace CLRF with LF_                                                                                |                                |         |
 | --html              | _html files to receive importmaps_                                                                    | glob                           |         |
 | --keep-external     | _Do not try to copy files from absolute paths into generated folder_                                  | boolean                        | false   |
