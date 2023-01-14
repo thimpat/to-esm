@@ -1636,13 +1636,14 @@ Therefore, there are advantages to not systematically using bundled code.
 ## Changelog
 
 ##### current:
-*  Fix error 3109 when scripts start with a shell bang symbol
+*  Allow changing extension of generated files
 
+##### 2.26.5:
+*  Fix error 3109 when scripts start with a shell bang symbol
 
 ##### 2.26.4:
 *  Fix comments disappearance
 *  Fix [to-esm add] directive applied too soon
-
 
 ##### 2.26.3:
 *  Keep line breaks in package.json on update-all
