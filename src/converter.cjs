@@ -2254,12 +2254,13 @@ const formatIndexEntry = ({
                               workingDir,
                               moreOptions,
                               externalSource,
-                              subRootDir,
-                              esmExtension
+                              subRootDir
                           }) =>
 {
     try
     {
+        const {esmExtension} = moreOptions || ESM_EXTENSION;
+
         // Absolute path to the .cjs (must exist)
         let sourceAbs, paths;
 
@@ -3127,8 +3128,6 @@ const addFileToIndex = ({
 {
     try
     {
-        let {esmExtension} = moreOptions;
-
         let sourceAbs = path.isAbsolute(source) ? source : joinPath(rootDir, source);
         if (!fs.existsSync(sourceAbs))
         {
@@ -3187,8 +3186,7 @@ const addFileToIndex = ({
                 workingDir,
                 outputDir,
                 externalSource,
-                subRootDir,
-                esmExtension
+                subRootDir
             });
         }
 
@@ -5181,7 +5179,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
                 outputDir,
                 workingDir,
                 subRootDir,
-                extension: cliOptions.extension,
+                esmExtension: cliOptions.extension,
                 firstPass: pass === 1
             });
 
