@@ -3209,7 +3209,11 @@ const addFileToIndex = ({
             }
         }
 
-        if (!moreOptions?.extras?.skipLinks)
+        if (!cjsList.length)
+        {
+            cjsList.push(entry);
+        }
+        else if (!moreOptions?.extras?.skipLinks)
         {
             cjsList.push(entry);
         }
@@ -4650,7 +4654,10 @@ const initialiseMainOptions = ({
             esmExtension
         });
 
-        console.log({lid: 1076}, toAnsi.getTextFromHex(`Entry Point: ${moreOptions.entryPointPath}`, {fg: "green"}));
+        if (moreOptions.entryPointPath)
+        {
+            console.log({lid: 1076}, toAnsi.getTextFromHex(`Entry Point: ${moreOptions.entryPointPath}`, {fg: "green"}));
+        }
     }
     catch (e)
     {
@@ -4940,7 +4947,6 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
             htmlOptions    : moreOptions.extras.htmlOptions
         });
 
-        return success;
     }
     catch (e)
     {
@@ -5191,7 +5197,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             parseCliOptions(cliOptions, moreOptions);
             prepareDebugMode(cliOptions, moreOptions);
 
-            // First pass is to populate cjsList
+            // First pass is to populate cjsList, to determine common dir and other things
             success = await convertFile(moreOptions, extrasInfos);
 
             if (cjsList.length)
