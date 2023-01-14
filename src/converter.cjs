@@ -588,12 +588,13 @@ const getProjectedPathAll = ({source, outputDir, subRootDir = ""} = {}) =>
 /**
  * Change the given path extension to .mjs
  * @param filepath
+ * @param extension
  * @returns {string}
  */
-const changePathExtensionToESM = (filepath) =>
+const changePathExtensionToESM = (filepath, {esmExtension = ESM_EXTENSION} = {}) =>
 {
     const parsed = path.parse(filepath);
-    const renamed = joinPath(parsed.dir, parsed.name + ESM_EXTENSION);
+    const renamed = joinPath(parsed.dir, parsed.name + esmExtension);
     return normalisePath(renamed);
 };
 
@@ -624,13 +625,18 @@ const reviewEntryImportMaps = (match/*, requestedRequired, moreOptions*/) =>
 
 /**
  *
+ * @obsolete
  * @param {string} sourcePath Path to the file that does the require/import
  * @param {string} requiredPath Original required path
  * @param list
  * @param outputDir
+ * @param esmExtension
  * @returns {string}
  */
-const calculateRequiredPath = ({sourcePath, requiredPath, list, outputDir}) =>
+const calculateRequiredPath = (
+    {
+        sourcePath, requiredPath, list, outputDir, esmExtension = ESM_EXTENSION
+    } = {}) =>
 {
     let projectedRequiredPath;
 
@@ -647,7 +653,7 @@ const calculateRequiredPath = ({sourcePath, requiredPath, list, outputDir}) =>
     {
         const newPath = concatenatePaths(outputDir, requiredPath);
         projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
-        projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
+        projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath, {esmExtension});
     }
 
     return projectedRequiredPath;
@@ -813,7 +819,7 @@ const resolveThirdParty = (text, list, {
             outputDir,
             subRootDir: moreOptions.subRootDir
         });
-        projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
+        projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath, {esmExtension: moreOptions.extension});
 
         importMaps[moduleName] = requiredPath;
 
@@ -967,7 +973,7 @@ const resolveRelativeImport = (text, list, {
         console.error({lid: 3026}, "", e.message);
     }
 
-    regexRequiredPath = changePathExtensionToESM(regexRequiredPath);
+    regexRequiredPath = changePathExtensionToESM(regexRequiredPath, {esmExtension: moreOptions.extension});
     return regexRequiredPath;
 };
 
@@ -981,6 +987,7 @@ const resolveRelativeImport = (text, list, {
  * @param {string} workingDir
  * @param {string} regexRequiredPath Absolute required path
  * @param {*} moreOptions
+ * @param subRootDir
  * @returns {string}
  */
 const resolveAbsoluteImport = (text, list, {
@@ -1030,7 +1037,7 @@ const resolveAbsoluteImport = (text, list, {
             moreOptions,
             origin        : ORIGIN_ADDING_TO_INDEX.RESOLVE_ABSOLUTE,
             externalSource: true,
-            subRootDir
+            subRootDir,
         });
 
         if (isExternalSource(moreOptions))
@@ -1048,7 +1055,7 @@ const resolveAbsoluteImport = (text, list, {
         console.error({lid: 3028}, "", e.message);
     }
 
-    regexRequiredPath = changePathExtensionToESM(regexRequiredPath);
+    regexRequiredPath = changePathExtensionToESM(regexRequiredPath, {esmExtension: moreOptions.extension});
     return regexRequiredPath;
 };
 
@@ -1169,9 +1176,10 @@ const reviewEsmImports = (text, list, {
  * @param list
  * @param fileProp
  * @param workingDir
+ * @param esmExtension
  * @returns {*}
  */
-const parseImportWithRegex = (text, list, fileProp, workingDir) =>
+const parseImportWithRegex = (text, list, fileProp, {workingDir, esmExtension = ESM_EXTENSION} = {}) =>
 {
     const parsedFilePath = joinPath(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
@@ -1220,7 +1228,7 @@ const parseImportWithRegex = (text, list, fileProp, workingDir) =>
         const destinationPath = resolvePath(outputDir);
 
         let relativePath = path.relative(sourcePath, destinationPath);
-        relativePath = joinPath(relativePath, basename + ESM_EXTENSION);
+        relativePath = joinPath(relativePath, basename + esmExtension);
         relativePath = relativePath.replace(/\\/g, "/");
         if (!([".", "/"].includes(relativePath.charAt(0))))
         {
@@ -2246,7 +2254,8 @@ const formatIndexEntry = ({
                               workingDir,
                               moreOptions,
                               externalSource,
-                              subRootDir
+                              subRootDir,
+                              esmExtension
                           }) =>
 {
     try
@@ -2307,7 +2316,7 @@ const formatIndexEntry = ({
             }
         }
 
-        mjsTargetName = mjsTargetName || path.parse(subPath).name + ESM_EXTENSION;
+        mjsTargetName = mjsTargetName || path.parse(subPath).name + esmExtension;
         cjsTargetName = cjsTargetName || path.parse(subPath).name + CJS_EXTENSION;
 
         let mjsTarget, cjsTarget;
@@ -2575,7 +2584,10 @@ const convertToESMWithRegex = (converted, list, {
         converted = stripCodeComments(converted, extractedComments);
         dumpData(converted, source, "stripCodeComments");
 
-        converted = parseImportWithRegex(converted, list, {source, outputDir, rootDir}, workingDir);
+        converted = parseImportWithRegex(converted, list, {source, outputDir, rootDir}, {
+            workingDir,
+            esmExtension: moreOptions.extension
+        });
         dumpData(converted, source, "parseImportWithRegex");
 
         converted = convertNonTrivial(converted, source);
@@ -2617,12 +2629,12 @@ const getOptionsConfigFile = async (configPath) =>
     {
         const extension = path.parse(configPath).ext;
 
-        if ([".js", ".cjs"].includes(extension))
+        if ([".js", CJS_EXTENSION].includes(extension))
         {
             /* istanbul ignore next */
             confFileOptions = require(configPath);
         }
-        else if ([".mjs"].includes(extension))
+        else if ([ESM_EXTENSION].includes(extension))
         {
             const {default: options} = await import(configPath);
             confFileOptions = options;
@@ -2914,7 +2926,7 @@ const isCjsCompatible = (filepath, content = "") =>
     try
     {
         const extension = path.extname(filepath);
-        if (".mjs" === extension)
+        if (ESM_EXTENSION === extension)
         {
             return false;
         }
@@ -3094,6 +3106,7 @@ const getRelativePathsAgainstSuggestedRoots = ({regexRequiredPath, source, rootD
  * @param workingDir
  * @param externalSource
  * @param subRootDir
+ * @param esmExtension
  * @returns {CjsInfoType|null}
  */
 const addFileToIndex = ({
@@ -3109,11 +3122,13 @@ const addFileToIndex = ({
                             workingDir,
                             outputDir,
                             externalSource = false,
-                            subRootDir = ""
+                            subRootDir = "",
                         }) =>
 {
     try
     {
+        let {esmExtension} = moreOptions;
+
         let sourceAbs = path.isAbsolute(source) ? source : joinPath(rootDir, source);
         if (!fs.existsSync(sourceAbs))
         {
@@ -3172,7 +3187,8 @@ const addFileToIndex = ({
                 workingDir,
                 outputDir,
                 externalSource,
-                subRootDir
+                subRootDir,
+                esmExtension
             });
         }
 
@@ -4472,7 +4488,7 @@ const findCjsSources = (inputFileMaskArr, {rootDir}) =>
  * @param inputFileMaskArr
  * @returns {CjsInfoType[]}
  */
-const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, workingDir, subRootDir = ""}) =>
+const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, workingDir, subRootDir = "", moreOptions}) =>
 {
     const validList = [];
     try
@@ -4494,7 +4510,8 @@ const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, working
                     isEntryPoint,
                     origin: ORIGIN_ADDING_TO_INDEX.START,
                     workingDir,
-                    subRootDir
+                    subRootDir,
+                    moreOptions
                 });
 
                 if (!entry)
@@ -4566,7 +4583,7 @@ const parseCliInputs = (cliOptions) =>
  * @param subRootDir
  * @returns {CjsInfoType[]}
  */
-const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir}) =>
+const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir, moreOptions}) =>
 {
     let list = [];
     try
@@ -4575,7 +4592,13 @@ const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir}) =>
 
         const inputFileMaskArr = parseCliInputs(cliOptions);
         const sources = findCjsSources(inputFileMaskArr, {rootDir});
-        list = populateCjsList(cliOptions.entrypoint, sources, {rootDir, outputDir, workingDir, subRootDir});
+        list = populateCjsList(cliOptions.entrypoint, sources, {
+            rootDir,
+            outputDir,
+            workingDir,
+            subRootDir,
+            moreOptions
+        });
     }
     catch (e)
     {
@@ -4592,11 +4615,25 @@ const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir}) =>
  * @param outputDir
  * @returns {EngineOptionType}
  */
-const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir, subRootDir, firstPass}) =>
+const initialiseMainOptions = ({
+                                   rootDir,
+                                   entryPointPath,
+                                   outputDir,
+                                   workingDir,
+                                   subRootDir,
+                                   firstPass,
+                                   esmExtension = ESM_EXTENSION
+                               }) =>
 {
     const moreOptions = {};
     try
     {
+        esmExtension = esmExtension || ESM_EXTENSION;
+        if (!esmExtension.startsWith("."))
+        {
+            esmExtension = "." + esmExtension;
+        }
+
         /**
          * moreOptions is used to define options that users can't control
          * @type {{
@@ -4611,7 +4648,8 @@ const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir, 
             outputDir,
             workingDir,
             subRootDir,
-            firstPass
+            firstPass,
+            esmExtension
         });
 
         console.log({lid: 1076}, toAnsi.getTextFromHex(`Entry Point: ${moreOptions.entryPointPath}`, {fg: "green"}));
@@ -5085,7 +5123,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " useImportMaps, nmBrowserImported, skipEsmResolution, skipLinks"
+            " useImportMaps, nmBrowserImported, skipEsmResolution, skipLinks, extension"
         );
 
         if (cliOptions.resolveAbsolute === true)
@@ -5113,7 +5151,13 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         const originalOptions = Object.assign({}, cliOptions);
 
         let success, subRootDir = "";
-        let moreOptions;
+        let moreOptions = initialiseMainOptions({
+            rootDir,
+            outputDir,
+            workingDir,
+            subRootDir,
+            esmExtension: cliOptions.extension,
+        });
 
         const extrasInfos = {};
 
@@ -5122,7 +5166,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         for (let pass = 1; pass <= 2; ++pass)
         {
             // Build source info from glob(s)
-            const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir, subRootDir});
+            const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir, subRootDir, moreOptions});
             if (!sources.length)
             {
                 console.log({lid: 1080}, `Bad arguments. No input file detected.`);
@@ -5133,11 +5177,12 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             const entryPointPath = sources[0].sourceAbs;
             moreOptions = initialiseMainOptions({
                 rootDir,
-                entryPointPath: entryPointPath,
+                entryPointPath,
                 outputDir,
                 workingDir,
                 subRootDir,
-                firstPass     : pass === 1
+                extension: cliOptions.extension,
+                firstPass: pass === 1
             });
 
             // Config Files
