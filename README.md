@@ -1636,6 +1636,12 @@ Therefore, there are advantages to not systematically using bundled code.
 ## Changelog
 
 ##### current:
+*  Fix aliases conversion
+*  Fix conversion when an exported name does not match a function name
+*  Fix options --skipLinks
+
+
+##### 2.27.0:
 *  Allow changing extension of generated files
 
 ##### 2.26.5:
