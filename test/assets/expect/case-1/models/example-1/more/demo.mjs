@@ -2,6 +2,7 @@ import {LOG_CONTEXTS, LOG_TARGETS}  from "./contexts-def.mjs";
 import {anaLogger}  from "../../../src/ana-logger.mjs";
 
 
+
 anaLogger.keepLogHistory();
 
 anaLogger.setContexts(LOG_CONTEXTS);
