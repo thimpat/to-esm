@@ -243,6 +243,10 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
             new RegExp(regexSentence, "gm");
 
         subst = `export $1 ${item.namedExport} $2`;
+        if (item.funcname && item.namedExport !== item.funcname)
+        {
+            subst = subst + "\n" + `$1 ${item.funcname} = ${item.namedExport};`;
+        }
 
         converted0 = converted;
         converted = converted0.replace(regexp, subst);
