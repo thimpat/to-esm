@@ -218,6 +218,19 @@ const buildTargetDir = (targetDir) =>
     return false;
 };
 
+const identifyExportedFunctionsThenTransform = function (converted, source, detectedExported = [])
+{
+    try
+    {
+    }
+    catch (e)
+    {
+        console.error({lid: "TE6541"}, e.message);
+    }
+
+    return converted;
+};
+
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
@@ -229,11 +242,64 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
 {
     let converted0, subst;
 
+    converted = identifyExportedFunctionsThenTransform(converted, source, detectedExported);
+
     converted = hideKeyElementCode(converted, source);
 
     for (let i = 0; i < detectedExported.length; ++i)
     {
         const item = detectedExported[i];
+
+        if (!item.funcname)
+        {
+            continue;
+        }
+
+        let isFunctionExportedAlready = false;
+        let isNameExportedAlready = false;
+        let nonMatchingExport = false;
+
+        const exportedAlreadyRegex = new RegExp(`export\\s+\\w+\\s+${item.namedExport}`, "gm");
+        if (exportedAlreadyRegex.test(converted))
+        {
+            isNameExportedAlready = true;
+        }
+
+        const functionAlreadyExported = new RegExp(`export\\s+\\w+\\s+${item.funcname}`, "gm");
+        if (functionAlreadyExported.test(converted))
+        {
+            isFunctionExportedAlready = true;
+        }
+
+        if (item.funcname && item.namedExport !== item.funcname)
+        {
+            nonMatchingExport = true;
+        }
+
+        // Both function and name export have already been exported. Likely a bug, we ignore the export
+        if (isFunctionExportedAlready && isNameExportedAlready)
+        {
+            continue;
+        }
+
+        if (isFunctionExportedAlready && !isNameExportedAlready)
+        {
+            // The function is already exported
+            if (nonMatchingExport)
+            {
+                const regexSentence =
+                    // eslint-disable-next-line max-len
+                    `(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
+
+                const regexp =
+                    new RegExp(regexSentence, "gm");
+
+                subst = `export const ${item.namedExport} = ${item.funcname};`;
+                converted = converted.replace(regexp, subst);
+
+                continue;
+            }
+        }
 
         const regexSentence =
             // eslint-disable-next-line max-len
@@ -242,7 +308,15 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
         const regexp =
             new RegExp(regexSentence, "gm");
 
-        subst = `export $1 ${item.namedExport} $2`;
+        if (isFunctionExportedAlready)
+        {
+            subst = `$1 ${item.namedExport} $2`;
+        }
+        else
+        {
+            subst = `export $1 ${item.namedExport} $2`;
+        }
+
         if (item.funcname && item.namedExport !== item.funcname)
         {
             subst = subst + "\n" + `$1 ${item.funcname} = ${item.namedExport};`;
@@ -250,6 +324,8 @@ const convertNonTrivialExportsWithAST = (converted, source, detectedExported = [
 
         converted0 = converted;
         converted = converted0.replace(regexp, subst);
+
+        dumpData(converted, source, `convertNonTrivialExportsWithAST in loop - ${i}`);
     }
 
     converted = restoreKeyElementCode(converted);
@@ -5190,7 +5266,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
                 workingDir,
                 subRootDir,
                 esmExtension: cliOptions.extension,
-                firstPass: pass === 1
+                firstPass   : pass === 1
             });
 
             // Config Files
