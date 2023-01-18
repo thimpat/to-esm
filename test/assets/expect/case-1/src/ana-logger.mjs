@@ -1375,10 +1375,12 @@ class ____AnaLogger
 
 export const AnaLogger  = ____AnaLogger;
 
+const _AnaLogger = AnaLogger;
 
 const __AnaLogger = ____AnaLogger;
 export default __AnaLogger;
 
 export const anaLogger  = new ____AnaLogger();
 
+const ___anaLogger = anaLogger;
 

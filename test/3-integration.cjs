@@ -1472,6 +1472,149 @@ describe("The converter tool", function ()
                 }
             );
 
+            it("should export code with non matching export names", async function ()
+                {
+                    const input = "./assets/given/demo-test-55.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                        debug: true
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-55.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-55.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should export code with non matching export names correctly", async function ()
+                {
+                    const input = "./assets/given/demo-test-56.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                        debug: true
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-56.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-56.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert code with aliases correctly", async function ()
+                {
+                    const input = "./assets/given/demo-test-75.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                        debug: true
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-75.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-75.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert code with redefinition correctly", async function ()
+                {
+                    const input = "./assets/given/demo-test-76.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-76.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-76.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert code with references correctly - 1", async function ()
+                {
+                    const input = "./assets/given/demo-test-77.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-77.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-77.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert code with references correctly - 2", async function ()
+                {
+                    const input = "./assets/given/demo-test-78.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-78.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-78.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert code with references correctly - 3", async function ()
+                {
+                    const input = "./assets/given/demo-test-79.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-79.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-79.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
         });
 
         describe("on a directory", () =>

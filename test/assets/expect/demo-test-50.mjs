@@ -4746,6 +4746,7 @@ export const transpileFiles  = async (simplifiedCliOptions = null) =>
 
 
 
+const convertRequiresToImport = convertRequireToImport;
 
 
 
