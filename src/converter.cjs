@@ -368,6 +368,7 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
 {
     try
     {
+        str = str.replaceAll("\n", "");
         espree.parse(
             str, {
                 sourceType   : syntaxType,
@@ -384,6 +385,7 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
         /* istanbul ignore next */
     catch (e)
     {
+        console.log({lid: 1317}, e);
     }
 
     return false;
