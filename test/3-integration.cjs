@@ -1480,7 +1480,6 @@ describe("The converter tool", function ()
                         output  : path.join(testDir, "/actual"),
                         noheader: true,
                         target  : TARGET.ESM,
-                        debug: true
                     };
 
                     await transpileFiles(options);
@@ -1501,13 +1500,53 @@ describe("The converter tool", function ()
                         output  : path.join(testDir, "/actual"),
                         noheader: true,
                         target  : TARGET.ESM,
-                        debug: true
                     };
 
                     await transpileFiles(options);
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-56.mjs"), "utf8");
                     let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-56.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert multi-line require statement", async function ()
+                {
+                    const input = "./assets/given/demo-test-57.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-57.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-57.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert require statement with colon", async function ()
+                {
+                    const input = "./assets/given/demo-test-58.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                        debug: true
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-58.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-58.mjs"), "utf8");
                     actualConversion = actualConversion.replace(/\r\n/g, "\n");
 
                     expect(eol(actualConversion)).to.equal(eol(expectConversion));
