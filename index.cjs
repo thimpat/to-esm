@@ -2,6 +2,7 @@
 
 const minimist = require("minimist");
 const chokidar = require("chokidar");
+const {anaLogger} = require("analogger");
 const packageJson = require("./package.json");
 
 const {
@@ -62,7 +63,7 @@ let startConversion = async (moreOptions, watcher, savedOptions) =>
     }
     catch (e)
     {
-        console.error({lid: 3000}, e);
+        anaLogger.error({lid: 3000}, e);
     }
 
     timerID = null;
@@ -78,7 +79,7 @@ const triggerConversionWithDelay = ({
 {
     if (!timerID)
     {
-        console.log({lid: 1000, color: "green"}, `File ${filepath} has changed`);
+        anaLogger.log({lid: 1000, color: "green"}, `File ${filepath} has changed`);
     }
 
     clearTimeout(timerID);
@@ -104,7 +105,7 @@ const onChange = async (moreOptions, savedOptions, watcher, filepath) =>
     }
     catch (e)
     {
-        console.error({lid: 3002}, e);
+        anaLogger.error({lid: 3002}, e);
     }
 };
 
@@ -119,7 +120,7 @@ const stopOnHelpOrVersion = async function (simplifiedCliOptions = [])
         {
             // Tested with integration-cli but cannot be detected
             /* istanbul ignore next */
-            console.log(`v${packageJson.version}`);
+            anaLogger.log({lid: 3008}, `v${packageJson.version}`);
             return true;
         }
 
@@ -140,7 +141,7 @@ const stopOnHelpOrVersion = async function (simplifiedCliOptions = [])
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        anaLogger.error({lid: 1000}, e.message);
     }
 
     return false;
@@ -167,23 +168,23 @@ async function init(argv)
         if (!simplifiedCliOptions.noConsoleOverride)
         {
             // Replace console.log
-            setupConsole();
+            setupConsole(anaLogger);
         }
 
         // Transpile sources
         const {cliOptions, originalOptions, moreOptions, success} = await transpileFiles(simplifiedCliOptions);
         if (!success)
         {
-            console.error({lid: 3004}, `${packageJson.name}: Parsing failed`);
+            anaLogger.error({lid: 3004}, `${packageJson.name}: Parsing failed`);
             return false;
         }
 
         // Enable watch mode
         if (cliOptions && cliOptions.watch)
         {
-            console.log({lid: 1006, color: "green"}, `---------------------------`);
-            console.log({lid: 1008, color: "green"}, `Watch mode enabled`);
-            console.log({lid: 1010, color: "green"}, `---------------------------`);
+            anaLogger.log({lid: 1006, color: "green"}, `---------------------------`);
+            anaLogger.log({lid: 1008, color: "green"}, `Watch mode enabled`);
+            anaLogger.log({lid: 1010, color: "green"}, `---------------------------`);
 
             const cjsList = getIndexedItems();
             const watchList = getWatchList(cjsList);
@@ -204,7 +205,7 @@ async function init(argv)
     }
     catch (e)
     {
-        console.error({lid: 1000}, e.message);
+        anaLogger.error({lid: 1000}, e.message);
     }
 
     return false;
