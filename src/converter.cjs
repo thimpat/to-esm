@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 const path = require("path");
 const fs = require("fs");
+const process = require("process");
 const glob = require("glob");
 let crypto = require("crypto");
 const {anaLogger} = require("analogger");
@@ -4546,6 +4547,13 @@ const findCjsSources = (inputFileMaskArr, {rootDir}) =>
             /* istanbul ignore next */
             if (!fileList.length)
             {
+                if (process.platform === "win32" || process.platform === "win64")
+                {
+                    if (inputFileMask.indexOf("\\") > -1 && inputFileMask.indexOf("/") === -1) {
+                        console.error({lid: 3131}, `No file found for [${inputFileMask}] in [${rootDir}]. Did you mean to use the backslash character? It is interpreted as an escape character.`);
+                        console.log({lid: 3132}, `You can use: [${inputFileMask.replace(/\\/g, "/")}] to replace [${inputFileMask}]`);
+                    }
+                }
                 continue;
             }
 
