@@ -171,16 +171,16 @@ const normaliseString = (content) =>
     return content;
 };
 
-const setupConsole = () =>
+const setupConsole = (Console = anaLogger) =>
 {
     try
     {
-        anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
-        anaLogger.overrideConsole();
-        anaLogger.overrideError();
+        Console.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
+        Console.overrideConsole();
+        Console.overrideError();
 
-        console.log({lid: 1012}, "Console is set up");
-        return anaLogger;
+        Console.log({lid: 1012}, "Console is set up");
+        return Console;
     }
     catch (e)
     {
@@ -5255,7 +5255,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const extrasInfos = {};
 
-        anaLogger.setOptions({silent: true, hideError: true, hideHookMessage: true, lidLenMax: 4});
+        anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
 
         for (let pass = 1; pass <= 2; ++pass)
         {
@@ -5263,7 +5263,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir, subRootDir, moreOptions});
             if (!sources.length)
             {
-                console.log({lid: 1080}, `Bad arguments. No input file detected.`);
+                console.error({lid: 1080}, `Bad arguments. No input file detected.`);
                 return {success: false};
             }
 
@@ -5282,6 +5282,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             // Config Files
             let configPath = cliOptions.config || detectESMConfigPath();
 
+            anaLogger.setOptions({silent: true, hideError: true, lidLenMax: 4});
             // Extract options from config file
             await extractConfigFileOptions(configPath, cliOptions, moreOptions);
             parseCliOptions(cliOptions, moreOptions);
@@ -5305,8 +5306,8 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
                 subRootDir = calculateCommon(sourceList);
                 cjsList = cjsList.slice(0, 1);
 
-                anaLogger.setOptions({silent: false, hideError: false, lidLenMax: 4});
             }
+            anaLogger.setOptions({silent: false, hideError: false, lidLenMax: 4});
         }
 
         return {cliOptions, originalOptions, moreOptions, success, extrasInfos};
@@ -5314,6 +5315,9 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
     catch (e)
     {
         console.error({lid: 3162}, e.message);
+    }
+    finally {
+        anaLogger.setOptions({silent: false, hideError: false, lidLenMax: 4});
     }
 
     return {success: false};
