@@ -23,7 +23,8 @@ const {
     isArgsDir,
     normaliseDirPath,
     importLowerCaseOptions,
-    calculateCommon
+    calculateCommon,
+    writeFileContent
 } = require("@thimpat/libutils");
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
@@ -71,6 +72,7 @@ const TARGET = {
 };
 const ESM_EXTENSION = ".mjs";
 const CJS_EXTENSION = ".cjs";
+const JSON_EXTENSION = ".json";
 
 const COMMENT_MASK = "❖✎🔏❉";
 
@@ -1494,10 +1496,11 @@ const convertModuleExportsToExport = (converted, source) =>
 };
 
 const convertJsonImportToVars = (converted, {
-    source
+    source,
+    outputDir,
 }) =>
 {
-    const matchData = converted.matchAll(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(['"]([^)]+.json)[^)]\)/g);
+    const matchData = converted.matchAll(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\s*\(\s*['"`]([^)]+.json)[^)]+\)/g);
     const matches = [...matchData];
     const found = Array.from(matches, m => m[0]);
     const identifiers = Array.from(matches, m => m[1]);
@@ -1506,39 +1509,36 @@ const convertJsonImportToVars = (converted, {
     const n = identifiers.length;
     for (let i = 0; i < n; ++i)
     {
-        const identifier = identifiers[i].trim();
+        try {
         const filepath = files[i];
         let absPath = resolvePath(source);
-        let jsonPath = concatenatePaths(absPath, filepath);
-        if (!fs.existsSync(jsonPath))
+
+        // Path to Json file to convert and translate
+        let srcJsonPath = concatenatePaths(absPath, filepath);
+        if (!fs.existsSync(srcJsonPath))
         {
+            console.log({lid: "9801"}, `The file ${srcJsonPath} could not be found. Skipping...`);
             continue;
         }
 
-        const jsonContent = fs.readFileSync(jsonPath, "utf-8");
+        // Read and validate the json file
+        const jsonContent = fs.readFileSync(srcJsonPath, "utf-8");
         const json = JSON.parse(jsonContent.toString());
-        if (Array.isArray(json))
-        {
-            continue;
+
+        // Convert the json file to ESM
+        const esmifyJson = convertJsonToESM(json);
+
+        const srcPath = matches[i][2];
+        const esmifyJsonPath = joinPath(outputDir, srcPath + ESM_EXTENSION);
+        writeFileContent(esmifyJsonPath, esmifyJson, {encoding: "utf-8"});
+
+        const currentFound = found[i];
+        const replacedFound = currentFound.replace(filepath, filepath + ESM_EXTENSION);
+        converted = converted.replace(currentFound, replacedFound);
         }
-
-        const newObject = {};
-        for (let k in json)
-        {
-            const search1 = `${identifier}.${k}`;
-            if (converted.indexOf(search1) > -1)
-            {
-                newObject[k] = json[k];
-            }
-
-            const search2 = `${identifier}["${k}"]`;
-            if (converted.indexOf(search2) > -1)
-            {
-                newObject[k] = json[k];
-            }
+        catch (e) {
+            console.error({lid: "6541"}, `An error occurred while converting the json file: ${e.message}`);
         }
-
-        converted = converted.replace(found, `let ${identifier} = ${JSON.stringify(newObject, null, 2)}`);
     }
 
     return converted;
@@ -2680,7 +2680,7 @@ const convertToESMWithRegex = (converted, list, {
         converted = convertModuleExportsToExport(converted, source);
         dumpData(converted, source, "convertModuleExportsToExport");
 
-        converted = convertJsonImportToVars(converted, {source});
+        converted = convertJsonImportToVars(converted, {source, outputDir});
         dumpData(converted, source, "convertJsonImportToVars");
 
         converted = convertRequiresToImport(converted);
@@ -3000,6 +3000,38 @@ const parseEsm = (filepath, content, {
 };
 
 /**
+ * Check whether a file is Json compatible
+ * @param filepath
+ * @param content
+ * @returns {boolean}
+ */
+const isJsonCompatible = (filepath, content = "") =>
+{
+    try
+    {
+        const extension = path.extname(filepath);
+        if (JSON_EXTENSION === extension)
+        {
+            return true;
+        }
+
+        content = content || fs.readFileSync(filepath, "utf-8");
+
+        JSON.parse(content);
+
+        return true;
+    }
+    catch (e)
+    {
+        /* istanbul ignore next */
+        console.error({lid: 3069}, e);
+    }
+
+    /* istanbul ignore next */
+    return false;
+};
+
+/**
  * Check whether a file is CommonJs
  * @param filepath
  * @param content
@@ -3035,7 +3067,7 @@ const isCjsCompatible = (filepath, content = "") =>
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 3068}, e);
+        console.error({lid: 3067}, e);
     }
 
     /* istanbul ignore next */
@@ -4276,6 +4308,10 @@ const removeCommentFromConverted = function (converted)
     return converted;
 };
 
+const convertJsonToESM = (jsonData) => {
+    return `export default ${JSON.stringify(jsonData, null, 2)};`;
+};
+
 /**
  * Convert cjs file into esm
  * @param {string[]} list File list to convert
@@ -4328,7 +4364,6 @@ const convertCjsFiles = (list, {
             console.log({lid: 1070}, ` Processing: ${source}`);
             console.log({lid: 1072}, " ----------------------------------------------------------------");
 
-
             resetAll();
 
             let converted = fs.readFileSync(sourceAbs, "utf-8");
@@ -4358,7 +4393,10 @@ const convertCjsFiles = (list, {
                 continue;
             }
 
-            if (isCjsCompatible(sourceAbs, converted))
+            if (isJsonCompatible(sourceAbs, converted)) {
+                converted = convertJsonToESM(JSON.parse(converted));
+            }
+            else if (isCjsCompatible(sourceAbs, converted))
             {
                 converted = removeShebang(converted);
                 dumpData(converted, source, "remove-shebang");
@@ -4371,6 +4409,7 @@ const convertCjsFiles = (list, {
 
                 converted = convertJsonImportToVars(converted, {
                     source,
+                    outputDir,
                 });
                 dumpData(converted, source, "convert-json-import-to-vars");
 
@@ -4471,7 +4510,7 @@ const convertCjsFiles = (list, {
             writeConvertedIntoIndex(converted, cjsItem, moreOptions);
 
             // Newline
-            console.log({lid: 1074});
+            console.log({lid: 1074}, "");
 
             if (!cjsItem.success)
             {
@@ -4673,6 +4712,7 @@ const parseCliInputs = (cliOptions) =>
  * @param rootDir
  * @param workingDir
  * @param subRootDir
+ * @param moreOptions
  * @returns {CjsInfoType[]}
  */
 const buildIndex = (cliOptions, {outputDir, rootDir, workingDir, subRootDir, moreOptions}) =>
