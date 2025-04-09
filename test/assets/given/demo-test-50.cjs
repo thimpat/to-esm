@@ -4408,7 +4408,7 @@ let convertFile = async (moreOptions) =>
         const cjsEntryPointPath = cjsList[0].source;
         let mjsEntrypointPath = cjsList[0].mjsTargetAbs;
 
-        const success = convertCjsFiles(cjsList,
+        const success = await convertCjsFiles(cjsList,
             {
                 ...moreOptions.extras,
                 ...moreOptions.configFile,
