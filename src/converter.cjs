@@ -1159,7 +1159,7 @@ const resolveRelativeImport = (text, list, {
         console.error({lid: 3026}, "", e.message);
     }
 
-    regexRequiredPath = changePathExtensionToESM(regexRequiredPath, {esmExtension: moreOptions.extension});
+    regexRequiredPath = changePathExtensionToESM(regexRequiredPath, {esmExtension: moreOptions.esmExtension});
     return regexRequiredPath;
 };
 
