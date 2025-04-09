@@ -12,7 +12,8 @@ const glob = require("glob");
 let crypto = require("crypto");
 const {anaLogger} = require("analogger");
 const UglifyJS = require("uglify-js");
-const { ESLint } = require("eslint");
+const acorn = require("acorn");
+const escodegen = require("escodegen");
 
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
@@ -396,7 +397,68 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
     return false;
 };
 
+function expandRequireDeclarations(code) {
+    try {
+        const ast = acorn.parse(code, {ecmaVersion: "latest"});
+        const newBody = [];
+        let changed = false;
+
+        ast.body.forEach(node => {
+            if (node.type === "VariableDeclaration" && node.declarations.length > 1) {
+                const declarationsToExpand = [];
+                const standaloneDeclarations = [];
+
+                node.declarations.forEach(declarator => {
+                    if (declarator.init && declarator.init.type === "CallExpression" && declarator.init.callee.type === "Identifier" && declarator.init.callee.name === "require") {
+                        declarationsToExpand.push(declarator);
+                    } else {
+                        standaloneDeclarations.push(declarator);
+                    }
+                });
+
+                if (declarationsToExpand.length > 0) {
+                    changed = true;
+                    declarationsToExpand.forEach(declarator => {
+                        newBody.push({
+                            type: "VariableDeclaration",
+                            kind: node.kind,
+                            declarations: [declarator]
+                        });
+                    });
+                    standaloneDeclarations.forEach(declarator => {
+                        newBody.push({
+                            type: "VariableDeclaration",
+                            kind: node.kind,
+                            declarations: [declarator]
+                        });
+                    });
+                } else {
+                    newBody.push(node);
+                }
+            } else {
+                newBody.push(node);
+            }
+        });
+
+        if (changed) {
+            ast.body = newBody;
+            return escodegen.generate(ast);
+        }
+    } catch (e) {
+        console.error({lid: 1317}, e.message);
+    }
+
+    return code;
+}
+
+/**
+ * May use this in the next version
+ * @next
+ * @returns {Promise<*>}
+ */
 async function initLinter() {
+    const { ESLint } = require("eslint");
+
     const configPath = joinPath(__dirname, "../eslint-runtime.js");
     if (!fs.existsSync(configPath)) {
         console.log({lid: 3207}, "Missing dependency");
@@ -407,12 +469,17 @@ async function initLinter() {
         overrideConfigFile: configPath,
         fix: true,
     });
+
+    return eslint;
 }
 
-async function lintCode(code) {
+/**
+ * May use this in the next version
+ * @param eslint
+ * @returns {Promise<*>}
+ */
+async function lintCode(eslint) {
     try {
-
-        // 2. Lint the provided code string
         const results = await eslint.lintText(code);
 
         if (results.length > 0 && results[0].output)
@@ -1581,7 +1648,7 @@ const convertJsonImportToVars = (converted, {
 /**
  * Parse the given test and use regex to transform requires into imports.
  * @note This function is used with both parser (AST or Regex)
- * When use via AST, the transformation is applied by line.
+ * When use via AST (Abstract Syntax Tree), the transformation is applied by line.
  * When use with the regex fallback, the transformation is done on the whole source.
  * @param converted
  * @returns {*}
@@ -4438,10 +4505,18 @@ const convertCjsFiles = async (list, {
                 dumpData(converted, source, "remove-shebang");
 
                 converted = removeDuplicateExports(converted);
-                dumpData(converted, source, "remote-duplicate-exports");
+                dumpData(converted, source, "remove-duplicate-exports");
 
-                converted = await lintCode(converted);
-                dumpData(converted, source, "lint-code");
+                if (process.env.TO_ESM_APPLY_LINT === "true")
+                {
+                    converted = await lintCode(converted);
+                    dumpData(converted, source, "lint-code");
+                }
+                else
+                {
+                    converted = expandRequireDeclarations(converted);
+                    dumpData(converted, source, "expand-require-declarations");
+                }
 
                 converted = convertComplexRequiresToSimpleRequires(converted, source);
                 dumpData(converted, source, "convert-complex-requires-to-simple-requires");
@@ -4637,7 +4712,10 @@ const findCjsSources = (inputFileMaskArr, {rootDir}) =>
 
             fileList.forEach((filepath) =>
             {
-                filepath = calculateRelativePath(rootDir, filepath);
+                if (path.isAbsolute(filepath))
+                {
+                    filepath = calculateRelativePath(rootDir, filepath);
+                }
                 list.push(filepath);
             });
         }
@@ -5336,7 +5414,9 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
 
-        await initLinter();
+        if (process.env.TO_ESM_APPLY_LINTER === "true") {
+            await initLinter();
+        }
 
         for (let pass = 1; pass <= 2; ++pass)
         {
