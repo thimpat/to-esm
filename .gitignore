@@ -91,3 +91,6 @@ test/assets/package.json
 /.github/
 /.run/*
 /test/node_modules/
+/test/assets/package.json.mjs
+/example/esm2/node_modules/rgb-hex-cjs/index.mjs
+/example/esm2/contexts-def.mjs
