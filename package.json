@@ -36,10 +36,12 @@
   },
   "dependencies": {
     "@thimpat/libutils": "^1.11.0",
+    "acorn": "^8.14.1",
     "analogger": "^1.36.1",
     "before-replace": "^1.0.5",
     "chokidar": "^3.5.3",
     "esbuild": "^0.14.38",
+    "escodegen": "^2.1.0",
     "eslint": "9.20",
     "espree": "^9.3.0",
     "estraverse": "^5.3.0",
