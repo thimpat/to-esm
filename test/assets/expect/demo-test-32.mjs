@@ -1,51 +1,36 @@
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-let packageJson = {
-  "name": "something",
-  "version": "1.0.2",
-  "random": 123456
-};
-
+import packageJson  from "../package.json.mjs";
 export const ME  = process.env.GENSERVE_DEVELOPER;
 export const DEV  = "PT";
-
 export const CLIENT_BINARY  = packageJson.bin.genserve;
-
 export const APP_NAME  = packageJson.name;
 export const APP_VERSION  = packageJson.version;
 const n = packageJson.random;
-
 /**
  * Filename for global settings
  * @type {string}
  */
 export const GLOBAL_SETTING_FILENAME  = ".genserve.json";
 export const SUFFIX_SESSIONS_FILENAME  = "-sessions.json";
-
 export const DEFAULT_NAMESPACE_NAME  = "default";
 export const DEFAULT_SERVER_NAME  = "default";
-
 export const PLUGIN_STAT_PATH  = joinPath(__dirname, "../../plugins/stats.cjs");
 export const DEFAULT_DYNAMIC_EXTENSION  = "\.server\.[cm]?js";
-
 export const FATAL_UNCHANGEABLE_LOG_PATH  = "genserve-errors.log";
 export const DEFAULT_MESSAGE_STRING  = "Loggable initialised";
-
 export const CONFIRM  = {
     YES: "yes",
     NO : "no"
 };
-
 export const FLAG  = {
     ON : "on",
     OFF: "off"
 };
-
 export const UNKNOWN_STAGE  = {
     TDB: "??"
 };
-
 /**
  * @enum {StatusType}
  */
@@ -54,7 +39,6 @@ export const STATUS  = {
     FAILED     : "failed",
     UNPROCESSED: "unprocessed"
 };
-
 /**
  * @type {RemoteStatusType}
  */
@@ -63,7 +47,6 @@ export const REMOTE_STATUS  = {
     DOWN   : "down",
     UNKNOWN: "unknown"
 };
-
 /**
  * @type {DisplayType}
  */
@@ -81,7 +64,6 @@ export const DISPLAY  = {
     OPEN    : "open",
     EDIT    : "edit"
 };
-
 /**
  *
  * @enum {EditType}
@@ -99,13 +81,11 @@ export const TARGET  = {
     ACTIVE    : "active",
     DEFAULT   : "default",
 };
-
 export const EXTENSION  = {
     CORS     : "cors",
     SSL      : "ssl",
     NAMESPACE: "namespace",
 };
-
 /**
  * @type {ItemType}
  */
@@ -114,18 +94,15 @@ export const ITEM_TYPE  = {
     DYNAMIC: "dynamic",
     UNKNOWN: "unknown",
 };
-
 export const JS_TYPE  = {
     CJS: "cjs",
     ESM: "mjs"
 };
-
 export const SETTING_TYPE  = {
     WEB    : "WEB",             // Settings for servers
     API    : "API",             // Settings for apis
     GENERAL: "GENERAL"      // Settings for all other things
 };
-
 export const ERRORS  = {
     NO_ERROR             : {
         code   : 0,
@@ -168,7 +145,6 @@ export const ERRORS  = {
         message: "Server busy"
     },
 };
-
 export const PROCESS_MESSAGE  = {
     SERVER_READY: "server-ready",                // Sent by child process to any parent process when child is
                                                  // ready
@@ -176,8 +152,6 @@ export const PROCESS_MESSAGE  = {
     SERVER_FATAL_ERROR: "fatal-server-error",
     PORT_UNAVAILABLE  : "fatal-port-error"
 };
-
-
 /**
  * @enum {CommandListType}
  */
@@ -227,53 +201,10 @@ export const COMMANDS  = {
     RESET    : "reset",
     NOOP     : "noop"
 };
-
 export const FIXED_SETTINGS  = {
     "PASS"       : "re5fd212er4554gf223ds545",
     "WS_PATH"    : "mhgd5321321",
     "ENV_PASS"   : process.env.GENSERVE_PASS,
     "ENV_WS_PATH": process.env.GENSERVE_WS_PATH
 };
-
 export const LOG_SEPARATOR  = "---------------------------------------";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

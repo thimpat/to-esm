@@ -1,66 +1,56 @@
-const packageJson = require("../package.json");
-
-const ME = process.env.GENSERVE_DEVELOPER;
-const DEV = "PT";
-
-const CLIENT_BINARY = packageJson.bin.genserve;
-
-const APP_NAME = packageJson.name;
-const APP_VERSION = packageJson.version;
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+import packageJson  from "../package.json.mjs";
+export const ME  = process.env.GENSERVE_DEVELOPER;
+export const DEV  = "PT";
+export const CLIENT_BINARY  = packageJson.bin.genserve;
+export const APP_NAME  = packageJson.name;
+export const APP_VERSION  = packageJson.version;
 const n = packageJson.random;
-
 /**
  * Filename for global settings
  * @type {string}
  */
-const GLOBAL_SETTING_FILENAME = ".genserve.json";
-const SUFFIX_SESSIONS_FILENAME = "-sessions.json";
-
-const DEFAULT_NAMESPACE_NAME = "default";
-const DEFAULT_SERVER_NAME = "default";
-
-const PLUGIN_STAT_PATH = joinPath(__dirname, "../../plugins/stats.cjs");
-const DEFAULT_DYNAMIC_EXTENSION = "\.server\.[cm]?js";
-
-const FATAL_UNCHANGEABLE_LOG_PATH = "genserve-errors.log";
-const DEFAULT_MESSAGE_STRING = "Loggable initialised";
-
-const CONFIRM = {
+export const GLOBAL_SETTING_FILENAME  = ".genserve.json";
+export const SUFFIX_SESSIONS_FILENAME  = "-sessions.json";
+export const DEFAULT_NAMESPACE_NAME  = "default";
+export const DEFAULT_SERVER_NAME  = "default";
+export const PLUGIN_STAT_PATH  = joinPath(__dirname, "../../plugins/stats.cjs");
+export const DEFAULT_DYNAMIC_EXTENSION  = "\.server\.[cm]?js";
+export const FATAL_UNCHANGEABLE_LOG_PATH  = "genserve-errors.log";
+export const DEFAULT_MESSAGE_STRING  = "Loggable initialised";
+export const CONFIRM  = {
     YES: "yes",
     NO : "no"
 };
-
-const FLAG = {
+export const FLAG  = {
     ON : "on",
     OFF: "off"
 };
-
-const UNKNOWN_STAGE = {
+export const UNKNOWN_STAGE  = {
     TDB: "??"
 };
-
 /**
  * @enum {StatusType}
  */
-const STATUS = {
+export const STATUS  = {
     SUCCESS    : "success",
     FAILED     : "failed",
     UNPROCESSED: "unprocessed"
 };
-
 /**
  * @type {RemoteStatusType}
  */
-const REMOTE_STATUS = {
+export const REMOTE_STATUS  = {
     UP     : "up",
     DOWN   : "down",
     UNKNOWN: "unknown"
 };
-
 /**
  * @type {DisplayType}
  */
-const DISPLAY = {
+export const DISPLAY  = {
     JSON    : "json",               // Json
     JS      : "js",                 // Object
     STANDARD: "standard",           // Human
@@ -74,12 +64,11 @@ const DISPLAY = {
     OPEN    : "open",
     EDIT    : "edit"
 };
-
 /**
  *
  * @enum {EditType}
  */
-const TARGET = {
+export const TARGET  = {
     ALL       : "all",
     UPS       : "up",
     DOWNS     : "down",
@@ -92,34 +81,29 @@ const TARGET = {
     ACTIVE    : "active",
     DEFAULT   : "default",
 };
-
-const EXTENSION = {
+export const EXTENSION  = {
     CORS     : "cors",
     SSL      : "ssl",
     NAMESPACE: "namespace",
 };
-
 /**
  * @type {ItemType}
  */
-const ITEM_TYPE = {
+export const ITEM_TYPE  = {
     STATIC : "static",
     DYNAMIC: "dynamic",
     UNKNOWN: "unknown",
 };
-
-const JS_TYPE = {
+export const JS_TYPE  = {
     CJS: "cjs",
     ESM: "mjs"
 };
-
-const SETTING_TYPE = {
+export const SETTING_TYPE  = {
     WEB    : "WEB",             // Settings for servers
     API    : "API",             // Settings for apis
     GENERAL: "GENERAL"      // Settings for all other things
 };
-
-const ERRORS = {
+export const ERRORS  = {
     NO_ERROR             : {
         code   : 0,
         message: "Success"
@@ -161,20 +145,17 @@ const ERRORS = {
         message: "Server busy"
     },
 };
-
-const PROCESS_MESSAGE = {
+export const PROCESS_MESSAGE  = {
     SERVER_READY: "server-ready",                // Sent by child process to any parent process when child is
                                                  // ready
     PID_READY         : "pid-ready",
     SERVER_FATAL_ERROR: "fatal-server-error",
     PORT_UNAVAILABLE  : "fatal-port-error"
 };
-
-
 /**
  * @enum {CommandListType}
  */
-const COMMANDS = {
+export const COMMANDS  = {
     HELP     : "help",
     INFO     : "info",                         // Show session info in a json formatted way
     LOG      : "log",                          // Show log
@@ -220,53 +201,10 @@ const COMMANDS = {
     RESET    : "reset",
     NOOP     : "noop"
 };
-
-const FIXED_SETTINGS = {
+export const FIXED_SETTINGS  = {
     "PASS"       : "re5fd212er4554gf223ds545",
     "WS_PATH"    : "mhgd5321321",
     "ENV_PASS"   : process.env.GENSERVE_PASS,
     "ENV_WS_PATH": process.env.GENSERVE_WS_PATH
 };
-
-const LOG_SEPARATOR = "---------------------------------------";
-
-module.exports.GLOBAL_SETTING_FILENAME = GLOBAL_SETTING_FILENAME;
-module.exports.SUFFIX_SESSIONS_FILENAME = SUFFIX_SESSIONS_FILENAME;
-
-module.exports.SETTING_TYPE = SETTING_TYPE;
-
-module.exports.DEFAULT_NAMESPACE_NAME = DEFAULT_NAMESPACE_NAME;
-module.exports.DEFAULT_SERVER_NAME = DEFAULT_SERVER_NAME;
-module.exports.DEFAULT_MESSAGE_STRING = DEFAULT_MESSAGE_STRING;
-
-
-module.exports.PROCESS_MESSAGE = PROCESS_MESSAGE;
-module.exports.ERRORS = ERRORS;
-module.exports.STATUS = STATUS;
-module.exports.REMOTE_STATUS = REMOTE_STATUS;
-module.exports.CONFIRM = CONFIRM;
-module.exports.FLAG = FLAG;
-module.exports.UNKNOWN_STAGE = UNKNOWN_STAGE;
-module.exports.TARGET = TARGET;
-module.exports.COMMANDS = COMMANDS;
-module.exports.DISPLAY = DISPLAY;
-module.exports.EXTENSION = EXTENSION;
-module.exports.ITEM_TYPE = ITEM_TYPE;
-module.exports.JS_TYPE = JS_TYPE;
-
-module.exports.FIXED_SETTINGS = FIXED_SETTINGS;
-
-module.exports.PLUGIN_STAT_PATH = PLUGIN_STAT_PATH;
-module.exports.DEFAULT_DYNAMIC_EXTENSION = DEFAULT_DYNAMIC_EXTENSION;
-module.exports.FATAL_UNCHANGEABLE_LOG_PATH = FATAL_UNCHANGEABLE_LOG_PATH;
-module.exports.LOG_SEPARATOR = LOG_SEPARATOR;
-
-
-module.exports.ME = ME;
-module.exports.DEV = DEV;
-
-module.exports.CLIENT_BINARY = CLIENT_BINARY;
-
-module.exports.APP_NAME = APP_NAME;
-module.exports.APP_VERSION = APP_VERSION;
-
+export const LOG_SEPARATOR  = "---------------------------------------";
