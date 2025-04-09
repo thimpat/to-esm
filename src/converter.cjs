@@ -12,6 +12,7 @@ const glob = require("glob");
 let crypto = require("crypto");
 const {anaLogger} = require("analogger");
 const UglifyJS = require("uglify-js");
+const { ESLint } = require("eslint");
 
 const {hideText, restoreText, beforeReplace, resetAll} = require("before-replace");
 const {stripStrings, stripComments, stripRegexes, clearStrings, parseString} = require("strip-comments-strings");
@@ -394,6 +395,38 @@ const validateSyntax = (str, syntaxType = "commonjs") =>
 
     return false;
 };
+
+async function initLinter() {
+    const configPath = joinPath(__dirname, "../eslint-runtime.js");
+    if (!fs.existsSync(configPath)) {
+        console.log({lid: 3207}, "Missing dependency");
+        return code;
+    }
+
+    eslint = new ESLint({
+        overrideConfigFile: configPath,
+        fix: true,
+    });
+}
+
+async function lintCode(code) {
+    try {
+
+        // 2. Lint the provided code string
+        const results = await eslint.lintText(code);
+
+        if (results.length > 0 && results[0].output)
+        {
+            return results[0].output;
+        }
+
+    } catch (error) {
+        console.error({lid: "6541"}, `Error linting code: ${error}`);
+        return code; // Return original code on error
+    }
+
+    return code;
+}
 
 /**
  * If source finishes with a "/", it's a folder,
@@ -1703,6 +1736,7 @@ const removeDeclarationForAST = (converted, extracted) =>
  * @param nonHybridModuleMap
  * @param workingDir
  * @param moreOptions
+ * @param origin
  * @returns {string|*}
  * @private
  */
@@ -4330,7 +4364,7 @@ const convertJsonToESM = (jsonData) => {
  * @param moreOptions
  * @param rootDir
  */
-const convertCjsFiles = (list, {
+const convertCjsFiles = async (list, {
     replaceStart = [],
     replaceEnd = [],
     nonHybridModuleMap = {},
@@ -4341,10 +4375,8 @@ const convertCjsFiles = (list, {
     debuginput = "",
     moreOptions = {},
     rootDir,
-} = {}) =>
-{
-    if (!list || !list.length)
-    {
+} = {}) => {
+    if (!list || !list.length) {
         console.info({lid: 1010}, "No file to convert.");
         return false;
     }
@@ -4407,6 +4439,9 @@ const convertCjsFiles = (list, {
 
                 converted = removeDuplicateExports(converted);
                 dumpData(converted, source, "remote-duplicate-exports");
+
+                converted = await lintCode(converted);
+                dumpData(converted, source, "lint-code");
 
                 converted = convertComplexRequiresToSimpleRequires(converted, source);
                 dumpData(converted, source, "convert-complex-requires-to-simple-requires");
@@ -4994,7 +5029,7 @@ let convertFile = async (moreOptions, extrasInfos = {}) =>
         const cjsEntryPointPath = cjsList[0].source;
         let mjsEntrypointPath = cjsList[0].mjsTargetAbs;
 
-        const success = convertCjsFiles(cjsList,
+        const success = await convertCjsFiles(cjsList,
             {
                 ...moreOptions.extras,
                 ...moreOptions.configFile,
@@ -5300,6 +5335,8 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         const extrasInfos = {};
 
         anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
+
+        await initLinter();
 
         for (let pass = 1; pass <= 2; ++pass)
         {
