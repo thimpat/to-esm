@@ -90,3 +90,4 @@ test/assets/package.json
 /testgen.cjs
 /.github/
 /.run/*
+/test/node_modules/
