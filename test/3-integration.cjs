@@ -1675,6 +1675,47 @@ describe("The converter tool", function ()
                 }
             );
 
+            it("should understand complex import", async function ()
+                {
+                    const input = "./assets/given/demo-test-81.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-81.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-81.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should respect the --extension value", async function ()
+                {
+                    const input = "./assets/given/set-output-extension/demo-test-82.js";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                        extension: ".js"
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-82.js"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-82.js"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
         });
 
         describe("on a directory", () =>
