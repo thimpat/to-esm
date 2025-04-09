@@ -60,7 +60,8 @@ const blockMaskOut = "👈";
 let strSheBang = "";
 
 let dumpCounter = 0;
-let DEBUG_MODE = false;
+let DEBUG_MODE = (process.env.TO_ESM_DEBUG_MODE === "true") || false;
+let eslint = null;
 
 
 const TARGET = {
@@ -3007,9 +3008,10 @@ const parseEsm = (filepath, content, {
  */
 const isJsonCompatible = (filepath, content = "") =>
 {
+    let extension;
     try
     {
-        const extension = path.extname(filepath);
+        extension = path.extname(filepath);
         if (JSON_EXTENSION === extension)
         {
             return true;
@@ -3024,7 +3026,9 @@ const isJsonCompatible = (filepath, content = "") =>
     catch (e)
     {
         /* istanbul ignore next */
-        console.error({lid: 3069}, e);
+        if (DEBUG_MODE && extension === JSON_EXTENSION) {
+            console.error({lid: 3069}, e.message);
+        }
     }
 
     /* istanbul ignore next */
@@ -4925,7 +4929,7 @@ const prepareDebugMode = (cliOptions, moreOptions = {}) =>
 {
     try
     {
-        const debug = cliOptions.debug || false;
+        const debug = cliOptions.debug || process.env.TO_ESM_DEBUG_MODE === "true" || false;
         const debuginput = debug || cliOptions.debuginput || "";
         if (debuginput)
         {
@@ -5322,7 +5326,10 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             // Config Files
             let configPath = cliOptions.config || detectESMConfigPath();
 
-            anaLogger.setOptions({silent: true, hideError: true, lidLenMax: 4});
+            if (!DEBUG_MODE) {
+                anaLogger.setOptions({silent: true, hideError: true, lidLenMax: 4});
+            }
+
             // Extract options from config file
             await extractConfigFileOptions(configPath, cliOptions, moreOptions);
             parseCliOptions(cliOptions, moreOptions);
