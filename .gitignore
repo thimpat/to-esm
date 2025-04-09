@@ -81,6 +81,7 @@ test/assets/package.json
 /test/sandbox/node_modules/
 /debug/
 /test/debug/
+/test/assets/debug/
 /test/assets/given/my-test-class.cjs
 /builder.bak.cjs
 /conversion-tester.cjs
