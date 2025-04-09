@@ -8,6 +8,7 @@ const {CaptureConsole} = require("@aoberoi/capture-console");
 
 const {compareDir, switchToTestDirectory} = require("@thimpat/testutils");
 const {setupConsole, buildTargetDir, normaliseString, transpileFiles, TARGET} = require("../src/converter.cjs");
+const {joinPath} = require("@thimpat/libutils");
 
 
 switchToTestDirectory();
@@ -314,8 +315,8 @@ describe("The converter tool", function ()
 
             it("should convert ./given/demo-test.cjs into ./expect/demo-test.mjs", async function ()
             {
-                const input = path.resolve("./assets/given/demo-test.cjs");
-                const output = path.join(testDir, "/actual");
+                const input = "./demo-test.cjs";
+                const output = joinPath(testDir, "/actual");
                 const options = {
                     input,
                     output,
@@ -1648,6 +1649,26 @@ describe("The converter tool", function ()
 
                     const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-79.mjs"), "utf8");
                     let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-79.mjs"), "utf8");
+                    actualConversion = actualConversion.replace(/\r\n/g, "\n");
+
+                    expect(eol(actualConversion)).to.equal(eol(expectConversion));
+                }
+            );
+
+            it("should convert code combined require statement", async function ()
+                {
+                    const input = "./assets/given/demo-test-80.cjs";
+                    const options = {
+                        input,
+                        output  : path.join(testDir, "/actual"),
+                        noheader: true,
+                        target  : TARGET.ESM,
+                    };
+
+                    await transpileFiles(options);
+
+                    const expectConversion = fs.readFileSync(path.join(testDir, "expect", "demo-test-80.mjs"), "utf8");
+                    let actualConversion = fs.readFileSync(path.join(testDir, "actual", "demo-test-80.mjs"), "utf8");
                     actualConversion = actualConversion.replace(/\r\n/g, "\n");
 
                     expect(eol(actualConversion)).to.equal(eol(expectConversion));
