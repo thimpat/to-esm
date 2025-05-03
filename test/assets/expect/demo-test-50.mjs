@@ -21,36 +21,15 @@ import espree  from "espree";
 import estraverse  from "estraverse";
 import {anaLogger}  from "analogger";
 import esbuild  from "esbuild";
+import toEsmPackageJson  from "../package.json.mjs";
 import _toesmTemp1  from "os";
 import child_process  from "child_process";
 /**
  * This file is to convert a Commonjs file into an ESM one.
  */
-
 // ===========================================================================
 // Imports
 // ---------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-let toEsmPackageJson = {};
-
 // ===========================================================================
 // Constants
 // ---------------------------------------------------------------------------
@@ -62,17 +41,11 @@ let commentMasks = {
 let sourceExtractedComments = [];
 let sourceExtractedStrings = [];
 let sourceExtractedRegexes = [];
-
 const blockMaskIn = "👉";
 const blockMaskOut = "👈";
-
-
 let strSheBang = "";
-
 let dumpCounter = 0;
 let DEBUG_MODE = false;
-
-
 export const TARGET  = {
     BROWSER: "browser",
     ESM    : "esm",
@@ -81,37 +54,25 @@ export const TARGET  = {
     ALL    : "all"
 };
 const ESM_EXTENSION = ".mjs";
-
 const COMMENT_MASK = "❖✎🔏❉";
-
 const STRING_MASK_START = "❖✎❉";
 const STRING_MASK_END = "❉✎❖";
-
 const REGEX_MASK_START = "✋⛽⚒";
 const REGEX_MASK_END = "⚒⛽✋";
-
-
 const EOL  = _toesmTemp1.EOL;
-
 const IMPORT_MASK_START = EOL + "/** to-esm: import-start **/" + EOL;
 const IMPORT_MASK_END = EOL + "/** to-esm: import-end **/" + EOL;
 const EXPORT_KEYWORD_MASK = "🦊";
-
 export const DEBUG_DIR  = "./debug/";
-
 const GENERATED_ROOT_FOLDER_NAME = "_root";
-
 let indexGeneratedTempVariable = 1;
-
 export const DEFAULT_PREFIX_TEMP  = ".tmp-toesm";
-
 const ORIGIN_ADDING_TO_INDEX = {
     START                  : "START",
     RESOLVE_RELATIVE_IMPORT: "RESOLVE_RELATIVE_IMPORT",
     RESOLVE_THIRD_PARTY    : "RESOLVE_THIRD_PARTY",
     RESOLVE_ABSOLUTE       : "RESOLVE_ABSOLUTE"
 };
-
 /**
  * module and exports can be redeclared in a block. They are not protected keywords.
  * @type {[{search: RegExp, original: string, replace: string},{search: RegExp, original: string, replace: string}]}
@@ -129,17 +90,12 @@ const AMBIGUOUS = [
     }
 ];
 const AMBIGUOUS_VAR_NAMES = ["module", "exports"];
-
 const nativeModules = Object.keys(process.binding("natives"));
-
-
 // ===========================================================================
 // Globals
 // ---------------------------------------------------------------------------
 // The whole list of files to convert
 let cjsList = [];
-
-
 // ===========================================================================
 // Static Locals
 // ---------------------------------------------------------------------------
@@ -153,26 +109,20 @@ let cjsList = [];
 const displayWarningOncePerModule = (function ()
 {
     let convertedModuleList = {};
-
     return function (moduleName, message)
     {
         if (convertedModuleList[moduleName])
         {
             return false;
         }
-
         convertedModuleList[moduleName] = true;
-
         console.warn({
             lid  : 1236,
             color: "yellow"
         }, message);
-
         return true;
     };
 })();
-
-
 // ===========================================================================
 // Cores
 // ---------------------------------------------------------------------------
@@ -181,7 +131,6 @@ export const normaliseString  = (content) =>
     content = content.replace(/\r\n/gm, "\n").replace(/\n/gm, EOL);
     return content;
 };
-
 export const setupConsole  = () =>
 {
     try
@@ -189,7 +138,6 @@ export const setupConsole  = () =>
         anaLogger.setOptions({silent: false, hideError: false, hideHookMessage: true, lidLenMax: 4});
         anaLogger.overrideConsole();
         anaLogger.overrideError();
-
         console.log({lid: 1012}, "Console is set up");
         return true;
     }
@@ -197,10 +145,8 @@ export const setupConsole  = () =>
     {
         console.error({lid: 3008}, e.message);
     }
-
     return false;
 };
-
 /**
  * Build target directory.
  * Ignore, if the directory already exist
@@ -216,7 +162,6 @@ export const buildTargetDir  = (targetDir) =>
         {
             return true;
         }
-
         fs.mkdirSync(targetDir, {recursive: true});
         return true;
     }
@@ -225,11 +170,9 @@ export const buildTargetDir  = (targetDir) =>
         /* istanbul ignore next */
         console.error({lid: 3010}, "", e.message);
     }
-
     /* istanbul ignore next */
     return false;
 };
-
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
@@ -240,30 +183,21 @@ export const buildTargetDir  = (targetDir) =>
 const convertNonTrivialExportsWithAST = (converted, source, detectedExported = []) =>
 {
     let converted0, subst;
-
     converted = hideKeyElementCode(converted, source);
-
     for (let i = 0; i < detectedExported.length; ++i)
     {
         const item = detectedExported[i];
-
         const regexSentence =
             `(class|const|let|var|class|function\\s*\\*?)\\s*\\b${item.funcname}\\b([\\S\\s]*?)(?:module\\.)?exports\\.\\b${item.namedExport}\\b\\s*=\\s*\\b${item.funcname}\\b\\s*;?`;
-
         const regexp =
             new RegExp(regexSentence, "gm");
-
         subst = `export $1 ${item.namedExport} $2`;
-
         converted0 = converted;
         converted = converted0.replace(regexp, subst);
     }
-
     converted = restoreKeyElementCode(converted);
-
     return converted;
 };
-
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
@@ -278,17 +212,13 @@ export const convertNonTrivial  = (converted, source) =>
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
     dumpData(converted, source, "convertNonTrivial - p1");
-
     regex = /(?:const|let|var|class|function\s*\*?)\b\s+\b([\w]+)\b([\s\S]*)\1\s*=\s*require\(([^)]+.js[^)])\)/sgm;
     subst = "import $1 from $3$2";
     converted0 = converted;
     converted = converted0.replaceAll(regex, subst);
     dumpData(converted, source, "convertNonTrivial - p2");
-
     return converted;
-
 };
-
 /**
  * Check whether the given text has a valid JavaScript syntax
  * @param str
@@ -316,10 +246,8 @@ export const validateSyntax  = (str, syntaxType = "commonjs") =>
     catch (e)
     {
     }
-
     return false;
 };
-
 /**
  * If source finishes with a "/", it's a folder,
  * otherwise, it's not.
@@ -333,7 +261,6 @@ export const isConventionalFolder  = (source) =>
     }
     return source.charAt(source.length - 1) === "/";
 };
-
 /**
  * Returns the path of a relative path relative to source.
  * @param source File that contains the require or import
@@ -343,14 +270,11 @@ export const isConventionalFolder  = (source) =>
 export const concatenatePaths  = (source, requiredPath) =>
 {
     source = normalisePath(source);
-
     let sourceDir = isArgsDir(source) ? source : path.parse(source).dir;
     sourceDir = normaliseDirPath(sourceDir);
-
     let pkgImportPath = joinPath(sourceDir, requiredPath);
     return normalisePath(pkgImportPath);
 };
-
 /**
  * Calculate the relative path from a source to another path.
  * For instance, when doing a require() or import, the target
@@ -366,16 +290,13 @@ const calculateRelativePath = (sourcePath, targetPath) =>
 {
     sourcePath = normalisePath(sourcePath);
     targetPath = normalisePath(targetPath);
-
     if (!isConventionalFolder(sourcePath))
     {
         sourcePath = path.parse(sourcePath).dir + "/";
     }
-
     const relativePath = path.relative(sourcePath, targetPath);
     return normalisePath(relativePath);
 };
-
 /**
  * Third-Party Module path starting with ./node_modules/ + relative path to the entry point
  * @param moduleName
@@ -388,13 +309,11 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
     try
     {
         let isCjs = target === TARGET.CJS;
-
         let entryPoint = findPackageEntryPoint(moduleName, targetDir, {
             isCjs,
             isBrowser       : target === TARGET.BROWSER,
             useNativeResolve: false
         });
-
         /* istanbul ignore next */
         if (entryPoint === null)
         {
@@ -402,16 +321,13 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
             return null;
         }
         entryPoint = normalisePath(entryPoint);
-
         const nodeModulesPos = entryPoint.indexOf("node_modules");
         /* istanbul ignore next */
         if (nodeModulesPos === -1)
         {
             console.error({lid: 3015}, ` The module [${moduleName}] is located in a non-node_modules directory.`);
         }
-
         entryPoint = "./" + entryPoint.substring(nodeModulesPos);
-
         return entryPoint;
     }
     catch (e)
@@ -419,25 +335,20 @@ const getModuleEntryPointPath = (moduleName, targetDir = "", target = "") =>
         /* istanbul ignore next */
         console.info({lid: 1147}, ` Checking [${moduleName}] package.json`, e.message);
     }
-
     /* istanbul ignore next */
     return null;
 };
-
 const getCJSModuleEntryPath = (moduleName, targetDir = "") =>
 {
     return getModuleEntryPointPath(moduleName, targetDir, TARGET.CJS);
 };
-
 const getESMModuleEntryPath = (moduleName, targetDir, target) =>
 {
     return getModuleEntryPointPath(moduleName, targetDir, target);
 };
-
 // ---------------------------------------------------
 // NEW STUFF
 // ---------------------------------------------------
-
 const dumpData = (converted, source, title = "") =>
 {
     try
@@ -452,7 +363,6 @@ const dumpData = (converted, source, title = "") =>
         {
             title = "-" + title;
         }
-
         const indexCounter = dumpCounter.toString().padStart(4, "0");
         fs.writeFileSync(joinPath(DEBUG_DIR, `dump-${indexCounter}-${name}-${title}.js`), converted, "utf-8");
     }
@@ -462,7 +372,6 @@ const dumpData = (converted, source, title = "") =>
         console.error({lid: 3014}, e.message);
     }
 };
-
 /**
  * Convert path like:
  * C:/a/b/c/d => /a/b/c/d
@@ -477,7 +386,6 @@ export const convertToSubRootDir  = (wholePath) =>
     arr.shift();
     return arr.join("/");
 };
-
 /**
  * Remove part of path by subtracting a given directory from a whole path
  * TODO: Re-Check this function goal
@@ -490,11 +398,9 @@ export const convertToSubRootDir  = (wholePath) =>
 export const subtractPath  = (wholePath, pathToSubtract) =>
 {
     let subPath, subDir;
-
     // Get mapped path by subtracting rootDir
     wholePath = normalisePath(wholePath);
     pathToSubtract = normalisePath(pathToSubtract);
-
     if (wholePath.length < pathToSubtract.length)
     {
         console.error({lid: 3016}, "" + "Path subtraction will not work here. " +
@@ -503,13 +409,11 @@ export const subtractPath  = (wholePath, pathToSubtract) =>
             subPath: wholePath
         };
     }
-
     if (pathToSubtract === "./")
     {
         subPath = convertToSubRootDir(wholePath);
         subDir = path.parse(subPath).dir;
         subDir = normaliseDirPath(subDir);
-
         return {
             subDir, subPath
         };
@@ -522,24 +426,19 @@ export const subtractPath  = (wholePath, pathToSubtract) =>
             subPath: wholePath
         };
     }
-
     if (pathToSubtract.charAt(pathToSubtract.length - 1) !== "/")
     {
         pathToSubtract = pathToSubtract + "/";
     }
-
     let subPaths = wholePath.split(pathToSubtract);
     subPath = subPaths[1];
     subPath = normalisePath(subPath);
-
     subDir = path.parse(subPath).dir;
     subDir = normaliseDirPath(subDir);
-
     return {
         subDir, subPath
     };
 };
-
 /**
  * Look up for a path in the glob list
  * @param requiredPath
@@ -552,7 +451,6 @@ export const getTranslatedPath  = (requiredPath, list) =>
     for (let i = 0; i < list.length; ++i)
     {
         const item = list[i];
-
         const source = normalisePath(item.source);
         if (requiredPath === source)
         {
@@ -561,7 +459,6 @@ export const getTranslatedPath  = (requiredPath, list) =>
     }
     return {};
 };
-
 /**
  * TODO: Make this function obsolete. It's not obvious what it's trying to do.
  * @param source
@@ -575,7 +472,6 @@ export const getProjectedPathAll  = ({source, outputDir}) =>
     {
         let projectedPath = joinPath(outputDir, source);
         projectedPath = normalisePath(projectedPath);
-
         return {
             projectedPath,
         };
@@ -584,10 +480,8 @@ export const getProjectedPathAll  = ({source, outputDir}) =>
     {
         console.error({lid: 3020}, "", e.message);
     }
-
     return {};
 };
-
 /**
  * Change the given path extension to .mjs
  * @param filepath
@@ -599,7 +493,6 @@ const changePathExtensionToESM = (filepath) =>
     const renamed = joinPath(parsed.dir, parsed.name + ESM_EXTENSION);
     return normalisePath(renamed);
 };
-
 /**
  * @todo Investigate
  * @param match
@@ -619,12 +512,9 @@ const reviewEntryImportMaps = (match/*, requestedRequired, moreOptions*/) =>
     }
     catch (e)
     {
-
     }
-
     return match;
 };
-
 /**
  *
  * @param {string} sourcePath Path to the file that does the require/import
@@ -636,11 +526,9 @@ const reviewEntryImportMaps = (match/*, requestedRequired, moreOptions*/) =>
 export const calculateRequiredPath  = ({sourcePath, requiredPath, list, outputDir}) =>
 {
     let projectedRequiredPath;
-
     // Projected path of required path
     const requiredPathProperties = getTranslatedPath(requiredPath, list);
     const target = requiredPathProperties.target;
-
     if (target)
     {
         // The relative path of the two projected paths above (projectedPath + target)
@@ -652,10 +540,8 @@ export const calculateRequiredPath  = ({sourcePath, requiredPath, list, outputDi
         projectedRequiredPath = calculateRelativePath(sourcePath, newPath);
         projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
     }
-
     return projectedRequiredPath;
 };
-
 /**
  * Determine if the required third party required needs to be resolved
  * and calculate its value
@@ -682,13 +568,11 @@ const resolveThirdParty = (text, list, {
     try
     {
         const outputDir = moreOptions.outputDir;
-
         let moduleName = regexRequiredPath;
         if (nonHybridModuleMap[moduleName])
         {
             moduleName = nonHybridModuleMap[moduleName];
         }
-
         let requiredPath;
         if (moreOptions.extras.target === TARGET.BROWSER || moreOptions.extras.target === TARGET.ESM)
         {
@@ -702,7 +586,6 @@ const resolveThirdParty = (text, list, {
                     + "Skipping.");
                 return regexRequiredPath;
             }
-
             let isESM = isESMCompatible(requiredPath);
             if (isESM)
             {
@@ -720,49 +603,37 @@ const resolveThirdParty = (text, list, {
                     {
                         let {projectedPath} = getProjectedPathAll({outputDir, source});
                         let relativePath = calculateRelativePath(projectedPath, requiredPath);
-
                         importMaps[moduleName] = requiredPath;
-
                         if (moreOptions.extras.useImportMaps)
                         {
                             return regexRequiredPath;
                         }
-
                         if (moreOptions.extras.prefixpath)
                         {
                             relativePath = joinPath(moreOptions.extras.prefixpath, relativePath);
                             relativePath = normalisePath(relativePath);
                         }
-
                         return relativePath;
                     }
-
                     console.warn({
                         lid  : 1101,
                         color: "yellow"
                     }, ` The file [${requiredPath}] is not browser compatible. The system will try to generate one`);
-
                     // If not, start conversion from the .cjs
                     requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
                 }
-
                 displayWarningOncePerModule(
                     {lid: 1236},
                     `The npm module '${moduleName}' is ESM compatible, but the target is set to ${moreOptions.extras.target}.` +
                     `(The system will try to generate a new one if possible)`);
-
             }
         }
-
         displayWarningOncePerModule(moduleName, `The npm module '${moduleName}' does not seem to be ESM compatible. (The system will try to generate a new one)`);
-
         // Need conversion from .cjs because module is incompatible with ESM
         requiredPath = getCJSModuleEntryPath(moduleName, workingDir);
         let projectedRequiredPath = resolveReqPath(source, requiredPath, moreOptions);
         projectedRequiredPath = changePathExtensionToESM(projectedRequiredPath);
-
         importMaps[moduleName] = requiredPath;
-
         addFileToIndex({
             source   : requiredPath,
             rootDir  : workingDir,
@@ -774,7 +645,6 @@ const resolveThirdParty = (text, list, {
             moduleName,
             moreOptions
         });
-
         // When importMaps is enabled, we return the original require
         // Resolvers will be set in the HTML code
         if (moreOptions.extras.useImportMaps)
@@ -782,18 +652,14 @@ const resolveThirdParty = (text, list, {
             regexRequiredPath = reviewEntryImportMaps(regexRequiredPath, projectedRequiredPath, moreOptions);
             return regexRequiredPath;
         }
-
         return projectedRequiredPath;
     }
     catch (e)
     {
         console.error({lid: 3022}, "", e.message);
     }
-
     return regexRequiredPath;
-
 };
-
 const resolveReqPath = function (source, regexRequiredPath,
                                  moreOptions)
 {
@@ -801,39 +667,31 @@ const resolveReqPath = function (source, regexRequiredPath,
     {
         // Absolute path to source
         let sourcePathAbs = joinPath(moreOptions.outputDir, source);
-
         // Absolute path to required
         let mjsPathAbs = joinPath(moreOptions.outputDir, regexRequiredPath);
-
         // Distance
         regexRequiredPath = calculateRelativePath(sourcePathAbs, mjsPathAbs);
-
         return regexRequiredPath;
     }
     catch (e)
     {
         console.error({lid: 3024}, e.message);
     }
-
     return regexRequiredPath;
 };
-
 const isResolveAbsoluteMode = function (moreOptions)
 {
     return !!moreOptions?.extras?.resolveAbsolute?.length;
 };
-
 const getLookUpDirs = function (moreOptions)
 {
     return moreOptions?.extras?.resolveAbsolute;
 };
-
 const isExternalSource = function (moreOptions)
 {
     // Don't create a copy of the referenced file
     return !!moreOptions.extras?.keepExternal;
 };
-
 /**
  * Re-evaluate a require new path relative to the source is in
  * @param text
@@ -858,18 +716,13 @@ const resolveRelativeImport = (text, list, {
     {
         // The required path from the source
         let requiredPath = concatenatePaths(source, regexRequiredPath);
-
         // let sourcePathAbs = joinPath(moreOptions.outputDir, source);
         // let mjsPathAbs = joinPath(moreOptions.outputDir, requiredPath);
         // regexRequiredPath = calculateRelativePath(sourcePathAbs, mjsPathAbs);
-
         regexRequiredPath = resolveReqPath(source, requiredPath, moreOptions);
-
-
         // let source2 = path.parse(source).dir;
         // let {projectedPath} = getProjectedPathAll({source: source2, rootDir, outputDir: moreOptions.outputDir});
         // let relativePath = calculateRelativePath(projectedPath, requiredPath);
-
         addFileToIndex({
             source   : requiredPath,
             rootDir,
@@ -883,11 +736,9 @@ const resolveRelativeImport = (text, list, {
     {
         console.error({lid: 3026}, "", e.message);
     }
-
     regexRequiredPath = changePathExtensionToESM(regexRequiredPath);
     return regexRequiredPath;
 };
-
 /**
  * Parse the absolute given paths
  * @param {string} text Source content (likely already modified in the pipeline)
@@ -915,9 +766,7 @@ const resolveAbsoluteImport = (text, list, {
         const lookupDirLists = getLookUpDirs(moreOptions);
         let relativeRequiredPath, idRequiredPath;
         relativeRequiredPath = regexRequiredPath;
-
         let isAbsolutePath = true;
-
         if (lookupDirLists)
         {
             const props = getRelativePathsAgainstSuggestedRoots(regexRequiredPath, source, rootDir, lookupDirLists);
@@ -928,7 +777,6 @@ const resolveAbsoluteImport = (text, list, {
                 isAbsolutePath = false;
             }
         }
-
         // The required path from the source path above
         const entry = addFileToIndex({
             source        : relativeRequiredPath,
@@ -941,7 +789,6 @@ const resolveAbsoluteImport = (text, list, {
             origin        : ORIGIN_ADDING_TO_INDEX.RESOLVE_ABSOLUTE,
             externalSource: true
         });
-
         if (isExternalSource(moreOptions))
         {
             regexRequiredPath = idRequiredPath;
@@ -956,11 +803,9 @@ const resolveAbsoluteImport = (text, list, {
     {
         console.error({lid: 3028}, "", e.message);
     }
-
     regexRequiredPath = changePathExtensionToESM(regexRequiredPath);
     return regexRequiredPath;
 };
-
 /**
  * Parse imported for ESM
  * @param text
@@ -981,13 +826,10 @@ export const reviewEsmImports  = (text, list, {
     // Locate third party
     // const re = /\bfrom\s+["']([^.\/~@][^"']+)["'];?/gmu;
     const re = /\bfrom\s+["']([^"']+?)["'];?/gmu;
-
     const sourceExtractedComments = [];
     text = stripCodeComments(text, sourceExtractedComments, commentMasks);
-
     const sourceExtractedRegexes = [];
     text = stripCodeRegexes(text, sourceExtractedRegexes);
-
     text = text.replace(re, function (match, regexRequiredPath)
     {
         try
@@ -1000,7 +842,6 @@ export const reviewEsmImports  = (text, list, {
                 }
                 return match;
             }
-
             if (regexRequiredPath.startsWith("./") || regexRequiredPath.startsWith(".."))
             {
                 const solvedRelativeRequire = resolveRelativeImport(text, list, {
@@ -1011,7 +852,6 @@ export const reviewEsmImports  = (text, list, {
                     moreOptions,
                     regexRequiredPath,
                 });
-
                 match = match.replace(regexRequiredPath, solvedRelativeRequire);
             }
             else if (regexRequiredPath.startsWith("/"))
@@ -1024,7 +864,6 @@ export const reviewEsmImports  = (text, list, {
                     regexRequiredPath,
                     moreOptions,
                 });
-
                 match = match.replace(regexRequiredPath, solvedAbsoluteRequire);
             }
             else // Third party libraries
@@ -1040,11 +879,8 @@ export const reviewEsmImports  = (text, list, {
                     moreOptions,
                     match
                 });
-
                 match = match.replace(regexRequiredPath, solvedPath);
             }
-
-
             /* istanbul ignore next */
             return match;
         }
@@ -1053,16 +889,11 @@ export const reviewEsmImports  = (text, list, {
             /* istanbul ignore next */
             console.error({lid: 3030}, "", e.message);
         }
-
     });
-
     text = putBackComments(text, sourceExtractedComments, commentMasks);
-
     text = putBackRegexes(text, sourceExtractedRegexes);
-
     return text;
 };
-
 /**
  * Parse the string within "requires" to evaluate given paths
  * @param text
@@ -1075,14 +906,11 @@ export const parseImportWithRegex  = (text, list, fileProp, workingDir) =>
 {
     const parsedFilePath = joinPath(workingDir, fileProp.source);
     const parsedFileDir = path.dirname(parsedFilePath);
-
     const re = /require\(["'`]([.\/][^)]+)["'`]\)/gmu;
-
     return text.replace(re, function (match, group)
     {
         const target = joinPath(parsedFileDir, group);
         const extension = path.extname(target);
-
         const targets = [];
         if (!extension)
         {
@@ -1098,27 +926,21 @@ export const parseImportWithRegex  = (text, list, fileProp, workingDir) =>
         {
             targets.push(target);
         }
-
         const index = list.findIndex(function ({source})
         {
             const possibleFilePath = joinPath(workingDir, source);
             return (targets.includes(possibleFilePath));
         });
-
         if (index < 0)
         {
             return match;
         }
-
         // current file's absolute path
         const sourcePath = resolvePath(fileProp.outputDir);
-
         const {source, outputDir} = list[index];
         const basename = path.parse(source).name;
-
         // Absolute path in the "require"
         const destinationPath = resolvePath(outputDir);
-
         let relativePath = path.relative(sourcePath, destinationPath);
         relativePath = joinPath(relativePath, basename + ESM_EXTENSION);
         relativePath = relativePath.replace(/\\/g, "/");
@@ -1126,11 +948,9 @@ export const parseImportWithRegex  = (text, list, fileProp, workingDir) =>
         {
             relativePath = "./" + relativePath;
         }
-
         return match.replace(group, relativePath);
     });
 };
-
 /**
  * Rename variables declared as exports
  * @example
@@ -1147,12 +967,9 @@ const convertAmbiguous = (converted, ambiguousList) =>
     {
         let ambiguous = ambiguousList[i];
         let block = ambiguous.block;
-
         let start = block.start;
         let end = block.end;
-
         extract = converted.substring(start, end);
-
         for (let ii = 0; ii < AMBIGUOUS.length; ++ii)
         {
             let ambiguousWord = AMBIGUOUS[ii];
@@ -1160,14 +977,10 @@ const convertAmbiguous = (converted, ambiguousList) =>
             let replace = ambiguousWord.replace;
             extract = extract.replace(search, replace);
         }
-
         converted = converted.substring(0, start) + extract + converted.substring(end);
-
     }
-
     return converted;
 };
-
 /**
  * Put back original naming for ambiguous declarations
  * like
@@ -1185,10 +998,8 @@ const putBackAmbiguous = (converted) =>
         let replace = ambiguousWord.original;
         converted = converted.replaceAll(search, replace);
     }
-
     return converted;
 };
-
 const removeShebang = (converted) =>
 {
     const firstLine = converted.split("\n")[0];
@@ -1199,18 +1010,15 @@ const removeShebang = (converted) =>
     }
     return converted;
 };
-
 const restoreShebang = (converted) =>
 {
     if (strSheBang)
     {
         converted = strSheBang + EOL + converted;
     }
-
     strSheBang = "";
     return converted;
 };
-
 /**
  * Will not work if a variable is named "exports"
  * @param converted
@@ -1220,14 +1028,11 @@ const restoreShebang = (converted) =>
 export const convertModuleExportsToExport  = (converted, source) =>
 {
     converted = hideKeyElementCode(converted, source);
-
     converted = converted.replace(/\bexports\b\s*=\s*module.exports\s*=/, "module.exports =");
     converted = converted.replace(/\bmodule\.exports\b\s*=\s*exports\s*=/, "module.exports =");
-
     converted = converted.replace(
         /\b(const|let|var|class|function\s*\*)\s+\b(\w+)\b([\s\S]*?)(\bmodule\b\.)?\bexports\b\.\2\s*=\s*\2.*/gm,
         "export $1 $2 $3");
-
     let converted0;
     do
     {
@@ -1239,16 +1044,12 @@ export const convertModuleExportsToExport  = (converted, source) =>
             "$2 export $3");
     }
     while (converted !== converted0);
-
     // Convert module.exports to export default
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\s*=/gm, "export default");
-
     // Convert module.exports.default to export default
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.default\s*=/gm, "export default");
-
     // Convert module.exports.something to export something
     converted = converted.replace(/(?:\bmodule\b\.)?\bexports\b\.([\w]+)\s*=/gm, "export const $1 =");
-
     const arr = converted.split("export default");
     const defaultExportNumber = arr.length - 1;
     if (defaultExportNumber > 1)
@@ -1259,12 +1060,9 @@ export const convertModuleExportsToExport  = (converted, source) =>
             `"module.exports = ..."` +
             " and use named export if possible => i.e. \"module.exports.myValue = ...\"");
     }
-
     converted = restoreKeyElementCode(converted);
-
     return converted;
 };
-
 const convertJsonImportToVars = (converted, {
     source
 }) =>
@@ -1274,7 +1072,6 @@ const convertJsonImportToVars = (converted, {
     const found = Array.from(matches, m => m[0]);
     const identifiers = Array.from(matches, m => m[1]);
     const files = Array.from(matches, m => m[2]);
-
     const n = identifiers.length;
     for (let i = 0; i < n; ++i)
     {
@@ -1286,14 +1083,12 @@ const convertJsonImportToVars = (converted, {
         {
             continue;
         }
-
         const jsonContent = fs.readFileSync(jsonPath, "utf-8");
         const json = JSON.parse(jsonContent.toString());
         if (Array.isArray(json))
         {
             continue;
         }
-
         const newObject = {};
         for (let k in json)
         {
@@ -1302,20 +1097,16 @@ const convertJsonImportToVars = (converted, {
             {
                 newObject[k] = json[k];
             }
-
             const search2 = `${identifier}["${k}"]`;
             if (converted.indexOf(search2) > -1)
             {
                 newObject[k] = json[k];
             }
         }
-
         converted = converted.replace(found, `let ${identifier} = ${JSON.stringify(newObject, null, 2)}`);
     }
-
     return converted;
 };
-
 /**
  * Parse the given test and use regex to transform requires into imports.
  * @note This function is used with both parser (AST or Regex)
@@ -1327,24 +1118,18 @@ const convertJsonImportToVars = (converted, {
 export const convertRequireToImport  = (converted) =>
 {
     converted = stripCodeComments(converted);
-
     // convert require with .json file to import
     converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
-
     // convert require with .js or .cjs extension to import
     converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+\.c?js)([^)])\)/gm, "import $1" +
         " from" +
         " $2$3");
-
     // convert require without extension to import without extension
     converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(["'`]([./\\][^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
-
     // convert require with non-relative path to import (Third Party libraries)
     converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(["'`]([^"'`]+)["'`]\)/gm, "import $1 from \"$2\"");
-
     return converted;
 };
-
 const stripMasked = (str, limit, {
     COMMENT_MASK_START = COMMENT_MASK,
     COMMENT_MASK_END = COMMENT_MASK
@@ -1355,10 +1140,8 @@ const stripMasked = (str, limit, {
         const maskedComment = COMMENT_MASK_START + i + COMMENT_MASK_END;
         str = str.replace(maskedComment, "");
     }
-
     return str;
 };
-
 /**
  *
  * @param converted
@@ -1372,11 +1155,9 @@ const convertComplexRequiresToSimpleRequires = (converted, source = "") =>
         const extractedComments = [];
         converted = stripCodeComments(converted, extractedComments, commentMasks);
         dumpData(converted, source, "stripCodeComments");
-
         const extractedStrings = [];
         converted = stripCodeStrings(converted, extractedStrings);
         dumpData(converted, source, "stripCodeStrings");
-
         // Introduce temporary variables (_toesm) for tricky require
         converted = beforeReplace(/(const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*(require\(["'`]([^"'`]+)["'`]\))(.+);?/g, converted, function (found, wholeText, index, match)
         {
@@ -1384,33 +1165,26 @@ const convertComplexRequiresToSimpleRequires = (converted, source = "") =>
             {
                 return match[0];
             }
-
             if (match[5].trim() === ";")
             {
                 return match[0];
             }
-
             let unmasked = stripMasked(match[5], extractedComments.length, commentMasks);
             if (unmasked.trim() === ";")
             {
                 return match[0];
             }
-
             let intermediaryVariableName = "_toesmTemp" + indexGeneratedTempVariable++;
-
             const line1 = `let ${intermediaryVariableName} = ${match[3]};`;
             const line2 = `${match[1]} ${match[2]} = ${intermediaryVariableName}${match[5]}`;
             return line1 + EOL + line2 + EOL;
         });
         dumpData(converted, source, "add-extra-toesm-variable-for-tricky-requires");
-
         converted = putBackStrings(converted, extractedStrings);
         dumpData(converted, source, "putBackStrings");
-
         commentMasks.source = source;
         converted = putBackComments(converted, extractedComments, commentMasks);
         dumpData(converted, source, "putBackComments");
-
         return converted;
     }
     catch (e)
@@ -1419,7 +1193,6 @@ const convertComplexRequiresToSimpleRequires = (converted, source = "") =>
         console.error({lid: 3032}, "", e.message);
     }
 };
-
 /**
  * An import is a declaration + assignment, so we need to remove cjs
  * declarations that were not combined in the same line.
@@ -1437,30 +1210,22 @@ const removeDeclarationForAST = (converted, extracted) =>
         {
             continue;
         }
-
         const identifier = prop.identifier;
-
         // Replace declaration of type `let something =`
         regexp = new RegExp(`(var|let|const)\\s+(${identifier}\\s+=)`);
         converted = converted.replace(regexp, "$2");
-
         // Remove declaration of type `let something, something2;`
         regexp = new RegExp(`(var|let|const)\\s+(${identifier}\\s*\,)`);
         converted = converted.replace(regexp, "$1");
-
         // Remove declaration of type `let something2, something`
         regexp = new RegExp(`(var|let|const)(.*)\\,\\s*${identifier}`);
         converted = converted.replace(regexp, "$1$2");
-
         // Remove declaration of type `log something;`
         regexp = new RegExp(`(?:var|let|const)\\s+${identifier}\\s*[;]`);
         converted = converted.replace(regexp, "");
     }
-
     return converted;
 };
-
-
 /**
  * Convert "requires" to imports and move them to the top of the file.
  * @param converted
@@ -1494,7 +1259,6 @@ const applyExtractedASTToImports = (converted, extracted, list, {
         {
             return converted;
         }
-
         const importList = new Set();
         for (let i = extracted.length - 1; i >= 0; --i)
         {
@@ -1505,22 +1269,18 @@ const applyExtractedASTToImports = (converted, extracted, list, {
                 {
                     prop.text = "let " + prop.text;
                 }
-
                 let transformedLines = stripCodeComments(prop.text);
                 transformedLines = convertRequiresToImport(transformedLines);
-
                 const valid = validateSyntax(transformedLines, "module");
                 if (!valid)
                 {
                     continue;
                 }
-
                 transformedLines = reviewEsmImports(transformedLines, list,
                     {
                         source, sourceAbs, outputDir, rootDir, importMaps,
                         nonHybridModuleMap, workingDir, moreOptions
                     });
-
                 transformedLines = transformedLines.trim();
                 if (transformedLines.charAt(transformedLines.length - 1) !== ";")
                 {
@@ -1535,7 +1295,6 @@ const applyExtractedASTToImports = (converted, extracted, list, {
                 console.error({lid: 3034}, "", e.message);
             }
         }
-
         let imports = [...importList].reverse().join(EOL) + ";";
         imports = imports.substring(0, imports.length - 1);
         if (converted.startsWith(";"))
@@ -1546,7 +1305,6 @@ const applyExtractedASTToImports = (converted, extracted, list, {
         {
             converted = EOL + converted;
         }
-
         imports = IMPORT_MASK_START + imports + IMPORT_MASK_END;
         converted = imports + converted;
     }
@@ -1555,10 +1313,8 @@ const applyExtractedASTToImports = (converted, extracted, list, {
         /* istanbul ignore next */
         console.error({lid: 3036}, "", e.message);
     }
-
     return converted;
 };
-
 /**
  * Given an identifier detected by AST, returns the block it belongs to.
  * @param identifier
@@ -1576,11 +1332,9 @@ const findNearestBlock = (identifier, previouses) =>
             return previous;
         }
     }
-
     /* istanbul ignore next */
     return null;
 };
-
 /**
  * Extract information related to cjs imports and use them to do the transformation.
  * @param converted
@@ -1612,11 +1366,9 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
     const detectedExported = [];
     const detectedAmbiguous = [];
     const detectedBlockFunctions = [];
-
     try
     {
         const extracted = [];
-
         let ast;
         try
         {
@@ -1638,14 +1390,10 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
             console.error({lid: 3038}, " ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ➔ ", e.message);
             return {converted, success: false};
         }
-
         let text, start, end, requirePath, identifier;
-
         const previouses = [];
-
         let writeStream;
         let readable;
-
         if (debuginput)
         {
             const debugPath = joinPath(DEBUG_DIR, source + ".json");
@@ -1654,8 +1402,6 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
             readable = Readable.from([""]);
             readable.pipe(writeStream);
         }
-
-
         estraverse.traverse(ast, {
             enter: function (node, parent)
             {
@@ -1666,14 +1412,12 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                         const myText = JSON.stringify(node, null, 2);
                         readable.push(myText);
                     }
-
                     if ("FunctionDeclaration" === node.type || "FunctionExpression" === node.type || "ArrowFunctionExpression" === node.type || "MethodDefinition" === node.type)
                     {
                         detectedBlockFunctions.push({
                             node
                         });
                     }
-
                     // Look for: let exports, let modules,
                     if ("VariableDeclarator" === node.type)
                     {
@@ -1689,14 +1433,12 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                             }
                         }
                     }
-
                     if (node.type === "Identifier" && node.name === "exports")
                     {
                         if (parent && parent.type === "MemberExpression")
                         {
                         }
                     }
-
                     const lastFound = extracted[extracted.length - 1];
                     if (lastFound)
                     {
@@ -1707,7 +1449,6 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                             lastFound.text = converted.substring(lastFound.start, lastFound.end);
                         }
                     }
-
                     // Look for: require(...)
                     if (node && "Literal" === node.type)
                     {
@@ -1715,11 +1456,9 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                         {
                             requirePath = node.value;
                             end = parent.range[0];
-
                             for (let i = previouses.length - 2; i >= 0; --i)
                             {
                                 let previous = previouses[i];
-
                                 // Declaration without "kind" (const, let, var...)
                                 if (previous.parent.type === "AssignmentExpression")
                                 {
@@ -1728,7 +1467,6 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                                         identifier = previous.parent.left.name;
                                     }
                                 }
-
                                 if (previous.parent.type === "AssignmentExpression" || previous.parent.kind === "const" || previous.parent.kind === "var" || previous.parent.kind === "let")
                                 {
                                     previous = previouses[i];
@@ -1736,10 +1474,8 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                                     break;
                                 }
                             }
-
                         }
                     }
-
                     /**
                      * NOTE: As much as I wanted to avoid using optional chaining, this is getting annoying not to
                      * use them in this logic.
@@ -1748,32 +1484,26 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                     {
                         const namedExport = node.left.property.name;
                         const funcname = node.right.name;
-
                         detectedExported.push({
                             namedExport, funcname, source
                         });
                     }
-
                     if (parent?.type === "MemberExpression" && parent?.object?.property?.name === "exports" && parent?.property?.name)
                     {
                         const namedExport = parent.property.name;
-
                         detectedExported.push({
                             namedExport, source
                         });
                     }
-
                     // Look for: exports
                     if (parent?.expression?.left?.object?.property?.name === "exports" && parent?.expression?.left?.type === "MemberExpression" && parent?.expression?.right?.name)
                     {
                         const namedExport = parent.expression.left.property.name;
                         const funcname = parent.expression.right.name;
-
                         detectedExported.push({
                             namedExport, funcname, source
                         });
                     }
-
                     previouses.push({
                         parent,
                         node
@@ -1797,27 +1527,20 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                         {
                             ++end;
                         }
-
                         text = converted.substring(start, end);
-
                         const textTrimmed = text.trim();
-
                         const info = {
                             start, end, text, requirePath, source, identifier
                         };
-
                         if (!(textTrimmed.indexOf("const") === 0 || textTrimmed.indexOf("let") === 0 || textTrimmed.indexOf("var") === 0))
                         {
                             info.declareNotOnTheSameLine = true;
                         }
-
                         extracted.push(info);
-
                         requirePath = null;
                         start = 0;
                         end = 0;
                     }
-
                 }
                 catch (e)
                 {
@@ -1826,12 +1549,10 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
                 }
             }
         });
-
         if (detectedAmbiguous.length)
         {
             converted = convertAmbiguous(converted, detectedAmbiguous);
         }
-
         converted = applyExtractedASTToImports(converted, extracted, list, {
             source,
             sourceAbs,
@@ -1850,10 +1571,8 @@ export const convertRequiresToImportsWithAST  = (converted, list, {
         /* istanbul ignore next */
         console.error({lid: 3044}, ` [${source}] ->`, e.message);
     }
-
     return {converted, success: false, detectedExported, detectedAmbiguous, detectedBlockFunctions};
 };
-
 /**
  * Remove comments from code
  * @param code
@@ -1868,12 +1587,10 @@ export const stripCodeComments  = (code, extracted = null, {
 } = {}) =>
 {
     const commentProps = parseString(code).comments;
-
     if (!commentProps.length)
     {
         return code;
     }
-
     let commentIndexer = 0;
     for (let i = commentProps.length - 1; i >= 0; --i)
     {
@@ -1885,24 +1602,19 @@ export const stripCodeComments  = (code, extracted = null, {
             code = code.substring(0, indexCommentStart) + code.substring(indexCommentEnd);
             continue;
         }
-
         extracted[commentIndexer] = code.substring(indexCommentStart, indexCommentEnd);
         code =
             code.substring(0, indexCommentStart) +
             COMMENT_MASK_START + commentIndexer + COMMENT_MASK_END +
             code.substring(indexCommentEnd);
-
         ++commentIndexer;
     }
-
     return code;
 };
-
 const escapeDollar = function(text)
 {
     return text.split("$").join("$$");
 };
-
 export const putBackComments  = (str, extracted, {
     COMMENT_MASK_START = COMMENT_MASK,
     COMMENT_MASK_END = COMMENT_MASK
@@ -1912,16 +1624,13 @@ export const putBackComments  = (str, extracted, {
     {
         return str;
     }
-
     for (let i = 0; i < extracted.length; ++i)
     {
         let escaped = escapeDollar(extracted[i]);
         str = str.replace(COMMENT_MASK_START + i + COMMENT_MASK_END, escaped);
     }
-
     return str;
 };
-
 /**
  * Remove comments from code
  * @param code
@@ -1937,10 +1646,8 @@ const stripCodeStrings = (code, extracted = []) =>
         extracted[index] = info.content;
         return STRING_MASK_START + index + STRING_MASK_END;
     }, {includeDelimiter: false});
-
     return code;
 };
-
 const stripCodeRegexes = (code, extracted = []) =>
 {
     let index = -1;
@@ -1950,10 +1657,8 @@ const stripCodeRegexes = (code, extracted = []) =>
         extracted[index] = info.content;
         return REGEX_MASK_START + index + REGEX_MASK_END;
     }, {includeDelimiter: false});
-
     return code;
 };
-
 const putBackStrings = (str, extracted) =>
 {
     for (let i = 0; i < extracted.length; ++i)
@@ -1961,10 +1666,8 @@ const putBackStrings = (str, extracted) =>
         let mask = STRING_MASK_START + i + STRING_MASK_END;
         str = str.replace(mask, escapeDollar(extracted[i]));
     }
-
     return str;
 };
-
 const putBackRegexes = (str, extracted) =>
 {
     for (let i = 0; i < extracted.length; ++i)
@@ -1972,10 +1675,8 @@ const putBackRegexes = (str, extracted) =>
         let mask = REGEX_MASK_START + i + REGEX_MASK_END;
         str = str.replace(mask, extracted[i]);
     }
-
     return str;
 };
-
 /**
  * Apply command found in source code comments
  * @param converted
@@ -1985,28 +1686,22 @@ const putBackRegexes = (str, extracted) =>
 const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
 {
     let regexp;
-
     const directives = [TARGET.ALL];
     if (target !== TARGET.ALL)
     {
         directives.push(target);
     }
-
     // Remove => to-esm-browser: remove
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*remove\\s*\\*\\*\\/[\\s\\S]*?\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
     converted = converted.replace(regexp, "");
-
     // Insert => to-esm-browser: add
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(?:${directives.join("|")})\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
     converted = converted.replace(regexp, "$1");
-
     // Hide/skip => to-esm-browser: skip
     regexp = new RegExp(`\\/\\*\\*\\s*to-esm-(${directives.join("|")})\\s*:\\s*skip\\s*\\*\\*\\/([\\s\\S]*?)\\/\\*\\*\\s*to-esm-\\1\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
     converted = hideText(regexp, converted);
-
     return converted;
 };
-
 /**
  * Clean code from remaining directives
  * @param converted
@@ -2015,31 +1710,24 @@ const applyDirectives = (converted, {target = TARGET.ALL} = {}) =>
 const cleanDirectives = (converted) =>
 {
     let regexp;
-
     [TARGET.ALL, TARGET.ESM, TARGET.BROWSER].forEach((currentTarget) =>
     {
         // Insert => to-esm-browser: add
         regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*add\\s*([\\s\\S]*?)\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "");
-
         // Remove => to-esm-browser: remove
         regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*remove\\s*\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "");
         regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*end-remove\\s*\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "");
-
         // Remove => to-esm-browser: skip
         regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*skip\\s*\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "");
         regexp = new RegExp(`\\/\\*\\*\\s*to-esm-${currentTarget}\\s*:\\s*end-skip\\s*\\*\\*\\/`, "gm");
         converted = converted.replace(regexp, "");
-
     });
-
     return converted;
 };
-
-
 /**
  * Generate an object describing a file to convert
  * @param {string} source Relative path to the .cjs source
@@ -2071,23 +1759,18 @@ const formatIndexEntry = ({
     {
         // Absolute path to the .cjs (must exist)
         let sourceAbs, paths;
-
         rootDir = normaliseDirPath(rootDir);
-
         let targetName;
-
         if (isAbsolutePath)
         {
             sourceAbs = source;
             const infoPath = path.parse(source);
             const filename = infoPath.base;
-
             if (isResolveAbsoluteMode(moreOptions))
             {
                 outputDir = resolvePath(outputDir);
                 let subPath = path.relative(outputDir, sourceAbs);
                 subPath = normalisePath(subPath);
-
                 let info = path.parse(subPath);
                 let subDir = info.dir;
                 subDir = normaliseDirPath(subDir);
@@ -2101,30 +1784,21 @@ const formatIndexEntry = ({
                 subDir = joinPath(subDir, infoPath.dir);
                 paths = {subDir, subPath: filename};
             }
-
         }
         else
         {
             sourceAbs = joinPath(rootDir, source);
             paths = subtractPath(sourceAbs, rootDir);
         }
-
         sourceAbs = normalisePath(sourceAbs);
-
         let {subPath, subDir} = paths;
-
         targetName = targetName || path.parse(subPath).name + ESM_EXTENSION;
-
         let mjsTarget;
-
         mjsTarget = joinPath(subDir, targetName);
         subPath = joinPath(subDir, targetName);
-
         const mjsTargetAbs = joinPath(outputDir, subPath);
-
         let pkgImportPath = path.relative(workingDir, mjsTargetAbs);
         pkgImportPath = normalisePath(pkgImportPath);
-
         if (origin === ORIGIN_ADDING_TO_INDEX.RESOLVE_THIRD_PARTY)
         {
             console.log({lid: 1020}, {
@@ -2132,14 +1806,11 @@ const formatIndexEntry = ({
                 color: "orange"
             }, `[${moduleName}] will use [${mjsTarget}] in the generated source`);
         }
-
         source = normalisePath(source);
-
         let id = crypto
             .createHash("sha256")
             .update(source)
             .digest("hex");
-
         return {
             source,
             sourceAbs,
@@ -2160,7 +1831,6 @@ const formatIndexEntry = ({
         console.error({lid: 3046}, e.message);
     }
 };
-
 const hasImportmap = (content) =>
 {
     const regex = /<script.+importmap.+>([\s\S]+?)<\/script>/gm;
@@ -2168,22 +1838,17 @@ const hasImportmap = (content) =>
     match = regex.exec(content);
     return match && match.length;
 };
-
 export const getImportMapFromPage  = (fullHtmlPath) =>
 {
     let content = fs.readFileSync(fullHtmlPath, "utf-8");
-
     const regex = /<script.+importmap.+>([\s\S]+?)<\/script>/gm;
-
     let match;
     match = regex.exec(content);
     if (!match || !match.length)
     {
         return {};
     }
-
     let rawImportMap = match[1].trim();
-
     try
     {
         return JSON.parse(rawImportMap);
@@ -2193,10 +1858,8 @@ export const getImportMapFromPage  = (fullHtmlPath) =>
         /* istanbul ignore next */
         console.error({lid: 3048}, "", e.message);
     }
-
     return {};
 };
-
 /**
  * Merge importmap from html page, importmap from parsing and importmap from configfile
  * @param newMaps
@@ -2208,7 +1871,6 @@ const combineImportMaps = (newMaps, importMaps) =>
     let result = Object.assign({}, newMaps.imports, importMaps);
     return {imports: result};
 };
-
 const rewriteImportMapPaths = (newMaps, htmlPath) =>
 {
     for (let kk in newMaps.imports)
@@ -2225,19 +1887,15 @@ const rewriteImportMapPaths = (newMaps, htmlPath) =>
             console.error({lid: 3050}, "", e.message);
         }
     }
-
     return newMaps;
 };
-
 const applyReplaceToImportMap = (newMaps, htmlOptions) =>
 {
     if (!htmlOptions.importmapReplace || !htmlOptions.importmapReplace.length)
     {
         return newMaps;
     }
-
     regexifySearchList(htmlOptions.importmapReplace);
-
     for (let kk in newMaps.imports)
     {
         try
@@ -2249,15 +1907,12 @@ const applyReplaceToImportMap = (newMaps, htmlOptions) =>
             console.error({lid: 3052}, "", e.message);
         }
     }
-
     return newMaps;
 };
-
 const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
 {
     let content = fs.readFileSync(fullHtmlPath, "utf-8");
     const scriptMap = normaliseString(JSON.stringify(newMaps, null, 4));
-
     if (hasImportmap(content))
     {
         content = content.replace(/(<script.+importmap.+>)([\s\S]+?)(<\/script>)/gm, `$1${scriptMap}$3`);
@@ -2270,11 +1925,9 @@ const writeImportMapToHTML = (newMaps, fullHtmlPath) =>
 `;
         content = content.replace(/(<head.*?>)/gm, `$1${EOL}${ins}`);
     }
-
     fs.writeFileSync(fullHtmlPath, content, "utf-8");
     return newMaps;
 };
-
 /**
  * Insert importmaps into the passed html file
  * @param fullHtmlPath
@@ -2292,20 +1945,13 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
             console.error({lid: 3054}, ` Could not find HTML file at [${fullHtmlPath}]`);
             return;
         }
-
         // Get merged version of importmap from html page and importmap from parsing
         let newMaps = getImportMapFromPage(fullHtmlPath);
-
         newMaps = combineImportMaps(newMaps, importMaps);
-
         newMaps = rewriteImportMapPaths(newMaps, htmlPath);
-
         newMaps = applyReplaceToImportMap(newMaps, htmlOptions);
-
         newMaps = combineImportMaps(newMaps, htmlOptions.importmap);
-
         writeImportMapToHTML(newMaps, fullHtmlPath);
-
         console.log({lid: 1022}, `"${fullHtmlPath}" has been successfully updated`);
     }
     catch (e)
@@ -2313,9 +1959,7 @@ const parseHTMLFile = (htmlPath, {importMaps = {}, htmlOptions = {}}) =>
         /* istanbul ignore next */
         console.error({lid: 3056}, e.message);
     }
-
 };
-
 /**
  * Browse and update all specified html files with importmaps
  * @param list
@@ -2332,7 +1976,6 @@ const updateHTMLFiles = (list, {importMaps = {}, confFileOptions = {}, moreOptio
         parseHTMLFile(html, {importMaps, confFileOptions, moreOptions, htmlOptions});
     });
 };
-
 /**
  * Fallback conversion when parsing fails.
  * @param converted
@@ -2359,32 +2002,24 @@ export const convertToESMWithRegex  = (converted, list, {
     try
     {
         const extractedComments = [];
-
         converted = stripCodeComments(converted, extractedComments);
         dumpData(converted, source, "stripCodeComments");
-
         converted = parseImportWithRegex(converted, list, {source, outputDir, rootDir}, workingDir);
         dumpData(converted, source, "parseImportWithRegex");
-
         converted = convertNonTrivial(converted, source);
         dumpData(converted, source, "convertNonTrivial");
-
         converted = convertModuleExportsToExport(converted, source);
         dumpData(converted, source, "convertModuleExportsToExport");
-
         converted = convertJsonImportToVars(converted, {source});
         dumpData(converted, source, "convertJsonImportToVars");
-
         converted = convertRequiresToImport(converted);
         dumpData(converted, source, "convertRequiresToImport");
-
         converted = reviewEsmImports(converted, list,
             {
                 source, outputDir, rootDir,
                 importMaps, workingDir, moreOptions, nonHybridModuleMap
             });
         dumpData(converted, source, "reviewEsmImports");
-
         converted = putBackComments(converted, extractedComments);
         dumpData(converted, source, "putBackComments");
     }
@@ -2395,16 +2030,13 @@ export const convertToESMWithRegex  = (converted, list, {
     }
     return converted;
 };
-
 export const getOptionsConfigFile  = async (configPath) =>
 {
     let confFileOptions = {};
-
     configPath = resolvePath(configPath);
     if (fs.existsSync(configPath))
     {
         const extension = path.parse(configPath).ext;
-
         if ([".js", ".cjs"].includes(extension))
         {
             /* istanbul ignore next */
@@ -2429,10 +2061,8 @@ export const getOptionsConfigFile  = async (configPath) =>
             }
         }
     }
-
     return confFileOptions;
 };
-
 /**
  * Parse "replace" entry list given by the user.
  * Convert all search entries into their Regex equivalent.
@@ -2452,10 +2082,8 @@ export const regexifySearchList  = (replace = []) =>
             item.search = new RegExp(item.search);
         }
     });
-
     return replace || [];
 };
-
 export const getLibraryInfo  = (modulePackname) =>
 {
     const info = {
@@ -2467,22 +2095,18 @@ export const getLibraryInfo  = (modulePackname) =>
         if (installed)
         {
             info.installed = true;
-
             const dir = path.parse(installed).dir;
             const packageJsonPath = joinPath(dir, "package.json");
             const packageJson = require(packageJsonPath);
             info.version = packageJson.version;
         }
-
     }
     catch (e)
     {
-
     }
     return info;
 };
 /* istanbul ignore next */
-
 /**
  * Install npm packages on the users project.
  * Ignore for the tests as it requires some End to End testing.
@@ -2503,7 +2127,6 @@ export const installPackage  =
             {
                 return;
             }
-
             if (info.installed && info.version.indexOf("latest") > -1)
             {
                 return;
@@ -2511,20 +2134,13 @@ export const installPackage  =
         }
         catch (e)
         {
-
         }
-
         const devOption = isDevDependencies ? " -D" : "";
-
-        
-
         const environment = isCjs ? "CommonJs modules" : "ES Modules";
-
         console.info({lid: 1142}, `Installing (${environment}) package [${moduleName}${version}] as [${name}]`);
         child_process.execSync(`npm install ${name}@npm:${moduleName}${version} ${devOption}`, {stdio: []});
         console.info({lid: 1142}, "✔ Success");
     };
-
 /**
  * When defined in the config file, install a specific module version for commonjs
  * and a specific module version for ESM.
@@ -2542,7 +2158,6 @@ export const installNonHybridModules  = async (config = []) =>
     try
     {
         const replaceModules = config.replaceModules || [];
-
         let packageJsonPath = resolvePath("./package.json");
         /* istanbul ignore next */
         if (!fs.existsSync(packageJsonPath))
@@ -2550,30 +2165,23 @@ export const installNonHybridModules  = async (config = []) =>
             console.error({lid: 3062}, " Could not locate package Json. To use the replaceModules options, you must run this process from your root module directory.");
             return null;
         }
-
         // const toEsmPackageJson = require(packageJsonPath);
         const moduleList = Object.keys(replaceModules);
-
         const nonHybridModules = {};
-
         if (!moduleList || !moduleList.length)
         {
             return null;
         }
-
         for (const moduleName of moduleList)
         {
             try
             {
                 const moduleItem = replaceModules[moduleName];
-
                 moduleItem.cjs = moduleItem.cjs || {};
                 moduleItem.esm = moduleItem.esm || {};
-
                 let version = moduleItem.cjs.version || "@latest";
                 let cjsName = moduleItem.cjs.name || moduleName;
                 let isDevDependencies = !!moduleItem.cjs.devDependencies;
-
                 // Install cjs package
                 installPackage({
                     version,
@@ -2583,11 +2191,9 @@ export const installNonHybridModules  = async (config = []) =>
                     isCjs      : true,
                     packageJson: toEsmPackageJson
                 });
-
                 version = moduleItem.esm.version || "@latest";
                 let esmName = moduleItem.esm.name || moduleName;
                 isDevDependencies = !!moduleItem.esm.devDependencies;
-
                 // Install esm package
                 installPackage({
                     version,
@@ -2597,7 +2203,6 @@ export const installNonHybridModules  = async (config = []) =>
                     isCjs      : false,
                     packageJson: toEsmPackageJson
                 });
-
                 nonHybridModules[cjsName] = esmName;
                 return nonHybridModules;
             }
@@ -2607,18 +2212,14 @@ export const installNonHybridModules  = async (config = []) =>
                 console.error({lid: 3064}, "", e.message);
             }
         }
-
         return null;
     }
     catch (e)
     {
         console.error({lid: 3066}, e);
     }
-
     return null;
 };
-
-
 const parseEsm = (filepath, content, {
     range = false,
     loc = false,
@@ -2647,17 +2248,14 @@ const parseEsm = (filepath, content, {
             ecmaFeatures
         };
         content = content || fs.readFileSync(filepath, "utf-8");
-
         espree.parse(content, parserOtions);
     }
     catch (error)
     {
         return {success: false, error};
     }
-
     return {success: true};
 };
-
 /**
  * Check whether a file is CommonJs
  * @param filepath
@@ -2673,22 +2271,18 @@ const isCjsCompatible = (filepath, content = "") =>
         {
             return false;
         }
-
         content = content || fs.readFileSync(filepath, "utf-8");
         content = stripComments(content);
         content = clearStrings(content);
         content = stripRegexes(content);
-
         if (/\bimport\b[\s\S]*?\bfrom\b/gm.test(content) || /\bexport\b\s+\bdefault\b/gm.test(content))
         {
             return false;
         }
-
         if (/\brequire\b\s*\(/gm.test(content) || /(?:module\.)?\bexports\b\.?/gm.test(content))
         {
             return true;
         }
-
         return !/\bexport\b\s+/gm.test(content);
     }
     catch (e)
@@ -2696,11 +2290,9 @@ const isCjsCompatible = (filepath, content = "") =>
         /* istanbul ignore next */
         console.error({lid: 3068}, e);
     }
-
     /* istanbul ignore next */
     return false;
 };
-
 const isESMCompatible = (filepath, content = "") =>
 {
     try
@@ -2710,7 +2302,6 @@ const isESMCompatible = (filepath, content = "") =>
         {
             return false;
         }
-
         content = content || fs.readFileSync(filepath, "utf-8");
         return !isCjsCompatible(filepath, content);
     }
@@ -2719,11 +2310,9 @@ const isESMCompatible = (filepath, content = "") =>
         /* istanbul ignore next */
         console.error({lid: 3070}, e);
     }
-
     /* istanbul ignore next */
     return false;
 };
-
 const isBrowserCompatible = (filepath, content = "") =>
 {
     try
@@ -2733,17 +2322,14 @@ const isBrowserCompatible = (filepath, content = "") =>
         {
             return false;
         }
-
         espree.parse(
             content, {
                 sourceType : "module",
                 ecmaVersion: "latest",
             }
         );
-
         content = stripComments(content);
         content = stripRegexes(content);
-
         const regexp = new RegExp(`\\bfrom\\b +["'] *\\b(${nativeModules.join("|")})\\b *["']`);
         const hasCore = regexp.test(content);
         return !hasCore;
@@ -2752,11 +2338,9 @@ const isBrowserCompatible = (filepath, content = "") =>
     {
         console.error({lid: 3072}, e);
     }
-
     /* istanbul ignore next */
     return false;
 };
-
 /**
  * Returns file info if the file has already been parsed by to-esm
  * @param source
@@ -2769,7 +2353,6 @@ const findEntry = (source, propertyName = "sourceAbs") =>
     {
         return null;
     }
-
     const n = cjsList.length;
     for (let i = 0; i < n; ++i)
     {
@@ -2781,7 +2364,6 @@ const findEntry = (source, propertyName = "sourceAbs") =>
     }
     return null;
 };
-
 /**
  * Look if the required file exists in one of the suggested folder,
  * then if found calculate its path relatively to its source.
@@ -2795,7 +2377,6 @@ const getRelativePathsAgainstSuggestedRoots = (requiredPath, source, rootDir, ro
 {
     let sourceAbs = joinPath(rootDir, source);
     let rootDirs = JSON.parse(JSON.stringify(roots));
-
     for (let i = 0; i < rootDirs.length; ++i)
     {
         let requiredRootDir = rootDirs[i];
@@ -2805,16 +2386,13 @@ const getRelativePathsAgainstSuggestedRoots = (requiredPath, source, rootDir, ro
         {
             let relativeRequiredPath = path.relative(rootDir, requiredAbsolutePath);
             relativeRequiredPath = normalisePath(relativeRequiredPath);
-
             let idRequiredPath = path.relative(sourceAbs, requiredAbsolutePath);
             idRequiredPath = normalisePath(idRequiredPath);
             return {requiredRootDir, requiredAbsolutePath, idRequiredPath, relativeRequiredPath};
         }
     }
-
     return null;
 };
-
 /**
  * Add a file to the file list to parse. All added files must have their paths relative to rootDir.
  * If a path cannot be calculated based on rootDir, it must be passed as absolute and a copy
@@ -2855,7 +2433,6 @@ const addFileToIndex = ({
         {
             const file = path.parse(sourceAbs);
             const sourceAbsNoExt = joinPath(file.dir, file.name);
-
             let found = false;
             let foundPath = "";
             let possibleCjsExtensions = [".js", ".json", ".node"];
@@ -2869,7 +2446,6 @@ const addFileToIndex = ({
                     break;
                 }
             }
-
             if (!found)
             {
                 if (!referrer)
@@ -2877,23 +2453,19 @@ const addFileToIndex = ({
                     console.error({lid: 3074}, `Could not find the file [${sourceAbs}]`);
                     return null;
                 }
-
                 const referrerAbs = joinPath(rootDir, referrer);
                 console.error({lid: 3076}, `Could not find the file [${sourceAbs}] from [${referrerAbs}]`);
                 return null;
             }
-
             sourceAbs = normalisePath(foundPath);
             source = calculateRelativePath(rootDir, sourceAbs);
         }
-
         if (!fs.existsSync(sourceAbs))
         {
             const referrerAbs = joinPath(rootDir, referrer);
             console.error({lid: 3078}, `Could not find the file [${sourceAbs}] from [${referrerAbs}]`);
             return null;
         }
-
         const entryReferer = findEntry(referrer) || {weight: 1};
         let entry = findEntry(source);
         if (!entry)
@@ -2910,7 +2482,6 @@ const addFileToIndex = ({
                 externalSource
             });
         }
-
         entry.weight = entry.weight + entryReferer.weight;
         entry.notOnDisk = !!notOnDisk;
         entry.isEntryPoint = isEntryPoint;
@@ -2920,7 +2491,6 @@ const addFileToIndex = ({
             ++entry.weight;
             entry.referrers.push(referrer);
         }
-
         for (let i = 0; i < cjsList.length; ++i)
         {
             const item = cjsList[i];
@@ -2929,7 +2499,6 @@ const addFileToIndex = ({
                 return entry;
             }
         }
-
         cjsList.push(entry);
         return entry;
     }
@@ -2937,10 +2506,8 @@ const addFileToIndex = ({
     {
         console.error({lid: 3080}, e.message);
     }
-
     return null;
 };
-
 /**
  * Reset references to converted files, so the system can redo conversions
  * multiple times (watchers)
@@ -2952,12 +2519,10 @@ export const resetIndex  = () =>
     indexGeneratedTempVariable = 1;
     dumpCounter = 0;
 };
-
 export const getIndexedItems  = () =>
 {
     return cjsList;
 };
-
 const getIndent = async (str) =>
 {
     try
@@ -2972,7 +2537,6 @@ const getIndent = async (str) =>
     }
     return 2;
 };
-
 /**
  * Apply replacements from user config file or modules parsing
  * @param converted
@@ -2994,7 +2558,6 @@ export const applyReplaceFromConfig  = (converted, replace) =>
     });
     return converted;
 };
-
 const insertDirname = (converted) =>
 {
     try
@@ -3002,31 +2565,25 @@ const insertDirname = (converted) =>
         const dirnameCode = `import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 `;
-
         const filenameCode = `const __filename = fileURLToPath(import.meta.url);
 `;
-
         const importCode = `import { fileURLToPath } from "url";
 `;
-
         let insertion = "";
         if (converted.indexOf("__dirname") > -1 && converted.indexOf("import { dirname } from \"path\"") === -1)
         {
             insertion = dirnameCode;
         }
-
         if (converted.indexOf("__filename") > -1 && converted.indexOf("import { __filename } from \"path\"") === -1)
         {
             insertion = insertion + filenameCode;
         }
-
         if (insertion)
         {
             if (converted.indexOf("import { fileURLToPath } from \"url\"") === -1)
             {
                 insertion = importCode + insertion;
             }
-
             converted = insertion + converted;
         }
     }
@@ -3034,10 +2591,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
     {
         console.error({lid: 3084}, "", e.message);
     }
-
     return converted;
 };
-
 /**
  * Insert header to source
  * @param converted
@@ -3051,17 +2606,14 @@ const insertHeader = (converted, {source}, {noHeader = false} = {}) =>
     {
         return converted;
     }
-
     converted = `/**
  * DO NOT EDIT THIS FILE DIRECTLY.
  * This file is generated following the conversion of 
  * @see [${source}]{@link ${source}}
  * 
  **/${EOL}` + converted;
-
     return converted;
 };
-
 /**
  *
  * @note Event though we already loaded package.json, things might have happened,
@@ -3094,18 +2646,14 @@ const updatePackageJson = async ({
             console.error({lid: 3086}, "Can not update package.json. The option --entrypoint was not set.");
             return false;
         }
-
         const packageJsonLocation = joinPath(workingDir, "./package.json");
-
         /* istanbul ignore next */
         if (!fs.existsSync(packageJsonLocation))
         {
             console.error({lid: 3088}, ` package.json not in [${packageJsonLocation}].`);
             return false;
         }
-
         let json;
-
         try
         {
             let content = fs.readFileSync(packageJsonLocation, "utf-8") || "";
@@ -3116,7 +2664,6 @@ const updatePackageJson = async ({
                 return false;
             }
             json = JSON.parse(content);
-
             if (useImportMaps)
             {
                 if (importMaps && Object.keys(importMaps).length)
@@ -3125,24 +2672,20 @@ const updatePackageJson = async ({
                     Object.assign(json.imports, importMaps);
                 }
             }
-
             let requireSource = entryPoint.source;
             /**
              * pkgImportPath is evaluated in {@link formatIndexEntry}
              * @type {string}
              */
             let importSource = entryPoint.pkgImportPath;
-
             if (useBundle && bundlePath)
             {
                 importSource = bundlePath;
             }
-
             if (useBundle && cjsBundlePath)
             {
                 requireSource = cjsBundlePath;
             }
-
             if (target === TARGET.BROWSER)
             {
                 const browserField = json.browser;
@@ -3170,7 +2713,6 @@ const updatePackageJson = async ({
                     "require": requireSource,
                     "import" : importSource
                 };
-
                 // json.type = "module";
                 if (!json.exports)
                 {
@@ -3185,7 +2727,6 @@ const updatePackageJson = async ({
                         console.log({lid: 1026}, "Cannot update package.json. Expecting exports key to be an object.");
                         return false;
                     }
-
                     if (Object.keys(json.exports).length <= 0)
                     {
                         json.exports = entry;
@@ -3206,7 +2747,6 @@ const updatePackageJson = async ({
                     }
                 }
             }
-
             let indent = 2;
             try
             {
@@ -3217,10 +2757,8 @@ const updatePackageJson = async ({
                 /* istanbul ignore next */
                 console.info({lid: 1289}, " ", e.message);
             }
-
             let str = normaliseString(JSON.stringify(json, null, indent));
             fs.writeFileSync(packageJsonLocation, str, "utf8");
-
             console.log({lid: 1028});
             console.log({lid: 1030}, " ================================================================");
             console.log({lid: 1032}, " package.json updated");
@@ -3233,11 +2771,9 @@ const updatePackageJson = async ({
             /* istanbul ignore next */
             console.error({lid: 3094}, " Could not update package.json.");
         }
-
         return true;
     }
 ;
-
 /**
  * Bundle and minify
  * @param entryPointPath
@@ -3258,10 +2794,8 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {
     {
         const minifyDir = path.parse(bundlePath).dir;
         buildTargetDir(minifyDir);
-
         entryPointPath = resolvePath(entryPointPath);
         bundlePath = resolvePath(bundlePath);
-
         await esbuild.build({
             entryPoints   : [entryPointPath],
             bundle        : true,
@@ -3274,13 +2808,10 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {
             allowOverwrite: true,
             platform
         });
-
         let content = fs.readFileSync(bundlePath, "utf-8");
         content = content.replace(/\/\*! [^*]+\*\//g, "");
         fs.writeFileSync(bundlePath, content);
-
         displaySuccessBundleMessage(bundlePath, target);
-
         return true;
     }
     catch (e)
@@ -3288,20 +2819,16 @@ const minifyESMCode = async (entryPointPath, bundlePath, target, {
         /* istanbul ignore next */
         console.error({lid: 3096, target: "DEBUG"}, `Fail to bundle: ${e.message}`);
     }
-
     return false;
 };
-
 const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true, sourcemap = false} = {}) =>
 {
     try
     {
         const minifyDir = path.parse(bundlePath).dir;
         buildTargetDir(minifyDir);
-
         entryPointPath = resolvePath(entryPointPath);
         bundlePath = resolvePath(bundlePath);
-
         await esbuild.build({
             entryPoints   : [entryPointPath],
             bundle        : true,
@@ -3314,13 +2841,10 @@ const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true,
             allowOverwrite: true,
             platform      : "node"
         });
-
         let content = fs.readFileSync(bundlePath, "utf-8");
         content = content.replace(/\/\*! [^*]+\*\//g, "");
         fs.writeFileSync(bundlePath, content);
-
         displaySuccessBundleMessage(bundlePath, TARGET.CJS);
-
         return true;
     }
     catch (e)
@@ -3328,23 +2852,19 @@ const minifyCJSCode = async (entryPointPath, bundlePath, target, {minify = true,
         /* istanbul ignore next */
         console.error({lid: 3098}, `Fail to bundle: ${e.message}`);
     }
-
     return false;
 };
-
 const displaySeparator = ({width = 64} = {}) =>
 {
     console.log({lid: 1038});
     console.log({lid: 1040}, "".padEnd(width, "."));
 };
-
 const displaySuccessBundleMessage = (bundlePath, target) =>
 {
     console.log({lid: 1042});
     displaySeparator();
     console.log({lid: 1044, color: "orange"}, ` Bundle generated for ${target} => ${bundlePath}`);
     console.log({lid: 1046}, "Usage: ");
-
     if (target === TARGET.CJS)
     {
         console.log({lid: 1048}, ` require("${bundlePath}")`);
@@ -3358,9 +2878,7 @@ const displaySuccessBundleMessage = (bundlePath, target) =>
         console.log({lid: 1052}, ` <script type="module" src="${bundlePath}"></script>`);
         console.log({lid: 1054}, " from your html code");
     }
-
 };
-
 /**
  * Bundle generated ESM code into minified bundle
  * @param cjsList
@@ -3387,7 +2905,6 @@ const bundleResults = async (entryPointPath, {
         console.error({lid: 3100}, ` Failed to minify ${target}`);
         return false;
     }
-
     if (browserBundlePath)
     {
         if (isBrowserCompatible(entryPointPath))
@@ -3403,7 +2920,6 @@ const bundleResults = async (entryPointPath, {
             console.error({lid: 3104}, `${entryPointPath} is not browser compatible. Skipping bundle generation for ${TARGET.BROWSER}`);
         }
     }
-
     if (cjsBundlePath && !await minifyCJSCode(cjsEntryPath, cjsBundlePath, TARGET.CJS, {
         minify,
         sourcemap,
@@ -3412,52 +2928,39 @@ const bundleResults = async (entryPointPath, {
     {
         console.error({lid: 3106}, ` Failed to minify ${TARGET.CJS}`);
     }
-
     return true;
 };
-
 const removeCommentLikeElement = (str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source = null) =>
 {
     str = stripCodeComments(str, sourceExtractedComments, commentMasks);
     source && dumpData(str, source, "hideKeyElementCode - stripCodeComments");
-
     str = stripCodeStrings(str, sourceExtractedStrings);
     source && dumpData(str, source, "hideKeyElementCode - stripCodeStrings");
-
     str = stripCodeRegexes(str, sourceExtractedRegexes);
     source && dumpData(str, source, "hideKeyElementCode - stripCodeRegexes");
-
     return str;
 };
-
 const hideKeyElementCode = (str, source) =>
 {
     sourceExtractedComments = [];
     sourceExtractedStrings = [];
     sourceExtractedRegexes = [];
-
     str = removeCommentLikeElement(str, {sourceExtractedComments, sourceExtractedStrings, sourceExtractedRegexes}, source);
-
     str = markBlocks(str).modifiedSource;
     dumpData(str, source, "hideKeyElementCode - markBlocks");
-
     return str;
 };
-
 const restoreKeyElementCode = (str) =>
 {
     str = putBackStrings(str, sourceExtractedStrings);
     str = putBackComments(str, sourceExtractedComments, commentMasks);
     str = putBackRegexes(str, sourceExtractedRegexes);
-
     return str;
 };
-
 const hasWord = (word, str) =>
 {
     return str.indexOf(word) === 0;
 };
-
 const markBlocks = str =>
 {
     const n = str.length;
@@ -3480,18 +2983,15 @@ const markBlocks = str =>
             regexOn = true;
             continue;
         }
-
         if (regexOn && (char === "/" || char === "\n"))
         {
             regexOn = false;
             continue;
         }
-
         if (regexOn)
         {
             continue;
         }
-
         if (lookFor.charAt(0) === char)
         {
             let currentPart = str.substring(i);
@@ -3502,7 +3002,6 @@ const markBlocks = str =>
                 {
                     continue;
                 }
-
                 if (blockLevel >= 0)
                 {
                     const exportString = " " + lookFor + EXPORT_KEYWORD_MASK + blockLevel;
@@ -3537,23 +3036,19 @@ const markBlocks = str =>
             --blockLevel;
         }
     }
-
     modifiedSource += str.substring(lastPos);
     return {modifiedSource, max};
 };
-
 const removeResidue = (str) =>
 {
     str = str.replace(IMPORT_MASK_START, "");
     str = str.replace(IMPORT_MASK_END, "");
     return str;
 };
-
 function moveEmbeddedImportsToTop(converted, source)
 {
     converted = hideKeyElementCode(converted, source);
     dumpData(converted, source, "moveEmbeddedImportsToTop - hideKeyElementCode");
-
     // Export default
     let regex = new RegExp(`\\bexport.*default\\s*${blockMaskIn}([0-9]*[1-9])[\\S\\s]*?${blockMaskOut}\\1\\s*;?`, "gm");
     const exportDefault = [];
@@ -3563,7 +3058,6 @@ function moveEmbeddedImportsToTop(converted, source)
         return "";
     });
     dumpData(converted, source, "moveEmbeddedImportsToTop - Transform export default");
-
     // module.exports
     regex = new RegExp(`\\bexport${EXPORT_KEYWORD_MASK}(\\d*)\\s+default\\s+.*;?`, "gm");
     converted = beforeReplace(regex, converted, function (found, wholeText, index, match)
@@ -3572,10 +3066,8 @@ function moveEmbeddedImportsToTop(converted, source)
         return "";
     });
     dumpData(converted, source, "moveEmbeddedImportsToTop - Transform module.exports");
-
     converted = restoreKeyElementCode(converted);
     dumpData(converted, source, "moveEmbeddedImportsToTop - restoreKeyElementCode");
-
     if (exportDefault.length)
     {
         // Only 1 export default is allowed
@@ -3585,7 +3077,6 @@ function moveEmbeddedImportsToTop(converted, source)
                 " will be" +
                 " converted.");
         }
-
         if (converted.indexOf(IMPORT_MASK_END) > -1)
         {
             const escaped = escapeDollar(exportDefault[exportDefault.length - 1] + EOL);
@@ -3595,25 +3086,19 @@ function moveEmbeddedImportsToTop(converted, source)
         {
             converted = exportDefault[exportDefault.length - 1] + EOL + converted;
         }
-
         dumpData(converted, source, "moveEmbeddedImportsToTop - restore 0");
     }
-
     const regexMaskIn = new RegExp(`${blockMaskIn}(\\d+)`, "gm");
     converted = converted.replaceAll(regexMaskIn, "{");
     dumpData(converted, source, "moveEmbeddedImportsToTop - restore {");
-
     const regexMaskOut = new RegExp(`${blockMaskOut}(\\d+)`, "gm");
     converted = converted.replaceAll(regexMaskOut, "}");
     dumpData(converted, source, "moveEmbeddedImportsToTop - restore }");
-
     const exportDefaultMask = new RegExp(`${EXPORT_KEYWORD_MASK}(\\d+)`, "gm");
     converted = converted.replaceAll(exportDefaultMask, "");
     dumpData(converted, source, "moveEmbeddedImportsToTop - restore 4");
-
     return converted;
 }
-
 /**
  * Copy converted file into index
  * @param converted
@@ -3625,10 +3110,8 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
     try
     {
         const {source, mjsTarget} = entry;
-
         const parsingResult = parseEsm(source, converted);
         entry.success = parsingResult.success;
-
         let reportSuccess = parsingResult.success ? "✔ SUCCESS" : "✔ CONVERTED (with fallback)";
         if (!parsingResult.success)
         {
@@ -3640,7 +3123,6 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
             reportSuccess = "❌ FAILED";
             console.log({lid: 1058}, " Note that the file is still generated to allow error checking and manual updates.");
         }
-
         if (moreOptions.extras.isTemporaryOutputDir)
         {
             console.log({lid: 1060}, ` ${reportSuccess}: [${source}] processed successfully`);
@@ -3649,7 +3131,6 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
         {
             console.log({lid: 1062}, ` ${reportSuccess}: Converted [${source}] to [${mjsTarget}]`);
         }
-
         entry.converted = converted;
     }
     catch (e)
@@ -3657,7 +3138,6 @@ const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
         console.error({lid: 3112}, e.message);
     }
 };
-
 /**
  * Find the shortest common substring for all referenced rootDir in the index
  */
@@ -3667,30 +3147,24 @@ const reviewRootDirIndexes = () =>
     try
     {
         const list = [];
-
         const n = cjsList.length;
         if (!n)
         {
             return;
         }
-
         let smallestSubdir = cjsList[0].subDir;
-
         // Find the shortest subdir
         for (let i = 0; i < n; ++i)
         {
             const entry = cjsList[i];
             list.push(entry.subDir);
-
             if (entry.subDir.length < smallestSubdir)
             {
                 smallestSubdir = entry.subDir;
             }
         }
-
         // Find the shortest common subdir
         commonDir = calculateRootDir(list);
-
         const optimizable = commonDir.length < smallestSubdir.length;
         if (optimizable)
         {
@@ -3703,9 +3177,7 @@ const reviewRootDirIndexes = () =>
     {
         console.error({lid: 3114}, e.message);
     }
-
 };
-
 /**
  * Write all converted files on disk
  * @param moreOptions
@@ -3719,7 +3191,6 @@ const writeResultOnDisk = (moreOptions) =>
             moreOptions.secondPass = true;
             reviewRootDirIndexes(moreOptions);
         }
-
         const n = cjsList.length;
         for (let i = 0; i < n; ++i)
         {
@@ -3731,13 +3202,11 @@ const writeResultOnDisk = (moreOptions) =>
                     console.error({lid: 3116}, `Invalid entry detected:`, entry);
                     continue;
                 }
-
                 const {source, subDir, notOnDisk, converted, mjsTarget} = entry;
                 if (notOnDisk)
                 {
                     continue;
                 }
-
                 const mjsTargetAbs = joinPath(moreOptions.outputDir, mjsTarget);
                 let overwrite = true;
                 if (fs.existsSync(mjsTargetAbs))
@@ -3753,7 +3222,6 @@ const writeResultOnDisk = (moreOptions) =>
                         }, ` [${source}] contain the directive "do-not-overwrite". Skipping.`);
                     }
                 }
-
                 if (overwrite && !moreOptions.extras.keepexisting)
                 {
                     if (mjsTargetAbs.indexOf(moreOptions.outputDir) === -1)
@@ -3775,20 +3243,15 @@ const writeResultOnDisk = (moreOptions) =>
             {
                 console.error({lid: 3120}, `Failed to write [${source}] on disk: ${e.message}`);
             }
-
         }
-
         return true;
     }
     catch (e)
     {
         console.error({lid: 3122}, e.message);
     }
-
     return false;
 };
-
-
 /**
  * Convert cjs file into esm
  * @param {string[]} list File list to convert
@@ -3821,9 +3284,7 @@ export const convertCjsFiles  = (list, {
         console.info({lid: 1010}, "No file to convert.");
         return false;
     }
-
     let success = true;
-
     for (let dynamicIndex = 0; dynamicIndex < list.length; ++dynamicIndex)
     {
         try
@@ -3834,37 +3295,27 @@ export const convertCjsFiles  = (list, {
                 console.log({lid: 1066}, `Invalid entry detected in index: ${dynamicIndex}`);
                 continue;
             }
-
             let {source, sourceAbs} = cjsItem;
-
             console.log({lid: 1068}, " ================================================================");
             console.log({lid: 1070}, ` Processing: ${source}`);
             console.log({lid: 1072}, " ----------------------------------------------------------------");
-
             resetAll();
-
             let converted = fs.readFileSync(sourceAbs, "utf-8");
             dumpData(converted, source, "read-file");
-
             converted = applyDirectives(converted, {...moreOptions.extras});
             dumpData(converted, source, "apply-directives");
-
             converted = applyReplaceFromConfig(converted, replaceStart);
             dumpData(converted, source, "replace-from-config-file");
-
             if (isCjsCompatible(sourceAbs, converted))
             {
                 converted = removeShebang(converted);
                 dumpData(converted, source, "remove-shebang");
-
                 converted = convertComplexRequiresToSimpleRequires(converted, source);
                 dumpData(converted, source, "convert-complex-requires-to-simple-requires");
-
                 converted = convertJsonImportToVars(converted, {
                     source,
                 });
                 dumpData(converted, source, "convert-json-import-to-vars");
-
                 let result, success;
                 result = convertRequiresToImportsWithAST(converted, list,
                     {
@@ -3878,19 +3329,14 @@ export const convertCjsFiles  = (list, {
                         moreOptions,
                         debuginput
                     });
-
                 converted = result.converted;
                 success = result.success;
-
                 dumpData(converted, source, "convertRequiresToImportsWithAST");
-
                 list[dynamicIndex].exported = result.detectedExported;
-
                 if (success)
                 {
                     converted = convertNonTrivialExportsWithAST(converted, source, result.detectedExported);
                     dumpData(converted, source, "convertNonTrivialExportsWithAST");
-
                     converted = convertModuleExportsToExport(converted, source);
                     dumpData(converted, source, "convertModuleExportsToExport");
                 }
@@ -3911,19 +3357,14 @@ export const convertCjsFiles  = (list, {
                         });
                     dumpData(converted, source, "convertToESMWithRegex");
                 }
-
                 converted = moveEmbeddedImportsToTop(converted, source);
                 dumpData(converted, source, "moveEmbeddedImportsToTop");
-
                 converted = putBackAmbiguous(converted);
                 dumpData(converted, source, "putBackAmbiguous");
-
                 converted = restoreText(converted);
                 dumpData(converted, source, "restoreText");
-
                 converted = insertDirname(converted);
                 dumpData(converted, source, "insertDirname");
-
                 converted = insertHeader(converted, cjsItem, {noHeader: noHeader});
                 dumpData(converted, source, "insertHeader");
             }
@@ -3936,27 +3377,19 @@ export const convertCjsFiles  = (list, {
                     });
                 dumpData(converted, source, "reviewEsmImports");
             }
-
             converted = applyReplaceFromConfig(converted, replaceEnd);
             dumpData(converted, source, "applyReplaceFromConfig");
-
             converted = normaliseString(converted);
             dumpData(converted, source, "normaliseString");
-
             converted = cleanDirectives(converted);
             dumpData(converted, source, "clean-directives");
-
             converted = removeResidue(converted);
             dumpData(converted, source, "removeResidue");
-
             converted = restoreShebang(converted);
-
             // ******************************************
             writeConvertedIntoIndex(converted, cjsItem, moreOptions);
-
             // Newline
             console.log({lid: 1074});
-
             if (!cjsItem.success)
             {
                 success = false;
@@ -3970,10 +3403,8 @@ export const convertCjsFiles  = (list, {
             console.error({lid: 3126}, "", e.message);
         }
     }
-
     return success;
 };
-
 /**
  * Look for .to-esm config path, so to load automatically a configuration.
  * @returns {string} Returns .to-esm config path if found
@@ -3984,13 +3415,11 @@ const detectESMConfigPath = () =>
     {
         const toEsmConfigName = ".to-esm";
         const extensionList = ["", ".json", ".cjs"];
-
         for (let i = 0; i < extensionList.length; ++i)
         {
             const extension = extensionList[i];
             let esmPath = resolvePath(toEsmConfigName + extension);
             esmPath = normalisePath(esmPath);
-
             if (fs.existsSync(esmPath) && fs.lstatSync(esmPath).isFile())
             {
                 return esmPath;
@@ -4001,10 +3430,8 @@ const detectESMConfigPath = () =>
     {
         console.error({lid: 3128}, "", e.message);
     }
-
     return "";
 };
-
 const getCommon = function (str1, str2)
 {
     const max = Math.min(str1.length, str2.length);
@@ -4012,16 +3439,13 @@ const getCommon = function (str1, str2)
     {
         const char1 = str1[i];
         const char2 = str2[i];
-
         if (char1 !== char2)
         {
             return str1.substring(i);
         }
     }
-
     return str1;
 };
-
 const calculateCommon = (files) =>
 {
     const n = files.length;
@@ -4033,7 +3457,6 @@ const calculateCommon = (files) =>
     }
     return longestCommon;
 };
-
 const calculateRootDir = (fileList) =>
 {
     let rootDir = "";
@@ -4047,17 +3470,14 @@ const calculateRootDir = (fileList) =>
         {
             rootDir = "./";
         }
-
         return rootDir;
     }
     catch (e)
     {
         console.error({lid: 3130}, "", e.message);
     }
-
     return "";
 };
-
 /**
  * Find all sources against the given masks
  * All filepath returned are relative to rooDir
@@ -4073,20 +3493,17 @@ const findCjsSources = (inputFileMaskArr, {rootDir}) =>
         for (let i = 0; i < inputFileMaskArr.length; ++i)
         {
             const inputFileMask = inputFileMaskArr[i];
-
             const fileList = glob.sync(inputFileMask, {
                 dot     : true,
                 nodir   : true,
                 cwd     : rootDir,
                 realpath: true
             });
-
             /* istanbul ignore next */
             if (!fileList.length)
             {
                 continue;
             }
-
             fileList.forEach((filepath) =>
             {
                 filepath = calculateRelativePath(rootDir, filepath);
@@ -4099,10 +3516,8 @@ const findCjsSources = (inputFileMaskArr, {rootDir}) =>
     {
         console.error({lid: 3132}, e.message);
     }
-
     return list;
 };
-
 /**
  * Add entries to the to-convert-source list
  * @param entryPointPath
@@ -4119,7 +3534,6 @@ const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, working
         {
             list.unshift(entryPointPath);
         }
-
         let isEntryPoint = true;
         list.forEach((source) =>
         {
@@ -4133,12 +3547,10 @@ const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, working
                     origin: ORIGIN_ADDING_TO_INDEX.START,
                     workingDir
                 });
-
                 if (!entry)
                 {
                     return;
                 }
-
                 validList.push(entry);
                 isEntryPoint = false;
             }
@@ -4147,7 +3559,6 @@ const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, working
                 console.error({lid: 3134}, `Failed to add ${source} to index: ${e.message}`);
             }
         });
-
     }
     catch (e)
     {
@@ -4155,7 +3566,6 @@ const populateCjsList = (entryPointPath, list = [], {rootDir, outputDir, working
     }
     return validList;
 };
-
 /**
  * Get raw inputs from cli
  * @param cliOptions
@@ -4171,7 +3581,6 @@ const parseCliInputs = (cliOptions) =>
         {
             inputFileMaskArr.push(...cliOptions._);
         }
-
         if (cliOptions.input)
         {
             if (Array.isArray(cliOptions.input))
@@ -4183,16 +3592,13 @@ const parseCliInputs = (cliOptions) =>
                 inputFileMaskArr.push(cliOptions.input);
             }
         }
-
     }
     catch (e)
     {
         console.error({lid: 3138}, e.message);
     }
-
     return inputFileMaskArr;
 };
-
 /**
  * Build a list of cjs files containing various information about each file (path, target path, etc.)
  * The list first element will be the entrypoint
@@ -4208,7 +3614,6 @@ export const buildIndex  = (cliOptions, {outputDir, rootDir, workingDir}) =>
     try
     {
         resetIndex();
-
         const inputFileMaskArr = parseCliInputs(cliOptions);
         const sources = findCjsSources(inputFileMaskArr, {rootDir});
         list = populateCjsList(cliOptions.entrypoint, sources, {rootDir, outputDir, workingDir});
@@ -4217,10 +3622,8 @@ export const buildIndex  = (cliOptions, {outputDir, rootDir, workingDir}) =>
     {
         console.error({lid: 3140}, e.message);
     }
-
     return list;
 };
-
 /**
  * Define options that users do not control to pass over transformation functions
  * @param rootDir
@@ -4247,18 +3650,15 @@ const initialiseMainOptions = ({rootDir, entryPointPath, outputDir, workingDir})
             outputDir,
             workingDir
         });
-
         console.log({lid: 1076}, toAnsi.getTextFromHex(`Entry Point: ${moreOptions.entryPointPath}`, {fg: "green"}));
     }
     catch (e)
     {
         console.error({lid: 3142}, e.message);
     }
-
     moreOptions.extras = {};
     return moreOptions;
 };
-
 /**
  * Parse options from the config file and take the one needed
  * @param configPath
@@ -4271,27 +3671,22 @@ const extractConfigFileOptions = async (configPath, cliOptions, moreOptions = {}
     try
     {
         let confFileOptions = {replace: []};
-
         let nonHybridModuleMap = {};
         if (configPath)
         {
             confFileOptions = await getOptionsConfigFile(configPath);
-
             // Convert search replacement strings to regex
             confFileOptions.replaceStart = regexifySearchList(confFileOptions.replaceStart);
             confFileOptions.replaceEnd = regexifySearchList(confFileOptions.replaceEnd);
-
             // Install special npm modules based on config
             nonHybridModuleMap = await installNonHybridModules(confFileOptions) || {};
         }
-
         let htmlOptions = confFileOptions.html || {};
         let html = cliOptions.html;
         if (html)
         {
             htmlOptions.pattern = html;
         }
-
         moreOptions.configFile = {...confFileOptions};
         moreOptions.extras = {nonHybridModuleMap, htmlOptions};
     }
@@ -4301,7 +3696,6 @@ const extractConfigFileOptions = async (configPath, cliOptions, moreOptions = {}
     }
     return moreOptions;
 };
-
 /**
  * Parse options from cli
  * @param cliOptions
@@ -4313,49 +3707,38 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
     try
     {
         cliOptions.target = cliOptions.target || TARGET.ESM;
-
         if (cliOptions.target === TARGET.PACKAGE)
         {
             cliOptions.target = TARGET.BROWSER;
             cliOptions.prefixpath = "../../";
         }
-
         if (cliOptions.target === TARGET.ALL)
         {
             console.error({lid: 3146}, `The option --target ${TARGET.ALL} is no longer supported. It defaults to --target ${TARGET.BROWSER} now`);
             cliOptions.target = TARGET.BROWSER;
         }
-
         if (cliOptions.useimportmaps)
         {
             cliOptions.target = TARGET.BROWSER;
         }
-
         cliOptions.prefixpath = cliOptions.prefixpath || "";
         cliOptions.prefixpath = cliOptions.prefixpath.trim();
-
         // No header
         moreOptions.extras.noHeader = !!cliOptions.noHeader;
         moreOptions.extras.fallback = !!cliOptions.fallback;
         moreOptions.extras.importMaps = {};
-
         moreOptions.extras.minify = !["false", "no", "non"].includes(cliOptions.minify);
-
         if (["false", "no", "non"].includes(cliOptions.sourcemap))
         {
             moreOptions.extras.sourcemap = false;
         }
-
         let bundlePath = cliOptions.bundle || cliOptions["bundle-esm"];
         let cjsBundlePath = cliOptions["bundle-cjs"];
         let browserBundlePath = cliOptions["bundle-browser"];
-
         bundlePath = normalisePath(bundlePath) || "";
         cjsBundlePath = normalisePath(cjsBundlePath) || "";
         browserBundlePath = normalisePath(browserBundlePath) || "";
-
         Object.assign(moreOptions.extras, {...cliOptions});
-
         Object.assign(moreOptions.extras, {
             useImportMaps       : !!moreOptions.extras.htmlOptions.pattern || cliOptions.useImportMaps || false,
             target              : cliOptions.target,
@@ -4366,8 +3749,6 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
             keepexisting        : !!cliOptions.keepexisting,
             bundlePath, cjsBundlePath, browserBundlePath,
         });
-
-
     }
     catch (e)
     {
@@ -4375,7 +3756,6 @@ const parseCliOptions = (cliOptions, moreOptions = {}) =>
     }
     return moreOptions;
 };
-
 /**
  * Enable debug mode if required by the user and create
  * the debug directory
@@ -4405,7 +3785,6 @@ const prepareDebugMode = (cliOptions, moreOptions = {}) =>
             buildTargetDir(DEBUG_DIR);
         }
         DEBUG_MODE = !!debuginput;
-
         moreOptions.extras.debug = DEBUG_MODE;
     }
     catch (e)
@@ -4413,7 +3792,6 @@ const prepareDebugMode = (cliOptions, moreOptions = {}) =>
         console.error({lid: 3152}, e.message);
     }
 };
-
 /**
  * Use command line arguments to apply conversion
  * @param moreOptions
@@ -4426,7 +3804,6 @@ export let convertFile  = async (moreOptions) =>
         // The first file parsed will be the entrypoint
         const cjsEntryPointPath = cjsList[0].source;
         let mjsEntrypointPath = cjsList[0].mjsTargetAbs;
-
         const success = await convertCjsFiles(cjsList,
             {
                 ...moreOptions.extras,
@@ -4443,15 +3820,12 @@ export let convertFile  = async (moreOptions) =>
                 // fallback,
                 // debuginput,
             });
-
         if (!writeResultOnDisk(moreOptions))
         {
             console.error({lid: 3154}, `Conversion failed`);
             return false;
         }
-
         const {bundlePath, cjsBundlePath, browserBundlePath} = moreOptions.extras;
-
         if ((bundlePath || cjsBundlePath || browserBundlePath) && mjsEntrypointPath)
         {
             await bundleResults(mjsEntrypointPath, {
@@ -4464,7 +3838,6 @@ export let convertFile  = async (moreOptions) =>
                 sourcemap   : moreOptions.extras.sourcemap
             });
         }
-
         if (moreOptions.extras["update-all"])
         {
             let useBundle = moreOptions.extras["use-bundle"];
@@ -4480,31 +3853,26 @@ export let convertFile  = async (moreOptions) =>
                 useBundle
             });
         }
-
         if (!moreOptions.extras.htmlOptions.pattern)
         {
             return success;
         }
-
         if (!Object.keys(moreOptions.extras.importMaps).length)
         {
             console.info({lid: 1202}, " No importMaps entry found.");
             return success;
         }
-
         const htmlList = glob.sync(moreOptions.extras.htmlOptions.pattern,
             {
                 root : moreOptions.workingDir,
                 nodir: true
             });
-
         updateHTMLFiles(htmlList, {
             importMaps     : moreOptions.extras.importMaps,
             moreOptions,
             confFileOptions: moreOptions.configFile,
             htmlOptions    : moreOptions.extras.htmlOptions
         });
-
         return success;
     }
     catch (e)
@@ -4520,10 +3888,8 @@ export let convertFile  = async (moreOptions) =>
             moreOptions.outputDir = null;
         }
     }
-
     return success;
 };
-
 /**
  * Return working directory
  * @returns {string|null}
@@ -4539,10 +3905,8 @@ function getWorkingDir()
     {
         console.error({lid: 1000}, e.message);
     }
-
     return null;
 }
-
 /**
  * Return root directory by parsing user options.
  * @param cliOptions
@@ -4553,29 +3917,24 @@ function getRootDir(cliOptions)
     try
     {
         let rootDir = cliOptions.rootDir ? normaliseDirPath(cliOptions.rootDir) : getWorkingDir();
-
         if (!fs.existsSync(rootDir))
         {
             console.error({lid: 3158}, `rootDir: [${rootDir}] does not exist`);
             return null;
         }
-
         if (!fs.lstatSync(rootDir).isDirectory())
         {
             console.error({lid: 3160}, `rootDir: [${rootDir}] must be a valid directory`);
             return null;
         }
-
         return rootDir;
     }
     catch (e)
     {
         console.error({lid: 1000}, e.message);
     }
-
     return false;
 }
-
 /**
  * Returns output directory.
  * The output directory is the directory where converted .cjs will be generated.
@@ -4594,10 +3953,8 @@ function getOutputDirectory(cliOptions)
     {
         console.error({lid: 1000}, e.message);
     }
-
     return false;
 }
-
 /**
  * Determine working, root and output directories from user options
  * @param cliOptions
@@ -4609,15 +3966,12 @@ const extractKeyDirectories = function (cliOptions)
     {
         const workingDir = getWorkingDir();
         console.log({lid: 1078}, `Current working directory: ${workingDir}`);
-
         const rootDir = getRootDir(cliOptions);
         if (!rootDir)
         {
             return {};
         }
-
         let outputDir = getOutputDirectory(cliOptions);
-
         if (!cliOptions.output)
         {
             // User only wants the bundle, not the generated full tree
@@ -4628,17 +3982,14 @@ const extractKeyDirectories = function (cliOptions)
         }
         outputDir = outputDir || "./";
         outputDir = normaliseDirPath(outputDir);
-
         return {workingDir, rootDir, outputDir};
     }
     catch (e)
     {
         console.error({lid: 1000}, e.message);
     }
-
     return {};
 };
-
 /**
  * Review and rewrite some options
  * @param cliOptions
@@ -4654,7 +4005,6 @@ export const updateOptions  = function (cliOptions, {workingDir, outputDir})
     }
     cliOptions.workingDir = workingDir;
 };
-
 /**
  * Set up the engine for source conversion based on given options
  * @param simplifiedCliOptions
@@ -4668,11 +4018,9 @@ export const transpileFiles  = async (simplifiedCliOptions = null) =>
         {
             return {success: false};
         }
-
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal"
         );
-
         if (cliOptions.resolveAbsolute === true)
         {
             cliOptions.resolveAbsolute = ["./node_modules"];
@@ -4681,20 +4029,16 @@ export const transpileFiles  = async (simplifiedCliOptions = null) =>
         {
             cliOptions.resolveAbsolute = cliOptions.resolveAbsolute.split(",");
         }
-
         // Extract working, root and output directories
         let {workingDir, rootDir, outputDir} = extractKeyDirectories(cliOptions);
         if (!rootDir)
         {
             return {success: false};
         }
-
         // Save key directories to options
         updateOptions(cliOptions, {workingDir, outputDir});
-
         // Clone options for watchers
         const originalOptions = Object.assign({}, cliOptions);
-
         // Build source info from glob(s)
         const sources = buildIndex(cliOptions, {outputDir, rootDir, workingDir});
         if (!sources.length)
@@ -4702,7 +4046,6 @@ export const transpileFiles  = async (simplifiedCliOptions = null) =>
             console.log({lid: 1080}, `Bad arguments. No input file detected.`);
             return {success: false};
         }
-
         // Format option object
         const entryPointPath = sources[0].sourceAbs;
         const moreOptions = initialiseMainOptions({
@@ -4711,74 +4054,23 @@ export const transpileFiles  = async (simplifiedCliOptions = null) =>
             outputDir,
             workingDir
         });
-
         // Config Files
         let configPath = cliOptions.config || detectESMConfigPath();
-
         // Extract options from config file
         await extractConfigFileOptions(configPath, cliOptions, moreOptions);
         parseCliOptions(cliOptions, moreOptions);
         prepareDebugMode(cliOptions, moreOptions);
-
         // Start conversion
         const success = await convertFile(moreOptions);
-
         return {cliOptions, originalOptions, moreOptions, success};
     }
     catch (e)
     {
         console.error({lid: 3162}, e.message);
     }
-
     return {success: false};
 };
-
-
 // ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
 const convertRequiresToImport = convertRequireToImport;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
