@@ -91,3 +91,5 @@ debug/
 /lid-generator.cjs
 /testgen.cjs
 /bump.js
+/demo-out
+
