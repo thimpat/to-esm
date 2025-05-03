@@ -224,19 +224,6 @@ const buildTargetDir = (targetDir) =>
     return false;
 };
 
-const identifyExportedFunctionsThenTransform = function (converted, source, detectedExported = [])
-{
-    try
-    {
-    }
-    catch (e)
-    {
-        console.error({lid: "TE6541"}, e.message);
-    }
-
-    return converted;
-};
-
 /**
  * Execute some non-trivial transformations that require multiple passes
  * @param {string} converted String to perform transformations onto
@@ -247,8 +234,6 @@ const identifyExportedFunctionsThenTransform = function (converted, source, dete
 const convertNonTrivialExportsWithAST = (converted, source, detectedExported = []) =>
 {
     let converted0, subst;
-
-    converted = identifyExportedFunctionsThenTransform(converted, source, detectedExported);
 
     converted = hideKeyElementCode(converted, source);
 
@@ -779,9 +764,22 @@ const getProjectedPathAll = ({source, outputDir, subRootDir = ""} = {}) =>
  */
 const changePathExtensionToESM = (filepath, {esmExtension = ESM_EXTENSION} = {}) =>
 {
+    try
+    {
+        const isJson = filepath && filepath.endsWith(JSON_EXTENSION);
+        if (isJson)
+        {
+            esmExtension = JSON_EXTENSION + esmExtension;
+        }
+
     const parsed = path.parse(filepath);
     const renamed = joinPath(parsed.dir, parsed.name + esmExtension);
     return normalisePath(renamed);
+    }
+    catch (e)
+    {
+        console.error({lid: 3041}, `Error while updating extension: ${e.message}`);
+    }
 };
 
 /**
@@ -1596,55 +1594,6 @@ const convertModuleExportsToExport = (converted, source) =>
     return converted;
 };
 
-const convertJsonImportToVars = (converted, {
-    source,
-    outputDir,
-}) =>
-{
-    const matchData = converted.matchAll(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\s*\(\s*['"`]([^)]+.json)[^)]+\)/g);
-    const matches = [...matchData];
-    const found = Array.from(matches, m => m[0]);
-    const identifiers = Array.from(matches, m => m[1]);
-    const files = Array.from(matches, m => m[2]);
-
-    const n = identifiers.length;
-    for (let i = 0; i < n; ++i)
-    {
-        try {
-        const filepath = files[i];
-        let absPath = resolvePath(source);
-
-        // Path to Json file to convert and translate
-        let srcJsonPath = concatenatePaths(absPath, filepath);
-        if (!fs.existsSync(srcJsonPath))
-        {
-            console.log({lid: "9801"}, `The file ${srcJsonPath} could not be found. Skipping...`);
-            continue;
-        }
-
-        // Read and validate the json file
-        const jsonContent = fs.readFileSync(srcJsonPath, "utf-8");
-        const json = JSON.parse(jsonContent.toString());
-
-        // Convert the json file to ESM
-        const esmifyJson = convertJsonToESM(json);
-
-        const srcPath = matches[i][2];
-        const esmifyJsonPath = joinPath(outputDir, srcPath + ESM_EXTENSION);
-        writeFileContent(esmifyJsonPath, esmifyJson, {encoding: "utf-8"});
-
-        const currentFound = found[i];
-        const replacedFound = currentFound.replace(filepath, filepath + ESM_EXTENSION);
-        converted = converted.replace(currentFound, replacedFound);
-        }
-        catch (e) {
-            console.error({lid: "6541"}, `An error occurred while converting the json file: ${e.message}`);
-        }
-    }
-
-    return converted;
-};
-
 /**
  * Parse the given test and use regex to transform requires into imports.
  * @note This function is used with both parser (AST or Regex)
@@ -1658,7 +1607,7 @@ const convertRequiresToImport = (converted) =>
     converted = stripCodeComments(converted);
 
     // convert require with .json file to import
-    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2 assert {type: \"json\"}");
+    converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+.json[^)])\)/gm, "import $1 from $2");
 
     // convert require with .js or .cjs extension to import
     converted = converted.replace(/(?:const|let|var|class|function\s*\*?)\s+([^=]+)\s*=\s*require\(([^)]+\.c?js)([^)])\)/gm, "import $1" +
@@ -2445,6 +2394,9 @@ const formatIndexEntry = ({
     try
     {
         const {esmExtension} = moreOptions || ESM_EXTENSION;
+        if (!path.isAbsolute(outputDir)) {
+            outputDir = joinPath(workingDir, outputDir);
+        }
 
         // Absolute path to the .cjs (must exist)
         let sourceAbs, paths;
@@ -2502,7 +2454,18 @@ const formatIndexEntry = ({
             }
         }
 
-        mjsTargetName = mjsTargetName || path.parse(subPath).name + esmExtension;
+        const isJson = subPath && subPath.endsWith(JSON_EXTENSION);
+        if (isJson)
+        {
+            if (moreOptions.validateJson && !validateJsonContent(sourceAbs)) {
+                console.error({lid: 4055}, `The file ${sourceAbs} has the extension ${JSON_EXTENSION} but may not have a valid Json content. The generating output is invalid.`);
+            }
+            mjsTargetName = path.parse(subPath).name + JSON_EXTENSION + esmExtension;
+        }
+        else {
+            mjsTargetName = mjsTargetName || path.parse(subPath).name + esmExtension;
+        }
+
         cjsTargetName = cjsTargetName || path.parse(subPath).name + CJS_EXTENSION;
 
         let mjsTarget, cjsTarget;
@@ -2782,8 +2745,9 @@ const convertToESMWithRegex = (converted, list, {
         converted = convertModuleExportsToExport(converted, source);
         dumpData(converted, source, "convertModuleExportsToExport");
 
-        converted = convertJsonImportToVars(converted, {source, outputDir});
-        dumpData(converted, source, "convertJsonImportToVars");
+        // convertJsonImportToVars last: a200d5fd789eab00516adef094a670ca63c47abe
+        // converted = convertJsonImportToVars(converted, {source, outputDir, workingDir, rootDir});
+        // dumpData(converted, source, "convertJsonImportToVars");
 
         converted = convertRequiresToImport(converted);
         dumpData(converted, source, "convertRequiresToImport");
@@ -3102,6 +3066,28 @@ const parseEsm = (filepath, content, {
 };
 
 /**
+ * Validate content of a json file
+ * @param filepath
+ * @param content
+ * @returns {boolean}
+ */
+const validateJsonContent = (filepath, content = "") => {
+    try
+    {
+        content = content || fs.readFileSync(filepath, "utf-8");
+        JSON.parse(content);
+        return true;
+    }
+    catch (e)
+    {
+        if (DEBUG_MODE && extension === JSON_EXTENSION) {
+            console.error({lid: 3067}, e.message);
+        }
+    }
+    return false;
+};
+
+/**
  * Check whether a file is Json compatible
  * @param filepath
  * @param content
@@ -3118,11 +3104,7 @@ const isJsonCompatible = (filepath, content = "") =>
             return true;
         }
 
-        content = content || fs.readFileSync(filepath, "utf-8");
-
-        JSON.parse(content);
-
-        return true;
+        return validateJsonContent(filepath, content);
     }
     catch (e)
     {
@@ -3311,24 +3293,30 @@ const getRelativePathsAgainstSuggestedRoots = ({regexRequiredPath, source, rootD
 };
 
 /**
- * Add a file to the file list to parse. All added files must have their paths relative to rootDir.
+ * Adds a file to the file list for parsing and conversion. All added files must have their paths relative to rootDir.
  * If a path cannot be calculated based on rootDir, it must be passed as absolute and a copy
  * should be created in ./{rootDir}/__root/...
- * @param {string} source .cjs Source path (relative to rootDir)
+ * This method will be called during the conversion to also add
+ * the files use in the require("...") statement. * @param {string} source .cjs Source path (relative to rootDir)
  * @param {string} rootDir All .cjs Root dir
  * @param {string} outputDir .mjs Destination directory
  * @param {boolean} notOnDisk Whether the entry should be saved on disk
- * @param referrer
- * @param {boolean} isEntryPoint
- * @param {boolean} isAbsolutePath
- * @param {*} moreOptions
- * @param origin
- * @param moduleName
- * @param workingDir
- * @param externalSource
- * @param subRootDir
- * @param esmExtension
- * @returns {CjsInfoType|null}
+ * @param {Object} params - The parameters for adding the file.
+ * @param {string} params.source - The relative path to the `.cjs` source file.
+ * @param {string} params.rootDir - The absolute root path directory for `.cjs` files.
+ * @param {string} params.outputDir - The destination directory for `.mjs` files.
+ * @param {boolean} params.notOnDisk - Indicates if the entry should not be saved on disk.
+ * @param {string} [params.referrer] - The file that referred to this file.
+ * @param {boolean} params.isEntryPoint - Whether the file is an entry point.
+ * @param {boolean} params.isAbsolutePath - Whether the source path is absolute.
+ * @param {*} params.moreOptions - Additional options for processing.
+ * @param {string} [params.origin] - The origin of the file addition.
+ * @param {string} [params.moduleName] - The name of the module, if applicable.
+ * @param {string} params.workingDir - The working directory for the project.
+ * @param {string} [params.externalSource] - External source information, if applicable.
+ * @param {string} [params.subRootDir] - Subdirectory within the root directory.
+ * @param {string} [params.esmExtension] - The extension for ESM files.
+ * @returns {CjsInfoType|null} - Information about the added file or null if unsuccessful.
  */
 const addFileToIndex = ({
                             source,
@@ -3392,8 +3380,10 @@ const addFileToIndex = ({
             return null;
         }
 
+        // Check whether the file has already been registered
         const entryReferer = findEntry(referrer) || {weight: 1};
         let entry = findEntry(source);
+        // Is the file has not already been added to the index, build the entry
         if (!entry)
         {
             entry = formatIndexEntry({
@@ -4167,10 +4157,13 @@ function moveEmbeddedImportsToTop(converted, source)
 }
 
 /**
- * Copy converted file into index
- * @param converted
- * @param entry
- * @param moreOptions
+  * Copy the source code of the converted file into the index.
+  * This function handles the final step of processing a converted file,
+  * ensuring it is properly added to the index for further use.
+  *
+  * @param {string} converted - The converted file content.
+  * @param {Object} entry - The entry object containing metadata about the file.
+  * @param {Object} moreOptions - Additional options for processing the file.
  */
 const writeConvertedIntoIndex = (converted, entry, moreOptions) =>
 {
@@ -4521,11 +4514,14 @@ const convertCjsFiles = async (list, {
                 converted = convertComplexRequiresToSimpleRequires(converted, source);
                 dumpData(converted, source, "convert-complex-requires-to-simple-requires");
 
-                converted = convertJsonImportToVars(converted, {
-                    source,
-                    outputDir,
-                });
-                dumpData(converted, source, "convert-json-import-to-vars");
+                // convertJsonImportToVars last: a200d5fd789eab00516adef094a670ca63c47abe
+                // converted = convertJsonImportToVars(converted, {
+                //     source,
+                //     outputDir,
+                //     workingDir,
+                //     rootDir
+                // });
+                // dumpData(converted, source, "convert-json-import-to-vars");
 
                 let result, success;
                 result = convertRequiresToImportsWithAST(converted, list,
@@ -5374,7 +5370,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
 
         const cliOptions = importLowerCaseOptions(simplifiedCliOptions,
             "rootDir, workingDir, noHeader, outputDir, entrypoint, resolveAbsolute, keepExternal, onlyBundle," +
-            " useImportMaps, nmBrowserImported, skipEsmResolution, skipLinks, extension"
+            " useImportMaps, nmBrowserImported, skipEsmResolution, skipLinks, extension, validateJson"
         );
 
         if (cliOptions.resolveAbsolute === true)
@@ -5394,6 +5390,12 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
         }
 
         let {workingDir, rootDir, outputDir} = resultExtract;
+        if (!workingDir) {
+            workingDir = process.cwd();
+        }
+        if (!rootDir) {
+            rootDir = workingDir;
+        }
 
         // Save key directories to options
         updateOptions(cliOptions, {workingDir, outputDir});
@@ -5408,6 +5410,7 @@ const transpileFiles = async (simplifiedCliOptions = null) =>
             workingDir,
             subRootDir,
             esmExtension: cliOptions.extension,
+            validateJson: !!(cliOptions.validateJson || cliOptions["validate-json"]),
         });
 
         const extrasInfos = {};
