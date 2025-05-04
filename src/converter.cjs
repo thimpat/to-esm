@@ -4221,6 +4221,7 @@ const writeResultOnDisk = (moreOptions) =>
 {
     try
     {
+        const outputDir = path.isAbsolute(moreOptions.outputDir) ? moreOptions.outputDir : joinPath(moreOptions.workingDir, moreOptions.outputDir);
         const isCjs = moreOptions?.extras?.target === TARGET.CJS;
 
         const n = cjsList.length;
@@ -4244,8 +4245,8 @@ const writeResultOnDisk = (moreOptions) =>
                 }
 
                 let conversion = isCjs ? cjsConverted : converted;
-                const mjsTargetAbs = joinPath(moreOptions.outputDir, mjsTarget);
-                const cjsTargetAbs = joinPath(moreOptions.outputDir, cjsTarget);
+                const mjsTargetAbs = joinPath(outputDir, mjsTarget);
+                const cjsTargetAbs = joinPath(outputDir, cjsTarget);
 
                 let overwrite = true;
 
@@ -4267,7 +4268,7 @@ const writeResultOnDisk = (moreOptions) =>
 
                 if (overwrite && !moreOptions.extras.keepexisting)
                 {
-                    if (targetAbs.indexOf(moreOptions.outputDir) === -1)
+                    if (targetAbs.indexOf(outputDir) === -1)
                     {
                         if (!isResolveAbsoluteMode(moreOptions))
                         {
@@ -4276,7 +4277,7 @@ const writeResultOnDisk = (moreOptions) =>
                     }
                     else
                     {
-                        const destinationDir = joinPath(moreOptions.outputDir, subDir);
+                        const destinationDir = joinPath(outputDir, subDir);
                         buildTargetDir(destinationDir);
 
                         if (moreOptions?.extras?.minify === true)
@@ -5287,7 +5288,14 @@ const extractKeyDirectories = function (cliOptions)
 {
     try
     {
-        const workingDir = getWorkingDir();
+        let workingDir = "";
+        if (cliOptions.workingDir) {
+            workingDir = resolvePath(cliOptions.workingDir);
+        }
+        else {
+            workingDir = getWorkingDir();
+        }
+
         console.log({lid: 1078}, `Current working directory: ${workingDir}`);
 
         const rootDir = getRootDir(cliOptions);
