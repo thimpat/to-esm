@@ -26,7 +26,6 @@ const {
     normaliseDirPath,
     importLowerCaseOptions,
     calculateCommon,
-    writeFileContent
 } = require("@thimpat/libutils");
 const {Readable} = require("stream");
 const toAnsi = require("to-ansi");
@@ -5233,8 +5232,17 @@ function getRootDir(cliOptions)
 {
     try
     {
-        let rootDir = cliOptions.rootDir ? normaliseDirPath(cliOptions.rootDir) : getWorkingDir();
+        let rootDir = cliOptions.rootDir;
+        if (!rootDir) {
+            if (cliOptions.workingDir) {
+                rootDir = cliOptions.workingDir;
+            }
+            else {
+                rootDir = getWorkingDir();
+            }
+        }
 
+        rootDir = normaliseDirPath(rootDir)
         if (!fs.existsSync(rootDir))
         {
             console.error({lid: 3158}, `rootDir: [${rootDir}] does not exist`);
